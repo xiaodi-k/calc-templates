@@ -157,11 +157,16 @@
       outline: 2px solid #cfdcff; border-color: var(--in); background: #fff;
     }
 
-    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
+    /* 种类下拉的文字较长，左列（种类）给更多宽度，右列（厚度）只需容纳数字 */
+    .grid2 {
+      display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr);
+      gap: 10px 10px; align-items: start;
+    }
     .grid2 label {
       display: block; font-size: 12px; color: var(--muted);
       margin-bottom: 4px; white-space: nowrap;
     }
+    .grid2 > div { min-width: 0; }
 
     /* 构造层次分隔条 */
     .seam {
@@ -326,17 +331,26 @@
             <label for="cfg">玻璃配置</label>
             <select id="cfg" style="flex:1 1 auto"></select>
           </div>
-          <div class="row">
-            <label for="inter">夹胶片</label>
-            <select id="inter">
-              <option value="PVB" selected>PVB（不计剪切传递）</option>
-              <option value="SGP">SGP（按 2.3.4 算等效厚度）</option>
-            </select>
-          </div>
-          <div class="row" id="tvRow" hidden>
-            <label for="tv">胶片厚 t<sub>v</sub></label>
-            <input type="number" id="tv" value="2.28" step="0.38" />
-            <span class="unit">mm</span>
+          <div class="grid2">
+            <div>
+              <label for="inter">夹胶片</label>
+              <select id="inter">
+                <option value="PVB" selected>PVB</option>
+                <option value="SGP">SGP</option>
+              </select>
+            </div>
+            <div>
+              <label for="tv">胶片厚 t<sub>v</sub></label>
+              <div class="row" style="margin-bottom:0;gap:6px">
+                <select id="tv">
+                  <option value="0.76">0.76</option>
+                  <option value="1.52">1.52</option>
+                  <option value="2.28" selected>2.28</option>
+                  <option value="3.04">3.04</option>
+                </select>
+                <span class="unit">mm</span>
+              </div>
+            </div>
           </div>
           <p class="hint" id="cfgHint"></p>
         </div>
@@ -850,7 +864,7 @@ function tex2html(src) {
   const el = {};
   ['cfg', 'cfgHint', 'plyHost', 'a', 'b', 'wk', 'ig', 'E', 'nu', 'gg',
    'defdiv', 'gG', 'gw', 'gE', 'psE', 'psw', 'printBtn', 'fxOpen', 'fxClose',
-   'support', 'spanSide', 'spanRow', 'spanHint', 'inter', 'tv', 'tvRow']
+   'support', 'spanSide', 'spanRow', 'spanHint', 'inter', 'tv']
     .forEach(id => { el[id] = document.getElementById(id); });
 
   const f2 = x => x.toFixed(2);
@@ -911,15 +925,16 @@ function tex2html(src) {
         if (ji > 0) h += '<div class="seam pvb">' + il + '</div>';
         const idx = k++;
         const s = st[idx];
+        /* 种类放左列（宽列，保证 “HS 半钢化” 不被截断），厚度放右列 */
         h += '<div class="grid2">' +
-               '<div><label for="plyT' + idx + '">玻璃 ' + (idx + 1) + ' 厚度</label>' +
-                 '<div class="row"><input type="number" id="plyT' + idx + '" value="' + s.t +
-                   '" step="1" min="1" /><span class="unit">mm</span></div></div>' +
                '<div><label for="plyG' + idx + '">玻璃 ' + (idx + 1) + ' 种类</label>' +
                  '<select id="plyG' + idx + '">' +
                    GL_TYPES.map(o => '<option value="' + o[0] + '"' +
                      (o[0] === s.type ? ' selected' : '') + '>' + o[1] + '</option>').join('') +
                  '</select></div>' +
+               '<div><label for="plyT' + idx + '">玻璃 ' + (idx + 1) + ' 厚度</label>' +
+                 '<div class="row" style="margin-bottom:0"><input type="number" id="plyT' + idx +
+                   '" value="' + s.t + '" step="1" min="1" /><span class="unit">mm</span></div></div>' +
              '</div>';
       });
 
@@ -944,11 +959,12 @@ function tex2html(src) {
     }
   }
 
-  /* 联动显示：胶片厚度（仅 SGP）、支承边（仅对边），并给出跨度与取值口径提示 */
+  /* 联动显示：胶片厚度只对 SGP 起作用（PVB 时置灰）、支承边（仅对边），并给出取值口径提示 */
   function syncOptions() {
     const two = el.support.value === 'two';
     const sgp = el.inter.value === 'SGP';
-    el.tvRow.hidden = !sgp;
+    el.tv.disabled = !sgp;
+    el.tv.title = sgp ? '' : 'PVB 不计胶片剪切传递，厚度不参与计算';
     el.spanRow.hidden = !two;
 
     const cfg = getCurrentConfig();
