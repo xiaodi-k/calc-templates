@@ -452,8 +452,9 @@ function calcGlass(p) {
   const kPa = x => x * 1000;                       // N/mm² → kPa
   const sci = x => x.toExponential(2);
 
+  const num = id => parseFloat(el[id].value);
+
   function readInputs() {
-    const num = id => parseFloat(el[id].value);
     return {
       a: num('a'), b: num('b'),
       t: [num('t1'), num('t2'), num('t3'), num('t4')],
@@ -465,11 +466,14 @@ function calcGlass(p) {
     };
   }
 
+  /* 注意：ψE、ψw 允许为 0，不能一并要求 > 0 */
   function valid(p) {
-    const vals = [p.a, p.b, p.wk, p.E, p.nu, p.gammaG, p.defDiv, p.gG, p.gw, p.gE, p.psE, p.psw]
+    const positive = [p.a, p.b, p.wk, p.E, p.nu, p.gammaG, p.defDiv, p.gG, p.gw, p.gE]
       .concat(p.t);
-    return vals.every(v => isFinite(v) && v > 0) && p.a > 0 && p.b > 0 &&
-           isFinite(p.alpha) && p.defDiv > 0;
+    const nonNegative = [p.psE, p.psw];
+    return positive.every(v => isFinite(v) && v > 0) &&
+           nonNegative.every(v => isFinite(v) && v >= 0) &&
+           isFinite(p.alpha);
   }
 
   function badge(r) {
