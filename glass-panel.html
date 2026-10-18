@@ -198,6 +198,19 @@
     button.ghost { background: #fff; color: #111; border: 1px solid var(--line); }
     button:active { transform: scale(.98); }
 
+    /* 基础 / 高级 分段切换 */
+    .seg {
+      display: inline-flex; border: 1px solid var(--in-line);
+      border-radius: 9px; overflow: hidden; background: #fff; flex: 1 1 auto;
+    }
+    .segbtn {
+      flex: 1 1 0; padding: 6px 10px; border: 0; border-radius: 0;
+      background: transparent; color: var(--muted); font-weight: 700; font-size: 13px;
+      box-shadow: none;
+    }
+    .segbtn + .segbtn { border-left: 1px solid var(--in-line); }
+    .segbtn.on { background: var(--in); color: #fff; }
+
     .verdict { display: flex; gap: 28px; flex-wrap: wrap; padding: 16px; }
     .verdict .item .k { font-size: 12px; color: var(--muted); }
     .verdict .item .v { font-size: 26px; font-weight: 900; line-height: 1.2; }
@@ -324,6 +337,14 @@
     <div class="inputs">
       <div class="colcap in">输入 INPUT</div>
 
+      <div class="row" style="margin-bottom:14px">
+        <label>模式</label>
+        <div class="seg">
+          <button type="button" id="modeBasic" class="segbtn on">基础</button>
+          <button type="button" id="modeAdv" class="segbtn">高级</button>
+        </div>
+      </div>
+
       <div class="card">
         <h2>构造型式</h2>
         <div class="body">
@@ -331,7 +352,7 @@
             <label for="cfg">玻璃配置</label>
             <select id="cfg" style="flex:1 1 auto"></select>
           </div>
-          <div class="grid2">
+          <div class="grid2" id="interRow">
             <div>
               <label for="inter">夹胶片</label>
               <select id="inter">
@@ -362,7 +383,7 @@
       <div class="card">
         <h2>面板尺寸与支承</h2>
         <div class="body">
-          <div class="row">
+          <div class="row" id="supportRow">
             <label for="support">支承方式</label>
             <select id="support">
               <option value="four" selected>四边简支</option>
@@ -410,7 +431,7 @@
             </select>
           </div>
 
-          <details>
+          <details id="matBox">
             <summary>材料与系数</summary>
             <div class="grid2" style="margin-top:8px">
               <div>
@@ -499,11 +520,10 @@
   </main>
 
   <footer>
-    计算原则取自 <code>Template_MathCAD\2.2 四边支承玻璃\</code> 系列模板
-    （2.2.1 夹胶 / 2.2.2 中空 / 2.2.2a 三片夹层 / 2.2.2b 单片中空 / 2.2.3 双中空），
-    统一为「分组 → 组内」两级分配模型：<code>.</code> 为 PVB 夹胶（同组），<code>+</code> 为中空腔（分组）。
+    统一为「分组 → 组内」两级分配模型：<code>.</code> 为夹胶（同组），<code>+</code> 为中空腔（分组）。
     弯矩系数 m、挠度系数 μ 按宽长比 a/b 插值，折减系数 η 按 θ = w·a⁴/(E·t⁴) 插值，均取规范附录表线性插值。
-    面板为四边简支，PVB 层不计剪切传递（不计入等效厚度）。单位制 mm / N / MPa。
+    四边简支取中部强度、对边简支取边缘强度；PVB 层不计剪切传递（不计入等效厚度），
+    SGP 夹层等效厚度按 DG/TJ 08-56-2019 上海地标 第 11.2.8 条计算。单位制 mm / N / MPa。
   </footer>
 
 <script>
@@ -523,8 +543,11 @@ const FG_FOUR = { FT: [84, 72, 59], HS: [56, 48, 40], AN: [28, 24, 20] };
 const FG_EDGE = { FT: [67, 58, 47], HS: [44, 38, 32], AN: [22, 19, 16] };
 const FG = FG_FOUR;
 
-/* 夹胶层剪切模量 G (MPa)：上海地标，取 50℃ / 1min 时的参数（2.3.4） */
+/* 夹胶层剪切模量 G (MPa)：上海地标，取 50℃ / 1min 时的参数 */
 const G_INTER = { PVB: 0.44, SGP: 11.3 };
+
+/* SGP 夹层等效厚度算法的规范出处（页面对外展示统一引用这一条） */
+const SGP_REF = 'DG/TJ 08-56-2019 上海地标 第 11.2.8 条';
 
 /* 构造型式：每组一个数组，元素个数 = 该组的玻璃片数
    '.' 表示 PVB 夹胶（同组），'+' 表示中空腔（分组） */
@@ -561,7 +584,7 @@ function fgOf(type, t, support) {
   return row[2];
 }
 
-/* ---- 夹层玻璃等效厚度（SGP 按 2.3.4 方法）----
+/* ---- 夹层玻璃等效厚度（SGP 按 DG/TJ 08-56-2019 上海地标 第 11.2.8 条）----
    t_s   = 0.5(t1+t2) + t_v
    t_s.1 = t_s·t1/(t1+t2) ,  t_s.2 = t_s·t2/(t1+t2)
    I_s   = t1·t_s.2² + t2·t_s.1²
@@ -643,7 +666,7 @@ function calcGlass(p) {
 
   /* ① 组等效厚度
      PVB（或不计胶片）：t_e = (Σ t³)^⅓
-     SGP：按 2.3.4 的剪力传递算法，刚度用 t_e,w、强度与荷载分配用 t_e */
+     SGP：按上海地标第 11.2.8 条的剪力传递算法，刚度用 t_e,w、强度与荷载分配用 t_e */
   groups.forEach(g => {
     const ts = g.plies.map(q => q.t);
     g.sumC = g.plies.reduce((s, q) => s + Math.pow(q.t, 3), 0);
@@ -865,12 +888,18 @@ function tex2html(src) {
   const snapT = v => T_OPTS.reduce((best, x) =>
     Math.abs(x - v) < Math.abs(best - v) ? x : best, T_OPTS[0]);
 
+  /* 基础模式只保留 5 种常用构造；高级模式给出全部 9 种 + SGP / 对边 / 材料系数 */
+  const BASIC_KEYS = ['G', 'G.G', 'G+G', 'G.G+G', 'G.G+G.G'];
+  let mode = 'basic';
+
   const el = {};
   ['cfg', 'cfgHint', 'plyHost', 'a', 'b', 'wk', 'ig', 'E', 'nu', 'gg',
    'defdiv', 'gG', 'gw', 'gE', 'psE', 'psw', 'printBtn', 'fxOpen', 'fxClose',
-   'support', 'spanSide', 'spanRow', 'spanHint', 'inter', 'tv']
+   'support', 'spanSide', 'spanRow', 'spanHint', 'inter', 'tv',
+   'modeBasic', 'modeAdv', 'interRow', 'supportRow', 'matBox']
     .forEach(id => { el[id] = document.getElementById(id); });
 
+  const f0 = x => x.toFixed(0);
   const f2 = x => x.toFixed(2);
   const f3 = x => x.toFixed(3);
   const f4 = x => x.toFixed(4);
@@ -899,8 +928,39 @@ function tex2html(src) {
     return struct.reduce((s, g) => s + g.length, 0);
   }
 
+  /* 当前模式可用的构造列表（option 的 value 直接存 key，过滤时索引不会错位） */
+  function cfgList() {
+    return mode === 'basic'
+      ? CONFIGS.filter(c => BASIC_KEYS.indexOf(c.key) >= 0)
+      : CONFIGS.slice();
+  }
+
   function getCurrentConfig() {
-    return CONFIGS[parseInt(el.cfg.value, 10) || 0];
+    const list = cfgList();
+    const hit = list.filter(c => c.key === el.cfg.value)[0];
+    return hit || list.filter(c => c.key === 'G.G+G.G')[0] || list[0];
+  }
+
+  /* 重填构造下拉；当前选择若不在本模式列表内则退回 G.G+G.G */
+  function fillCfg() {
+    const list = cfgList();
+    const cur = list.some(c => c.key === el.cfg.value) ? el.cfg.value : 'G.G+G.G';
+    el.cfg.innerHTML = list.map(c =>
+      '<option value="' + c.key + '"' + (c.key === cur ? ' selected' : '') + '>' +
+      c.key + '</option>').join('');
+    el.cfg.value = cur;
+  }
+
+  /* 基础模式：锁死 PVB 夹胶 + 四边简支，并隐藏这三项与材料系数 */
+  function applyMode() {
+    const basic = mode === 'basic';
+    el.interRow.hidden = basic;
+    el.supportRow.hidden = basic;
+    el.matBox.hidden = basic;
+    if (basic) { el.inter.value = 'PVB'; el.support.value = 'four'; }
+    el.modeBasic.className = 'segbtn' + (basic ? ' on' : '');
+    el.modeAdv.className = 'segbtn' + (basic ? '' : ' on');
+    fillCfg();
   }
 
   /* 生成各组玻璃输入卡 */
@@ -946,7 +1006,8 @@ function tex2html(src) {
 
       h += counts.length > 1
         ? (il === 'SGP'
-            ? '<p class="hint">SGP：按 2.3.4 计算等效厚度，刚度用 t<sub>e,w</sub>、' +
+            ? '<p class="hint">SGP：等效厚度按 ' + SGP_REF +
+              ' 计算，刚度用 t<sub>e,w</sub>、' +
               '强度用 t<sub>e</sub>，计算书见第 ② 步。</p>'
             : '<p class="hint">等效厚度 t<sub>e</sub> = (Σ t<sub>i</sub>³)<sup>1/3</sup>，' +
               'PVB 不计入刚度。</p>')
@@ -977,7 +1038,7 @@ function tex2html(src) {
     const n = totalPlies(cfg.struct);
     el.cfgHint.innerHTML = cfg.note + '（共 ' + n + ' 片玻璃 / ' + cfg.struct.length + ' 个构造组）' +
       (sgp
-        ? '<br>SGP：按 2.3.4 计算等效厚度（G = ' + G_INTER.SGP + ' MPa）；' +
+        ? '<br>SGP：等效厚度按 ' + SGP_REF + ' 计算（G = ' + G_INTER.SGP + ' MPa）；' +
           '组内各片<b>整体工作</b>，荷载不再按片分配，应力用组等效厚度校核。'
         : '<br>PVB：等效厚度取 (Σ t³)<sup>1/3</sup>，不计胶片剪切传递；' +
           '荷载按单片厚度立方比分配，各片单独校核。');
@@ -1097,7 +1158,7 @@ function tex2html(src) {
       L: L1
     });
 
-    /* ② SGP 夹层等效厚度（仅 SGP，按 2.3.4） */
+    /* ② SGP 夹层等效厚度（仅 SGP，上海地标第 11.2.8 条） */
     if (sgp) {
       const L2s = [];
       r.groups.forEach((g, gi) => {
@@ -1134,7 +1195,7 @@ function tex2html(src) {
           f2(g.teS) + '\\ \\mathrm{mm}'));
       });
       S.push({
-        t: 'SGP 夹层等效厚度（2.3.4 方法）',
+        t: 'SGP 夹层等效厚度（' + SGP_REF + '）',
         n: 'SGP 剪切模量 G = ' + r.G + ' MPa（上海地标 50℃ / 1min），能传递剪力，' +
            '故夹层不再是简单叠合：先由 Γ 反映剪力传递程度，刚度用 t_e,w、强度用 t_e，' +
            '且均不大于玻璃加胶片的总厚度 t_max = Σt + t_v。',
@@ -1262,10 +1323,10 @@ function tex2html(src) {
         f2(g.flex.def) + '\\ \\mathrm{mm}'));
     });
     L5.push(fxl('限值', '[d]=\\frac{L}{' + N(p.defDiv) + '}',
-      '\\frac{' + L + '}{' + N(p.defDiv) + '}', f2(r.defLim) + '\\ \\mathrm{mm}'));
+      '\\frac{' + L + '}{' + N(p.defDiv) + '}', f0(r.defLim) + '\\ \\mathrm{mm}'));
     r.groups.forEach((g, gi) => {
       L5.push(fxl(nG === 1 ? '全截面' : '第' + (gi + 1) + '组', 'd\\le [d]',
-        f2(g.flex.def) + '\\le ' + f2(r.defLim),
+        f2(g.flex.def) + '\\le ' + f0(r.defLim),
         g.flex.ratio <= 1 ? '\\text{满足}' : '\\text{不满足}',
         g.flex.ratio <= 1 ? 'ok' : 'ng'));
     });
@@ -1354,23 +1415,23 @@ function tex2html(src) {
           (r.two ? '对边简支' : '四边简支') + ' · ' + p.interlayer + '</div></div>' +
       '<div class="item"><div class="k">挠度（最不利组）</div>' +
         '<div class="v">' + f3(maxF) + '</div>' +
-        '<div class="sub">' + badge(maxF) + ' &nbsp;限值 ' + f2(r.defLim) + ' mm</div></div>' +
+        '<div class="sub">' + badge(maxF) + ' &nbsp;限值 ' + f0(r.defLim) + ' mm</div></div>' +
       '<div class="item"><div class="k">强度（控制片）</div>' +
         '<div class="v">' + f3(maxS) + '</div>' +
         '<div class="sub">' + badge(maxS) + ' &nbsp;第 ' + (maxSi + 1) + ' 片 ' +
           f2(r.flat[maxSi].q.sigma) + ' / ' + r.flat[maxSi].q.fg + ' MPa</div></div>';
 
     document.getElementById('basic').innerHTML = [
-      ['宽长比 a/b', f3(r.ab)],
-      ['计算跨度 L', f2(r.L) + ' mm'],
+      ['宽长比 a/b', f2(r.ab)],
+      ['计算跨度 L', f0(r.L) + ' mm'],
       ['弯矩系数 m', f4(r.bm)],
       ['挠度系数 μ', f4(r.mu)],
       ['自重 G_k', K3(r.Gk) + ' kPa'],
       ['地震 E_k', K3(r.Ek) + ' kPa'],
-      ['挠度限值', f2(r.defLim) + ' mm'],
+      ['挠度限值', f0(r.defLim) + ' mm'],
       ['玻璃总厚', r.groups.flatMap(g => g.plies.map(q => q.t))
                     .reduce((s, x) => s + x, 0) + ' mm'],
-      ['面积', (p.a * p.b / 1e6).toFixed(3) + ' m²']
+      ['面积', (p.a * p.b / 1e6).toFixed(2) + ' m²']
     ].map(x => '<div><div class="k">' + x[0] + '</div><div class="v">' + x[1] + '</div></div>')
      .join('');
 
@@ -1430,10 +1491,16 @@ function tex2html(src) {
     document.querySelectorAll('#fxSteps .fxstep').forEach(d => { d.open = open; });
   }
 
-  el.cfg.innerHTML = CONFIGS
-    .map((c, i) => '<option value="' + i + '"' +
-      (c.key === 'G.G+G.G' ? ' selected' : '') + '>' + c.key + '</option>').join('');
   el.cfg.addEventListener('change', () => { buildPlyCards(); render(); });
+
+  /* 基础 / 高级 切换 */
+  [['modeBasic', 'basic'], ['modeAdv', 'adv']].forEach(pair => {
+    el[pair[0]].addEventListener('click', () => {
+      if (mode === pair[1]) return;
+      mode = pair[1];
+      applyMode(); syncOptions(); buildPlyCards(); render();
+    });
+  });
 
   el.fxOpen.addEventListener('click', () => setAllSteps(true));
   el.fxClose.addEventListener('click', () => setAllSteps(false));
@@ -1468,6 +1535,7 @@ function tex2html(src) {
   ['input', 'change'].forEach(t =>
     el.inter.addEventListener(t, () => { syncOptions(); buildPlyCards(); render(); }));
 
+  applyMode();
   buildPlyCards();
   render();
 })();
