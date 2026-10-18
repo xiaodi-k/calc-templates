@@ -860,6 +860,10 @@ function tex2html(src) {
 /* ===== 界面 ===== */
 (function () {
   const GL_TYPES = [['FT', 'FT 钢化'], ['HS', 'HS 半钢化'], ['AN', 'AN 浮法']];
+  /* 玻璃厚度固定档位（mm） */
+  const T_OPTS = [6, 8, 10, 12, 15, 19];
+  const snapT = v => T_OPTS.reduce((best, x) =>
+    Math.abs(x - v) < Math.abs(best - v) ? x : best, T_OPTS[0]);
 
   const el = {};
   ['cfg', 'cfgHint', 'plyHost', 'a', 'b', 'wk', 'ig', 'E', 'nu', 'gg',
@@ -933,8 +937,10 @@ function tex2html(src) {
                      (o[0] === s.type ? ' selected' : '') + '>' + o[1] + '</option>').join('') +
                  '</select></div>' +
                '<div><label for="plyT' + idx + '">玻璃 ' + (idx + 1) + ' 厚度</label>' +
-                 '<div class="row" style="margin-bottom:0"><input type="number" id="plyT' + idx +
-                   '" value="' + s.t + '" step="1" min="1" /><span class="unit">mm</span></div></div>' +
+                 '<div class="row" style="margin-bottom:0"><select id="plyT' + idx + '">' +
+                   T_OPTS.map(v => '<option value="' + v + '"' +
+                     (snapT(s.t) === v ? ' selected' : '') + '>' + v + '</option>').join('') +
+                 '</select><span class="unit">mm</span></div></div>' +
              '</div>';
       });
 
@@ -954,7 +960,7 @@ function tex2html(src) {
     for (let i = 0; i < n; i++) {
       const ti = document.getElementById('plyT' + i);
       const gi = document.getElementById('plyG' + i);
-      ti.addEventListener('input', () => { plyState[i].t = parseFloat(ti.value); render(); });
+      ti.addEventListener('change', () => { plyState[i].t = snapT(parseFloat(ti.value)); render(); });
       gi.addEventListener('change', () => { plyState[i].type = gi.value; render(); });
     }
   }
