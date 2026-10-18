@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>四边支承中空玻璃（G.G+G.G）</title>
+  <style>
+    :root {
+      --bg: #f6f7fb;
+      --card: #ffffff;
+      --text: #111111;
+      --muted: #6b7280;
+      --line: rgba(0, 0, 0, .10);
+      --ok: #1a7f37;
+      --ng: #c62828;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 0 24px 72px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                   "PingFang SC", "Microsoft YaHei", sans-serif;
+      font-size: 14px;
+    }
+
+    .topbar {
+      position: sticky; top: 0; z-index: 10;
+      display: flex; align-items: center; gap: 12px;
+      padding: 16px 0; margin-bottom: 20px;
+      background: var(--bg);
+      border-bottom: 1px solid var(--line);
+    }
+    .topbar h1 { font-size: 18px; font-weight: 800; margin: 0; letter-spacing: .3px; }
+    .topbar .spacer { flex: 1; }
+    .back { color: var(--muted); text-decoration: none; font-size: 13px; }
+    .back:hover { color: var(--text); }
+
+    main {
+      display: grid;
+      grid-template-columns: 340px minmax(0, 1fr);
+      gap: 20px;
+      align-items: start;
+      max-width: 1240px;
+      margin: 0 auto;
+    }
+    @media (max-width: 900px) {
+      main { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, .05);
+      overflow: hidden;
+    }
+    .card + .card { margin-top: 16px; }
+    .card > h2 {
+      margin: 0;
+      padding: 12px 16px;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: .5px;
+      color: var(--muted);
+      background: #fbfbfd;
+      border-bottom: 1px solid var(--line);
+    }
+    .card > .body { padding: 14px 16px 16px; }
+
+    .row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .row:last-child { margin-bottom: 0; }
+    .row label { flex: 1; color: #333; }
+    .row .unit { color: var(--muted); width: 34px; font-size: 12px; }
+
+    input[type="number"], select {
+      width: 92px;
+      padding: 7px 8px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      font: inherit;
+      color: var(--text);
+      background: #fff;
+    }
+    select { width: 104px; }
+    input[type="number"]:focus, select:focus { outline: 2px solid #dbe4ff; border-color: #b9c6f2; }
+
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
+    .grid2 .row { margin-bottom: 0; }
+    .grid2 label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+
+    details { margin-top: 4px; }
+    details > summary {
+      cursor: pointer; color: var(--muted); font-size: 12px; padding: 6px 0;
+      user-select: none;
+    }
+
+    button {
+      appearance: none; border: 0; padding: 8px 14px; border-radius: 10px;
+      font: inherit; font-weight: 700; cursor: pointer; background: #111; color: #fff;
+    }
+    button.ghost { background: #fff; color: #111; border: 1px solid var(--line); }
+    button:active { transform: scale(.98); }
+
+    .verdict {
+      display: flex; gap: 28px; flex-wrap: wrap;
+      padding: 16px;
+    }
+    .verdict .item .k { font-size: 12px; color: var(--muted); }
+    .verdict .item .v { font-size: 26px; font-weight: 900; line-height: 1.2; }
+    .verdict .item .sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .badge {
+      display: inline-block; padding: 3px 10px; border-radius: 999px;
+      font-size: 12px; font-weight: 800; color: #fff; background: var(--ok);
+    }
+    .badge.ng { background: var(--ng); }
+
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { padding: 8px 10px; text-align: right; border-bottom: 1px solid var(--line); }
+    th {
+      color: var(--muted); font-weight: 700; font-size: 12px;
+      background: #fbfbfd; white-space: nowrap;
+    }
+    th:first-child, td:first-child { text-align: left; }
+    tbody tr:last-child td { border-bottom: 0; }
+    td.num { font-variant-numeric: tabular-nums; }
+    .ok { color: var(--ok); font-weight: 700; }
+    .ng { color: var(--ng); font-weight: 700; }
+
+    .kv { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .kv .k { font-size: 12px; color: var(--muted); }
+    .kv .v { font-weight: 700; font-variant-numeric: tabular-nums; }
+
+    footer { max-width: 1240px; margin: 24px auto 0; color: var(--muted); font-size: 12px; line-height: 1.7; }
+
+    @media print {
+      body { background: #fff; padding: 0; }
+      .topbar { position: static; border-bottom: 0; }
+      .topbar button, .back { display: none; }
+      .card { box-shadow: none; border-color: #ddd; break-inside: avoid; }
+      main { display: block; }
+      main > .inputs { margin-bottom: 16px; }
+      .inputs .card > .body { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0 24px; }
+      .inputs details { display: none; }
+      footer { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <a class="back" href="index.html">← 返回首页</a>
+    <h1>四边支承中空玻璃承载力计算（G.G+G.G）</h1>
+    <span class="spacer"></span>
+    <button class="ghost" id="printBtn">打印 / 存 PDF</button>
+  </div>
+
+  <main>
+    <!-- ============ 输入 ============ -->
+    <div class="inputs">
+      <div class="card">
+        <h2>面板尺寸</h2>
+        <div class="body">
+          <div class="row">
+            <label for="a">短边 a</label>
+            <input type="number" id="a" value="1500" step="10" />
+            <span class="unit">mm</span>
+          </div>
+          <div class="row">
+            <label for="b">长边 b</label>
+            <input type="number" id="b" value="3000" step="10" />
+            <span class="unit">mm</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>外片夹层玻璃（室外侧）</h2>
+        <div class="body grid2">
+          <div>
+            <label for="t1">玻璃 1 厚度</label>
+            <div class="row">
+              <input type="number" id="t1" value="8" step="1" />
+            </div>
+          </div>
+          <div>
+            <label for="g1">玻璃 1 种类</label>
+            <select id="g1">
+              <option value="FT">FT 钢化</option>
+              <option value="HS" selected>HS 半钢化</option>
+              <option value="AN">AN 浮法</option>
+            </select>
+          </div>
+          <div>
+            <label for="t2">玻璃 2 厚度</label>
+            <div class="row">
+              <input type="number" id="t2" value="8" step="1" />
+            </div>
+          </div>
+          <div>
+            <label for="g2">玻璃 2 种类</label>
+            <select id="g2">
+              <option value="FT">FT 钢化</option>
+              <option value="HS" selected>HS 半钢化</option>
+              <option value="AN">AN 浮法</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>内片夹层玻璃（室内侧）</h2>
+        <div class="body grid2">
+          <div>
+            <label for="t3">玻璃 3 厚度</label>
+            <div class="row">
+              <input type="number" id="t3" value="8" step="1" />
+            </div>
+          </div>
+          <div>
+            <label for="g3">玻璃 3 种类</label>
+            <select id="g3">
+              <option value="FT">FT 钢化</option>
+              <option value="HS" selected>HS 半钢化</option>
+              <option value="AN">AN 浮法</option>
+            </select>
+          </div>
+          <div>
+            <label for="t4">玻璃 4 厚度</label>
+            <div class="row">
+              <input type="number" id="t4" value="8" step="1" />
+            </div>
+          </div>
+          <div>
+            <label for="g4">玻璃 4 种类</label>
+            <select id="g4">
+              <option value="FT">FT 钢化</option>
+              <option value="HS" selected>HS 半钢化</option>
+              <option value="AN">AN 浮法</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>荷载</h2>
+        <div class="body">
+          <div class="row">
+            <label for="wk">风荷载标准值 W<sub>k</sub></label>
+            <input type="number" id="wk" value="1.5" step="0.05" />
+            <span class="unit">kPa</span>
+          </div>
+          <div class="row">
+            <label for="ig">抗震设防烈度</label>
+            <select id="ig">
+              <option value="0.04">6 度 0.05g</option>
+              <option value="0.08" selected>7 度 0.10g</option>
+              <option value="0.12">7 度 0.15g</option>
+              <option value="0.16">8 度 0.20g</option>
+              <option value="0.24">8 度 0.30g</option>
+              <option value="0.32">9 度 0.40g</option>
+            </select>
+          </div>
+
+          <details>
+            <summary>材料与系数</summary>
+            <div class="grid2" style="margin-top:8px">
+              <div>
+                <label for="E">弹性模量 E</label>
+                <div class="row"><input type="number" id="E" value="72000" step="1000" /></div>
+              </div>
+              <div>
+                <label for="nu">泊松比 ν</label>
+                <div class="row"><input type="number" id="nu" value="0.2" step="0.01" /></div>
+              </div>
+              <div>
+                <label for="gg">玻璃密度 γ<sub>g</sub></label>
+                <div class="row"><input type="number" id="gg" value="25.6" step="0.1" /></div>
+              </div>
+              <div>
+                <label for="defdiv">挠度限值 a /</label>
+                <div class="row"><input type="number" id="defdiv" value="60" step="5" /></div>
+              </div>
+              <div>
+                <label for="gG">永久荷载 γ<sub>G</sub></label>
+                <div class="row"><input type="number" id="gG" value="1.3" step="0.1" /></div>
+              </div>
+              <div>
+                <label for="gw">风荷载 γ<sub>w</sub></label>
+                <div class="row"><input type="number" id="gw" value="1.5" step="0.1" /></div>
+              </div>
+              <div>
+                <label for="gE">地震 γ<sub>E</sub></label>
+                <div class="row"><input type="number" id="gE" value="1.4" step="0.1" /></div>
+              </div>
+              <div>
+                <label for="psE">ψ<sub>E</sub></label>
+                <div class="row"><input type="number" id="psE" value="0" step="0.1" /></div>
+              </div>
+              <div>
+                <label for="psw">ψ<sub>w</sub></label>
+                <div class="row"><input type="number" id="psw" value="0.2" step="0.1" /></div>
+              </div>
+            </div>
+          </details>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 输出 ============ -->
+    <div class="outputs">
+      <div class="card">
+        <h2>结论</h2>
+        <div class="verdict" id="verdict"></div>
+      </div>
+
+      <div class="card">
+        <h2>面板与荷载</h2>
+        <div class="body">
+          <div class="kv" id="basic"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>挠度校核（外片 / 内片）</h2>
+        <div class="body" id="flexTable"></div>
+      </div>
+
+      <div class="card">
+        <h2>强度校核（逐片）</h2>
+        <div class="body" id="strTable"></div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    公式与系数表取自 <code>Template_MathCAD\2.2 四边支承玻璃\2.2.2 中空玻璃计算（G.G+G.G）.xmcd</code>：
+    弯矩系数 m、挠度系数 μ 按宽长比 a/b 插值，折减系数 η 按 θ = w·a⁴/(E·t⁴) 插值，均取规范附录表的线性插值。
+    面板为四边简支，单位制 mm / N / MPa。
+  </footer>
+
+<script>
+/* ===== 计算核心 ===== */
+const AR   = [0, 0.2, 0.25, 0.33, 0.40, 0.50, 0.55, 0.60, 0.65, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95, 1.0];
+const BMY  = [0.1250, 0.1234, 0.1230, 0.1180, 0.1115, 0.1000, 0.0934, 0.0868,
+              0.0804, 0.0742, 0.0683, 0.0628, 0.0576, 0.0528, 0.0483, 0.0442];
+const MUY  = [0.01302, 0.01297, 0.01282, 0.01223, 0.01137, 0.01013, 0.00940, 0.00867,
+              0.00796, 0.00727, 0.00663, 0.00603, 0.00547, 0.00496, 0.00449, 0.00406];
+const TH   = [0, 5, 10, 20, 40, 60, 80, 100, 120, 150, 200, 250, 300, 350, 400, 1000];
+const ETAY = [1.00, 1.00, 0.96, 0.92, 0.84, 0.78, 0.73, 0.68, 0.65, 0.61, 0.57, 0.54,
+              0.52, 0.51, 0.50, 0.50];
+
+/* 玻璃强度设计值 f_g (MPa)：种类 + 厚度档 */
+const FG = {
+  FT: [84, 72, 59],
+  HS: [56, 48, 40],
+  AN: [28, 24, 20]
+};
+
+function linterp(xs, ys, x) {
+  const n = xs.length;
+  if (x <= xs[0]) return ys[0];
+  if (x >= xs[n - 1]) return ys[n - 1];
+  for (let i = 0; i < n - 1; i++) {
+    if (x >= xs[i] && x <= xs[i + 1]) {
+      const k = (x - xs[i]) / (xs[i + 1] - xs[i]);
+      return ys[i] + (ys[i + 1] - ys[i]) * k;
+    }
+  }
+  return ys[n - 1];
+}
+
+function fgOf(type, t) {
+  const row = FG[type] || FG.HS;
+  if (t <= 12) return row[0];
+  if (t <= 19) return row[1];
+  return row[2];
+}
+
+/* p: { a, b, t[4], types[4], wk(kPa), alpha, E(MPa), nu, gammaG(kN/m3),
+        gG, gw, gE, psE, psw, defDiv }
+   内部单位：mm / N / MPa，面荷载 N/mm² */
+function calcGlass(p) {
+  const a = p.a, b = p.b, t = p.t, E = p.E, nu = p.nu;
+  const gammaN = p.gammaG * 1e-6;      // kN/m³ → N/mm³
+  const wk = p.wk / 1000;              // kPa → N/mm²
+  const alpha = p.alpha;
+  const a4 = Math.pow(a, 4);
+
+  const te1 = Math.cbrt(Math.pow(t[0], 3) + Math.pow(t[1], 3));
+  const te2 = Math.cbrt(Math.pow(t[2], 3) + Math.pow(t[3], 3));
+  const te = [te1, te2];
+
+  const Gk = (t[0] + t[1] + t[2] + t[3]) * gammaN;
+  const Ek = 5 * alpha * Gk;
+  const Eki = t.map(x => 5 * alpha * gammaN * x);
+
+  const te1c = Math.pow(te1, 3), te2c = Math.pow(te2, 3);
+  const Wke1 = 1.1 * wk * te1c / (te1c + te2c);
+  const Wke2 = wk * te2c / (te1c + te2c);
+  const Wke = [Wke1, Wke2];
+
+  const c12 = Math.pow(t[0], 3) + Math.pow(t[1], 3);
+  const c34 = Math.pow(t[2], 3) + Math.pow(t[3], 3);
+  const Wk = [
+    Wke1 * Math.pow(t[0], 3) / c12,
+    Wke1 * Math.pow(t[1], 3) / c12,
+    Wke2 * Math.pow(t[2], 3) / c34,
+    Wke2 * Math.pow(t[3], 3) / c34
+  ];
+
+  const ab = a / b;
+  const mu = linterp(AR, MUY, ab);
+  const bm = linterp(AR, BMY, ab);
+  const defLim = a / p.defDiv;
+
+  const flex = [0, 1].map(i => {
+    const w = Wke[i], tt = te[i];
+    const D = E * Math.pow(tt, 3) / (12 * (1 - nu * nu));
+    const theta = w * a4 / (E * Math.pow(tt, 4));
+    const eta = linterp(TH, ETAY, theta);
+    const def = mu * w * a4 / D * eta;
+    return { D, theta, eta, def, ratio: def / defLim };
+  });
+
+  const strength = [0, 1, 2, 3].map(i => {
+    const ti = t[i];
+    const fg = fgOf(p.types[i], ti);
+    const theta = (Wk[i] + p.psE * Eki[i]) * a4 / (E * Math.pow(ti, 4));
+    const eta = linterp(TH, ETAY, theta);
+    const Sw = p.gw * Wk[i] + p.psE * p.gE * Eki[i];
+    const SE = p.gE * Eki[i] + p.psw * p.gw * Wk[i];
+    const Sd = Math.max(Sw, SE);
+    const sigma = 6 * bm * Sd * a * a * eta / (ti * ti);
+    return { fg, theta, eta, Sw, SE, Sd, sigma, ratio: sigma / fg };
+  });
+
+  return { te, Gk, Ek, Eki, Wke, Wk, mu, bm, ab, defLim, flex, strength };
+}
+/* ===== 计算核心结束 ===== */
+
+/* ===== 界面 ===== */
+(function () {
+  const ids = ['a', 'b', 't1', 't2', 't3', 't4', 'g1', 'g2', 'g3', 'g4', 'wk', 'ig',
+               'E', 'nu', 'gg', 'defdiv', 'gG', 'gw', 'gE', 'psE', 'psw'];
+  const el = {};
+  ids.forEach(id => { el[id] = document.getElementById(id); });
+
+  const f2 = x => x.toFixed(2);
+  const f3 = x => x.toFixed(3);
+  const f4 = x => x.toFixed(4);
+  const kPa = x => x * 1000;                       // N/mm² → kPa
+  const sci = x => x.toExponential(2);
+
+  function readInputs() {
+    const num = id => parseFloat(el[id].value);
+    return {
+      a: num('a'), b: num('b'),
+      t: [num('t1'), num('t2'), num('t3'), num('t4')],
+      types: [el.g1.value, el.g2.value, el.g3.value, el.g4.value],
+      wk: num('wk'),
+      alpha: parseFloat(el.ig.value),
+      E: num('E'), nu: num('nu'), gammaG: num('gg'), defDiv: num('defdiv'),
+      gG: num('gG'), gw: num('gw'), gE: num('gE'), psE: num('psE'), psw: num('psw')
+    };
+  }
+
+  function valid(p) {
+    const vals = [p.a, p.b, p.wk, p.E, p.nu, p.gammaG, p.defDiv, p.gG, p.gw, p.gE, p.psE, p.psw]
+      .concat(p.t);
+    return vals.every(v => isFinite(v) && v > 0) && p.a > 0 && p.b > 0 &&
+           isFinite(p.alpha) && p.defDiv > 0;
+  }
+
+  function badge(r) {
+    return '<span class="badge' + (r > 1 ? ' ng' : '') + '">' + (r > 1 ? 'NG' : 'OK') + '</span>';
+  }
+  function ratioCell(r) {
+    return '<td class="num ' + (r > 1 ? 'ng' : 'ok') + '">' + f3(r) + '</td>';
+  }
+
+  function render() {
+    const p = readInputs();
+    if (!valid(p)) return;
+    const r = calcGlass(p);
+
+    // 结论
+    let maxS = 0, maxSi = 0;
+    r.strength.forEach((s, i) => { if (s.ratio > maxS) { maxS = s.ratio; maxSi = i; } });
+    let maxF = 0, maxFi = 0;
+    r.flex.forEach((f, i) => { if (f.ratio > maxF) { maxF = f.ratio; maxFi = i; } });
+
+    document.getElementById('verdict').innerHTML =
+      '<div class="item">' +
+        '<div class="k">最大应力比（玻璃 ' + (maxSi + 1) + '）</div>' +
+        '<div class="v ' + (maxS > 1 ? 'ng' : 'ok') + '">' + f3(maxS) + '</div>' +
+        '<div class="sub">' + badge(maxS) + ' σ = ' + f2(r.strength[maxSi].sigma) +
+        ' / f<sub>g</sub> = ' + r.strength[maxSi].fg + ' MPa</div>' +
+      '</div>' +
+      '<div class="item">' +
+        '<div class="k">最大挠度比（' + (maxFi === 0 ? '外片' : '内片') + '）</div>' +
+        '<div class="v ' + (maxF > 1 ? 'ng' : 'ok') + '">' + f3(maxF) + '</div>' +
+        '<div class="sub">' + badge(maxF) + ' ' + f2(r.flex[maxFi].def) +
+        ' / ' + f2(r.defLim) + ' mm</div>' +
+      '</div>' +
+      '<div class="item">' +
+        '<div class="k">面板</div>' +
+        '<div class="v">' + f2(p.a) + ' × ' + f2(p.b) + '</div>' +
+        '<div class="sub">a/b = ' + f3(r.ab) + '，等效厚度 ' + f2(r.te[0]) + ' / ' + f2(r.te[1]) + ' mm</div>' +
+      '</div>';
+
+    // 面板与荷载
+    document.getElementById('basic').innerHTML = [
+      ['短边 a', f2(p.a) + ' mm'],
+      ['长边 b', f2(p.b) + ' mm'],
+      ['外片等效厚 t<sub>e1</sub>', f2(r.te[0]) + ' mm'],
+      ['内片等效厚 t<sub>e2</sub>', f2(r.te[1]) + ' mm'],
+      ['弯矩系数 m', f4(r.bm)],
+      ['挠度系数 μ', f4(r.mu)],
+      ['玻璃自重 G<sub>k</sub>', f3(kPa(r.Gk)) + ' kPa'],
+      ['地震作用 E<sub>k</sub>', f3(kPa(r.Ek)) + ' kPa'],
+      ['外片分配 W<sub>ke1</sub>', f3(kPa(r.Wke[0])) + ' kPa'],
+      ['内片分配 W<sub>ke2</sub>', f3(kPa(r.Wke[1])) + ' kPa'],
+      ['单片 W<sub>k1</sub>~W<sub>k4</sub>',
+        r.Wk.map(w => f2(kPa(w))).join(' / ') + ' kPa'],
+      ['单片 E<sub>k1</sub>~E<sub>k4</sub>',
+        r.Eki.map(w => f3(kPa(w))).join(' / ') + ' kPa']
+    ].map(([k, v]) => '<div><div class="k">' + k + '</div><div class="v">' + v + '</div></div>').join('');
+
+    // 挠度
+    let fh = '<table><thead><tr><th>位置</th><th>刚度 D (N·mm)</th><th>θ</th>' +
+             '<th>η</th><th>挠度 (mm)</th><th>限值 (mm)</th><th>挠度比</th></tr></thead><tbody>';
+    ['外片', '内片'].forEach((nm, i) => {
+      const f = r.flex[i];
+      fh += '<tr><td>' + nm + '</td>' +
+            '<td class="num">' + sci(f.D) + '</td>' +
+            '<td class="num">' + f3(f.theta) + '</td>' +
+            '<td class="num">' + f4(f.eta) + '</td>' +
+            '<td class="num">' + f2(f.def) + '</td>' +
+            '<td class="num">' + f2(r.defLim) + '</td>' +
+            ratioCell(f.ratio) + '</tr>';
+    });
+    document.getElementById('flexTable').innerHTML = fh + '</tbody></table>';
+
+    // 强度
+    let sh = '<table><thead><tr><th>玻璃</th><th>厚度 (mm)</th><th>种类</th>' +
+             '<th>f<sub>g</sub> (MPa)</th><th>θ</th><th>η</th>' +
+             '<th>S<sub>d</sub> (kPa)</th><th>σ (MPa)</th><th>应力比</th></tr></thead><tbody>';
+    const TN = { FT: 'FT 钢化', HS: 'HS 半钢化', AN: 'AN 浮法' };
+    r.strength.forEach((s, i) => {
+      sh += '<tr><td>玻璃 ' + (i + 1) + '</td>' +
+            '<td class="num">' + p.t[i] + '</td>' +
+            '<td class="num">' + (TN[p.types[i]] || '') + '</td>' +
+            '<td class="num">' + s.fg + '</td>' +
+            '<td class="num">' + f3(s.theta) + '</td>' +
+            '<td class="num">' + f4(s.eta) + '</td>' +
+            '<td class="num">' + f3(kPa(s.Sd)) + '</td>' +
+            '<td class="num">' + f2(s.sigma) + '</td>' +
+            ratioCell(s.ratio) + '</tr>';
+    });
+    document.getElementById('strTable').innerHTML = sh + '</tbody></table>';
+  }
+
+  ids.forEach(id => {
+    el[id].addEventListener('input', render);
+    el[id].addEventListener('change', render);
+  });
+  document.getElementById('printBtn').addEventListener('click', () => window.print());
+
+  render();
+})();
+</script>
+</body>
+</html>
