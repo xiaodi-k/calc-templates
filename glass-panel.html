@@ -206,28 +206,28 @@
       gap: 10px; margin-bottom: 12px;
     }
     .inhead .colcap { margin-bottom: 0; }
-    .ios { display: inline-flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+    .ios { display: inline-flex; align-items: center; gap: 7px; flex: 0 0 auto; }
     .ios-lbl {
-      font-size: 12px; font-weight: 800; letter-spacing: .5px;
+      font-size: 11px; font-weight: 800; letter-spacing: .5px;
       color: var(--muted); cursor: pointer; user-select: none;
       transition: color .18s ease;
     }
     .ios-lbl.on { color: var(--in); }
     .ios-sw {
       position: relative; flex: 0 0 auto;
-      width: 52px; height: 28px; padding: 0; border: 0; border-radius: 999px;
+      width: 40px; height: 22px; padding: 0; border: 0; border-radius: 999px;
       background: #c3c3c9;                     /* 基础：暗 */
       box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .07);
       transition: background .22s ease;
     }
     .ios-sw::after {
       content: ''; position: absolute; top: 2px; left: 2px;
-      width: 24px; height: 24px; border-radius: 50%; background: #fff;
+      width: 18px; height: 18px; border-radius: 50%; background: #fff;
       box-shadow: 0 1px 3px rgba(0, 0, 0, .28);
       transition: transform .22s cubic-bezier(.32, .72, 0, 1);
     }
     .ios-sw.on { background: var(--in); }       /* 高级：亮 */
-    .ios-sw.on::after { transform: translateX(24px); }
+    .ios-sw.on::after { transform: translateX(18px); }
     .ios-sw:focus-visible { outline: 2px solid #cfdcff; outline-offset: 2px; }
     .ios-sw:active { transform: none; }   /* 覆盖 button:active 的缩放，开关不该抖 */
 
@@ -547,7 +547,7 @@
     弯矩系数 m、挠度系数 μ 按宽长比 a/b 插值，折减系数 η 按 θ = w·a⁴/(E·t⁴) 插值，均取规范附录表线性插值。
     四边简支取中部强度、对边简支取边缘强度；PVB 层不计剪切传递（不计入等效厚度），
     SGP 夹层等效厚度按 DG/TJ 08-56-2019 上海地标 第 11.2.8 条计算。单位制 mm / N / MPa。
-    <span class="ver">版本 2026-10-18 23:25</span>
+    <span class="ver">版本 2026-10-18 23:28</span>
   </footer>
 
 <script>
