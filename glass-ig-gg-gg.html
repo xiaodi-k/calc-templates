@@ -6,13 +6,24 @@
   <title>四边支承中空玻璃（G.G+G.G）</title>
   <style>
     :root {
-      --bg: #f6f7fb;
+      --bg: #f2f4f9;
       --card: #ffffff;
       --text: #111111;
       --muted: #6b7280;
       --line: rgba(0, 0, 0, .10);
       --ok: #1a7f37;
       --ng: #c62828;
+
+      /* 输入区：蓝 */
+      --in: #2f6feb;
+      --in-soft: #e9f0ff;
+      --in-band: #e8eefb;
+      --in-line: #d2dff7;
+      /* 输出区：绿 */
+      --out: #0e7c66;
+      --out-soft: #e5f4f0;
+      --out-line: #c8e5dc;
+      --out-band: #edf7f4;
     }
     * { box-sizing: border-box; }
     body {
@@ -39,7 +50,7 @@
 
     main {
       display: grid;
-      grid-template-columns: 340px minmax(0, 1fr);
+      grid-template-columns: 364px minmax(0, 1fr);
       gap: 20px;
       align-items: start;
       max-width: 1240px;
@@ -69,26 +80,91 @@
     }
     .card > .body { padding: 14px 16px 16px; }
 
+    /* ===== 输入行 ===== */
     .row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
     .row:last-child { margin-bottom: 0; }
-    .row label { flex: 1; color: #333; }
-    .row .unit { color: var(--muted); width: 34px; font-size: 12px; }
+    .row label { flex: 0 1 auto; font-size: 13px; color: #333; white-space: nowrap; }
+    .row .unit {
+      flex: none; width: 34px; font-size: 12px;
+      color: var(--muted); text-align: right;
+    }
+    /* 行内的输入框：按剩余空间伸展，不撑破行 */
+    .row > input[type="number"], .row > select {
+      width: auto; flex: 1 1 96px; min-width: 0;
+    }
+
+    /* ===== 输入 / 输出 分区配色 ===== */
+    .inputs, .outputs { min-width: 0; }
+    .inputs {
+      background: var(--in-band);
+      border: 1px solid var(--in-line);
+      border-radius: 14px;
+      padding: 14px;
+    }
+    .outputs {
+      background: var(--out-band);
+      border: 1px solid var(--out-line);
+      border-radius: 14px;
+      padding: 14px;
+    }
+
+    /* 卡片：左侧色条 + 同色标题条 */
+    .inputs > .card {
+      border-left: 3px solid var(--in);
+      box-shadow: 0 3px 10px rgba(20, 50, 100, .05);
+    }
+    .inputs > .card > h2 {
+      background: var(--in-soft); color: var(--in);
+      border-bottom-color: var(--in-line);
+    }
+    .outputs > .card {
+      border-left: 3px solid var(--out);
+      box-shadow: 0 3px 10px rgba(10, 60, 50, .05);
+    }
+    .outputs > .card > h2 {
+      background: var(--out-soft); color: var(--out);
+      border-bottom-color: var(--out-line);
+    }
+
+    /* 结论卡再重一档 */
+    .outputs > .card.lead > h2 { font-size: 14px; letter-spacing: 1px; }
+    .outputs > .card.lead > .verdict {
+      background: linear-gradient(180deg, #eef8f5 0%, #ffffff 100%);
+    }
+
+    .colcap {
+      display: inline-flex; align-items: center; gap: 7px;
+      margin-bottom: 12px; padding: 5px 13px; border-radius: 999px;
+      font-size: 12px; font-weight: 800; letter-spacing: 1px;
+    }
+    .colcap::before {
+      content: ''; width: 7px; height: 7px; border-radius: 50%;
+      background: currentColor;
+    }
+    .colcap.in  { background: #fff; color: var(--in);  box-shadow: 0 1px 4px rgba(20, 50, 100, .10); }
+    .colcap.out { background: #fff; color: var(--out); box-shadow: 0 1px 4px rgba(20, 50, 100, .10); }
 
     input[type="number"], select {
-      width: 92px;
-      padding: 7px 8px;
-      border: 1px solid var(--line);
+      width: 100%;
+      padding: 7px 9px;
+      border: 1px solid #d5dded;
       border-radius: 8px;
       font: inherit;
       color: var(--text);
-      background: #fff;
+      background: #fcfdff;
+      font-variant-numeric: tabular-nums;
     }
-    select { width: 104px; }
-    input[type="number"]:focus, select:focus { outline: 2px solid #dbe4ff; border-color: #b9c6f2; }
+    input[type="number"] { text-align: right; }
+    select { cursor: pointer; }
+    input[type="number"]:focus, select:focus {
+      outline: 2px solid #cfdcff; border-color: var(--in); background: #fff;
+    }
 
     .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
-    .grid2 .row { margin-bottom: 0; }
-    .grid2 label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+    .grid2 label {
+      display: block; font-size: 12px; color: var(--muted);
+      margin-bottom: 4px; white-space: nowrap;
+    }
 
     details { margin-top: 4px; }
     details > summary {
@@ -200,6 +276,15 @@
       .topbar button, .back { display: none; }
       .card { box-shadow: none; border-color: #ddd; break-inside: avoid; }
       main { display: block; }
+      .colcap { display: none; }
+      .inputs, .outputs {
+        background: none; border: 0; border-radius: 0; padding: 0;
+      }
+      .inputs > .card, .outputs > .card { box-shadow: none; border-left-width: 1px; }
+      .inputs > .card > h2, .outputs > .card > h2 {
+        background: #f4f4f6; color: #333;
+      }
+      .outputs > .card.lead > .verdict { background: #fff; }
       main > .inputs { margin-bottom: 16px; }
       .inputs .card > .body { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0 24px; }
       .inputs details { display: none; }
@@ -223,6 +308,8 @@
   <main>
     <!-- ============ 输入 ============ -->
     <div class="inputs">
+      <div class="colcap in">输入 INPUT</div>
+
       <div class="card">
         <h2>面板尺寸</h2>
         <div class="body">
@@ -374,7 +461,9 @@
 
     <!-- ============ 输出 ============ -->
     <div class="outputs">
-      <div class="card">
+      <div class="colcap out">输出 OUTPUT</div>
+
+      <div class="card lead">
         <h2>结论</h2>
         <div class="verdict" id="verdict"></div>
       </div>
