@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>计算模板</title>
+  <style>
+    :root {
+      --bg: #f6f7fb;
+      --card: #ffffff;
+      --text: #111111;
+      --muted: #6b7280;
+      --line: rgba(0, 0, 0, .10);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 48px 24px 72px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                   "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+    .wrap { width: min(760px, 100%); margin: 0 auto; }
+    h1 { font-size: 24px; font-weight: 800; margin: 0 0 6px; letter-spacing: .5px; }
+    .sub { color: var(--muted); font-size: 14px; margin: 0 0 28px; min-height: 1em; }
+
+    #list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, .05);
+      transition: box-shadow .15s ease, transform .05s ease;
+    }
+    .card:hover { box-shadow: 0 12px 28px rgba(0, 0, 0, .09); }
+    .card:active { transform: scale(.995); }
+    .card a { display: block; padding: 16px 18px; text-decoration: none; color: inherit; }
+    .name { font-size: 16px; font-weight: 700; }
+    .note { margin-top: 4px; font-size: 13px; color: var(--muted); }
+
+    .empty {
+      background: var(--card);
+      border: 1px dashed var(--line);
+      border-radius: 12px;
+      padding: 32px 24px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.8;
+    }
+    code {
+      background: #eef0f5;
+      padding: 2px 6px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>计算模板</h1>
+    <p class="sub" id="count"></p>
+
+    <ul id="list"></ul>
+    <div class="empty" id="empty" hidden>
+      还没有模板。<br />
+      在本文件的 <code>calcs</code> 数组里加一条，这里就会出现。
+    </div>
+  </div>
+
+<script>
+/* =================================================================
+   使用约定
+   —— 每做一份计算模板，把 .html 放进本目录，然后在下面加一条记录：
+
+     { name: "玻璃面板验算", file: "glass-panel.html", note: "" }
+
+   name：首页显示的名字
+   file：文件名，用相对路径，和 index.html 放同一个目录
+   note：一行备注，可留空
+
+   —— 数组为空时不显示提示以外的任何东西。
+================================================================= */
+const calcs = [];
+
+const listEl  = document.getElementById("list");
+const emptyEl = document.getElementById("empty");
+const countEl = document.getElementById("count");
+
+function render() {
+  listEl.innerHTML = "";
+
+  calcs.forEach(calc => {
+    const li = document.createElement("li");
+    li.className = "card";
+
+    const a = document.createElement("a");
+    a.href = calc.file;
+
+    const name = document.createElement("div");
+    name.className = "name";
+    name.textContent = calc.name;
+    a.appendChild(name);
+
+    if (calc.note) {
+      const note = document.createElement("div");
+      note.className = "note";
+      note.textContent = calc.note;
+      a.appendChild(note);
+    }
+
+    li.appendChild(a);
+    listEl.appendChild(li);
+  });
+
+  emptyEl.hidden = calcs.length > 0;
+  countEl.textContent = calcs.length ? calcs.length + " 份模板" : "";
+}
+
+render();
+</script>
+</body>
+</html>
