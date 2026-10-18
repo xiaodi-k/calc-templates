@@ -26,6 +26,8 @@
       --out-band: #edf7f4;
     }
     * { box-sizing: border-box; }
+    /* 必须 !important：.row/.grid2 自己带 display，会盖掉 UA 的 [hidden]{display:none} */
+    [hidden] { display: none !important; }
     body {
       margin: 0;
       padding: 0 24px 72px;
@@ -198,24 +200,36 @@
     button.ghost { background: #fff; color: #111; border: 1px solid var(--line); }
     button:active { transform: scale(.98); }
 
-    /* 输入列顶部：左侧 INPUT 徽标，右侧 基础/高级 分段切换 */
+    /* 输入列顶部：左侧 INPUT 徽标，右侧 基础/高级 iOS 风格滑动开关 */
     .inhead {
       display: flex; align-items: center; justify-content: space-between;
       gap: 10px; margin-bottom: 12px;
     }
     .inhead .colcap { margin-bottom: 0; }
-    .seg {
-      display: inline-flex; border: 1px solid var(--in-line);
-      border-radius: 999px; overflow: hidden; background: #fff; flex: 0 0 auto;
-      box-shadow: 0 1px 4px rgba(20, 50, 100, .10);
+    .ios { display: inline-flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+    .ios-lbl {
+      font-size: 12px; font-weight: 800; letter-spacing: .5px;
+      color: var(--muted); cursor: pointer; user-select: none;
+      transition: color .18s ease;
     }
-    .segbtn {
-      flex: 0 0 auto; padding: 5px 13px; border: 0; border-radius: 0;
-      background: transparent; color: var(--muted); font-weight: 700; font-size: 12px;
-      letter-spacing: .5px; box-shadow: none;
+    .ios-lbl.on { color: var(--in); }
+    .ios-sw {
+      position: relative; flex: 0 0 auto;
+      width: 52px; height: 28px; padding: 0; border: 0; border-radius: 999px;
+      background: #c3c3c9;                     /* 基础：暗 */
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .07);
+      transition: background .22s ease;
     }
-    .segbtn + .segbtn { border-left: 1px solid var(--in-line); }
-    .segbtn.on { background: var(--in); color: #fff; }
+    .ios-sw::after {
+      content: ''; position: absolute; top: 2px; left: 2px;
+      width: 24px; height: 24px; border-radius: 50%; background: #fff;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, .28);
+      transition: transform .22s cubic-bezier(.32, .72, 0, 1);
+    }
+    .ios-sw.on { background: var(--in); }       /* 高级：亮 */
+    .ios-sw.on::after { transform: translateX(24px); }
+    .ios-sw:focus-visible { outline: 2px solid #cfdcff; outline-offset: 2px; }
+    .ios-sw:active { transform: none; }   /* 覆盖 button:active 的缩放，开关不该抖 */
 
     .verdict { display: flex; gap: 28px; flex-wrap: wrap; padding: 16px; }
     .verdict .item .k { font-size: 12px; color: var(--muted); }
@@ -311,7 +325,7 @@
       .card { box-shadow: none; border-color: #ddd; break-inside: avoid; }
       main { display: block; }
       .colcap { display: none; }
-      .seg { display: none; }
+      .ios { display: none; }
       .inputs, .outputs {
         background: none; border: 0; border-radius: 0; padding: 0;
       }
@@ -345,9 +359,12 @@
     <div class="inputs">
       <div class="inhead">
         <div class="colcap in">输入 INPUT</div>
-        <div class="seg">
-          <button type="button" id="modeBasic" class="segbtn on">基础</button>
-          <button type="button" id="modeAdv" class="segbtn">高级</button>
+        <div class="ios">
+          <span class="ios-lbl on" id="lblBasic">基础</span>
+          <button type="button" class="ios-sw" id="modeSw"
+                  role="switch" aria-checked="false"
+                  title="基础：5 种常用构造、PVB 夹胶、四边简支　／　高级：9 种构造、可选 SGP 与对边支承"></button>
+          <span class="ios-lbl" id="lblAdv">高级</span>
         </div>
       </div>
 
@@ -530,7 +547,7 @@
     弯矩系数 m、挠度系数 μ 按宽长比 a/b 插值，折减系数 η 按 θ = w·a⁴/(E·t⁴) 插值，均取规范附录表线性插值。
     四边简支取中部强度、对边简支取边缘强度；PVB 层不计剪切传递（不计入等效厚度），
     SGP 夹层等效厚度按 DG/TJ 08-56-2019 上海地标 第 11.2.8 条计算。单位制 mm / N / MPa。
-    <span class="ver">版本 2026-10-18 23:20</span>
+    <span class="ver">版本 2026-10-18 23:25</span>
   </footer>
 
 <script>
@@ -903,7 +920,7 @@ function tex2html(src) {
   ['cfg', 'cfgHint', 'plyHost', 'a', 'b', 'wk', 'ig', 'E', 'nu', 'gg',
    'defdiv', 'gG', 'gw', 'gE', 'psE', 'psw', 'printBtn', 'fxOpen', 'fxClose',
    'support', 'spanSide', 'spanRow', 'spanHint', 'inter', 'tv',
-   'modeBasic', 'modeAdv', 'interRow', 'supportRow', 'matBox']
+   'modeSw', 'lblBasic', 'lblAdv', 'interRow', 'supportRow', 'matBox']
     .forEach(id => { el[id] = document.getElementById(id); });
 
   const f0 = x => x.toFixed(0);
@@ -964,9 +981,12 @@ function tex2html(src) {
     el.interRow.hidden = basic;
     el.supportRow.hidden = basic;
     el.matBox.hidden = basic;
+    /* 基础模式把这两项定死：PVB 夹胶 + 四边简支（隐藏后不再给用户任何入口） */
     if (basic) { el.inter.value = 'PVB'; el.support.value = 'four'; }
-    el.modeBasic.className = 'segbtn' + (basic ? ' on' : '');
-    el.modeAdv.className = 'segbtn' + (basic ? '' : ' on');
+    el.modeSw.className = 'ios-sw' + (basic ? '' : ' on');
+    el.modeSw.setAttribute('aria-checked', basic ? 'false' : 'true');
+    el.lblBasic.className = 'ios-lbl' + (basic ? ' on' : '');
+    el.lblAdv.className = 'ios-lbl' + (basic ? '' : ' on');
     fillCfg();
   }
 
@@ -1500,14 +1520,15 @@ function tex2html(src) {
 
   el.cfg.addEventListener('change', () => { buildPlyCards(); render(); });
 
-  /* 基础 / 高级 切换 */
-  [['modeBasic', 'basic'], ['modeAdv', 'adv']].forEach(pair => {
-    el[pair[0]].addEventListener('click', () => {
-      if (mode === pair[1]) return;
-      mode = pair[1];
-      applyMode(); syncOptions(); buildPlyCards(); render();
-    });
-  });
+  /* 基础 / 高级 切换：开关本体与两侧文字都可点 */
+  function switchMode(m) {
+    if (mode === m) return;
+    mode = m;
+    applyMode(); syncOptions(); buildPlyCards(); render();
+  }
+  el.modeSw.addEventListener('click', () => switchMode(mode === 'basic' ? 'adv' : 'basic'));
+  el.lblBasic.addEventListener('click', () => switchMode('basic'));
+  el.lblAdv.addEventListener('click', () => switchMode('adv'));
 
   el.fxOpen.addEventListener('click', () => setAllSteps(true));
   el.fxClose.addEventListener('click', () => setAllSteps(false));
