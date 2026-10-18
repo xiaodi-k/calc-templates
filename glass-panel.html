@@ -198,15 +198,21 @@
     button.ghost { background: #fff; color: #111; border: 1px solid var(--line); }
     button:active { transform: scale(.98); }
 
-    /* 基础 / 高级 分段切换 */
+    /* 输入列顶部：左侧 INPUT 徽标，右侧 基础/高级 分段切换 */
+    .inhead {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 10px; margin-bottom: 12px;
+    }
+    .inhead .colcap { margin-bottom: 0; }
     .seg {
       display: inline-flex; border: 1px solid var(--in-line);
-      border-radius: 9px; overflow: hidden; background: #fff; flex: 1 1 auto;
+      border-radius: 999px; overflow: hidden; background: #fff; flex: 0 0 auto;
+      box-shadow: 0 1px 4px rgba(20, 50, 100, .10);
     }
     .segbtn {
-      flex: 1 1 0; padding: 6px 10px; border: 0; border-radius: 0;
-      background: transparent; color: var(--muted); font-weight: 700; font-size: 13px;
-      box-shadow: none;
+      flex: 0 0 auto; padding: 5px 13px; border: 0; border-radius: 0;
+      background: transparent; color: var(--muted); font-weight: 700; font-size: 12px;
+      letter-spacing: .5px; box-shadow: none;
     }
     .segbtn + .segbtn { border-left: 1px solid var(--in-line); }
     .segbtn.on { background: var(--in); color: #fff; }
@@ -239,6 +245,7 @@
     .kv .v { font-weight: 700; font-variant-numeric: tabular-nums; }
 
     footer { max-width: 1280px; margin: 24px auto 0; color: var(--muted); font-size: 12px; line-height: 1.7; }
+    footer .ver { display: block; margin-top: 6px; opacity: .7; font-variant-numeric: tabular-nums; }
 
     /* ===== 公式区 ===== */
     .card > h2.fxhead { display: flex; align-items: center; gap: 8px; }
@@ -304,6 +311,7 @@
       .card { box-shadow: none; border-color: #ddd; break-inside: avoid; }
       main { display: block; }
       .colcap { display: none; }
+      .seg { display: none; }
       .inputs, .outputs {
         background: none; border: 0; border-radius: 0; padding: 0;
       }
@@ -335,10 +343,8 @@
   <main>
     <!-- ============ 输入 ============ -->
     <div class="inputs">
-      <div class="colcap in">输入 INPUT</div>
-
-      <div class="row" style="margin-bottom:14px">
-        <label>模式</label>
+      <div class="inhead">
+        <div class="colcap in">输入 INPUT</div>
         <div class="seg">
           <button type="button" id="modeBasic" class="segbtn on">基础</button>
           <button type="button" id="modeAdv" class="segbtn">高级</button>
@@ -524,6 +530,7 @@
     弯矩系数 m、挠度系数 μ 按宽长比 a/b 插值，折减系数 η 按 θ = w·a⁴/(E·t⁴) 插值，均取规范附录表线性插值。
     四边简支取中部强度、对边简支取边缘强度；PVB 层不计剪切传递（不计入等效厚度），
     SGP 夹层等效厚度按 DG/TJ 08-56-2019 上海地标 第 11.2.8 条计算。单位制 mm / N / MPa。
+    <span class="ver">版本 2026-10-18 23:20</span>
   </footer>
 
 <script>
