@@ -326,6 +326,18 @@
             <label for="cfg">玻璃配置</label>
             <select id="cfg" style="flex:1 1 auto"></select>
           </div>
+          <div class="row">
+            <label for="inter">夹胶片</label>
+            <select id="inter">
+              <option value="PVB" selected>PVB（不计剪切传递）</option>
+              <option value="SGP">SGP（按 2.3.4 算等效厚度）</option>
+            </select>
+          </div>
+          <div class="row" id="tvRow" hidden>
+            <label for="tv">胶片厚 t<sub>v</sub></label>
+            <input type="number" id="tv" value="2.28" step="0.38" />
+            <span class="unit">mm</span>
+          </div>
           <p class="hint" id="cfgHint"></p>
         </div>
       </div>
@@ -334,8 +346,22 @@
       <div id="plyHost"></div>
 
       <div class="card">
-        <h2>面板尺寸</h2>
+        <h2>面板尺寸与支承</h2>
         <div class="body">
+          <div class="row">
+            <label for="support">支承方式</label>
+            <select id="support">
+              <option value="four" selected>四边简支</option>
+              <option value="two">对边简支</option>
+            </select>
+          </div>
+          <div class="row" id="spanRow" hidden>
+            <label for="spanSide">支承边</label>
+            <select id="spanSide">
+              <option value="b" selected>两条短边 → 跨度 = 长边</option>
+              <option value="a">两条长边 → 跨度 = 短边</option>
+            </select>
+          </div>
           <div class="row">
             <label for="a">短边 a</label>
             <input type="number" id="a" value="1500" step="10" />
@@ -346,6 +372,7 @@
             <input type="number" id="b" value="3000" step="10" />
             <span class="unit">mm</span>
           </div>
+          <p class="hint" id="spanHint"></p>
         </div>
       </div>
 
@@ -476,8 +503,14 @@ const TH   = [0, 5, 10, 20, 40, 60, 80, 100, 120, 150, 200, 250, 300, 350, 400, 
 const ETAY = [1.00, 1.00, 0.96, 0.92, 0.84, 0.78, 0.73, 0.68, 0.65, 0.61, 0.57, 0.54,
               0.52, 0.51, 0.50, 0.50];
 
-/* 玻璃强度设计值 f_g (MPa)：种类 + 厚度档 ≤12 / ≤19 / >19 */
-const FG = { FT: [84, 72, 59], HS: [56, 48, 40], AN: [28, 24, 20] };
+/* 玻璃强度设计值 f_g (MPa)：种类 + 厚度档 ≤12 / ≤19 / >19
+   四边支承取中部强度；对边简支时玻璃边缘受力，按边缘强度取值（2.3 系列模板） */
+const FG_FOUR = { FT: [84, 72, 59], HS: [56, 48, 40], AN: [28, 24, 20] };
+const FG_EDGE = { FT: [67, 58, 47], HS: [44, 38, 32], AN: [22, 19, 16] };
+const FG = FG_FOUR;
+
+/* 夹胶层剪切模量 G (MPa)：上海地标，取 50℃ / 1min 时的参数（2.3.4） */
+const G_INTER = { PVB: 0.44, SGP: 11.3 };
 
 /* 构造型式：每组一个数组，元素个数 = 该组的玻璃片数
    '.' 表示 PVB 夹胶（同组），'+' 表示中空腔（分组） */
@@ -506,11 +539,58 @@ function linterp(xs, ys, x) {
   return ys[n - 1];
 }
 
-function fgOf(type, t) {
-  const row = FG[type] || FG.HS;
+function fgOf(type, t, support) {
+  const table = support === 'two' ? FG_EDGE : FG_FOUR;
+  const row = table[type] || table.HS;
   if (t <= 12) return row[0];
   if (t <= 19) return row[1];
   return row[2];
+}
+
+/* ---- 夹层玻璃等效厚度（SGP 按 2.3.4 方法）----
+   t_s   = 0.5(t1+t2) + t_v
+   t_s.1 = t_s·t1/(t1+t2) ,  t_s.2 = t_s·t2/(t1+t2)
+   I_s   = t1·t_s.2² + t2·t_s.1²
+   Γ     = 1 / (1 + 9.6·E·I_s·t_v / (G·t_s²·L²))      剪力传递系数
+   t_e,w = ( t1³ + t2³ + 12·Γ·I_s )^⅓                  刚度（挠度）用
+   t_1e  = √( t_e,w³ / (t1 + 2Γ·t_s.2) )               强度用，按片
+   t_2e  = √( t_e,w³ / (t2 + 2Γ·t_s.1) )
+   均不大于 t_max = t1 + t2 + t_v                                         */
+function laminatePair(t1, t2, tv, G, E, L) {
+  const ts = 0.5 * (t1 + t2) + tv;
+  const ts1 = ts * t1 / (t1 + t2);
+  const ts2 = ts * t2 / (t1 + t2);
+  const Is = t1 * ts2 * ts2 + t2 * ts1 * ts1;
+  const Gamma = 1 / (1 + 9.6 * (E * Is * tv) / (G * ts * ts * L * L));
+  const teW0 = Math.cbrt(Math.pow(t1, 3) + Math.pow(t2, 3) + 12 * Gamma * Is);
+  const t1e = Math.sqrt(Math.pow(teW0, 3) / (t1 + 2 * Gamma * ts2));
+  const t2e = Math.sqrt(Math.pow(teW0, 3) / (t2 + 2 * Gamma * ts1));
+  const tmax = t1 + t2 + tv;
+  return { ts: ts, ts1: ts1, ts2: ts2, Is: Is, Gamma: Gamma,
+           teW0: teW0, t1e: t1e, t2e: t2e, tmax: tmax,
+           teW: Math.min(teW0, tmax), teS: Math.min(t1e, t2e, tmax) };
+}
+
+/* 组内 n 片：2 片直接算；3 片及以上逐次复合（第一次结果再与下一片复合），
+   最后统一用 Σt + (n-1)·t_v 封顶 */
+function laminateGroup(ts, tv, G, E, L) {
+  if (ts.length < 2) {
+    return { teW: ts[0], teS: ts[0], Gamma: 1, Is: 0, ts: ts[0],
+             ts1: 0, ts2: 0, teW0: ts[0], t1e: ts[0], t2e: ts[0],
+             tmax: ts[0], nested: false };
+  }
+  let r = null, a = ts[0];
+  for (let i = 1; i < ts.length; i++) {
+    r = laminatePair(a, ts[i], tv, G, E, L);
+    a = r.teS;
+  }
+  const cap = ts.reduce((s, x) => s + x, 0) + (ts.length - 1) * tv;
+  if (ts.length > 2) {
+    r = { ts: r.ts, ts1: r.ts1, ts2: r.ts2, Is: r.Is, Gamma: r.Gamma,
+          teW0: r.teW0, t1e: r.t1e, t2e: r.t2e, tmax: cap,
+          teW: Math.min(r.teW, cap), teS: Math.min(r.teS, cap), nested: true };
+  }
+  return r;
 }
 
 /* 由各片玻璃的厚度/种类序列 + 结构，组装成 groups */
@@ -522,22 +602,47 @@ function buildGroups(struct, ts, types) {
 }
 
 /* p: { a, b, groups, wk(kPa), alpha, E(MPa), nu, gammaG(kN/m3),
-        gG, gw, gE, psE, psw, defDiv }
+        gG, gw, gE, psE, psw, defDiv,
+        support('four'|'two'), span(mm), interlayer('PVB'|'SGP'), tv(mm) }
    内部单位：mm / N / MPa，面荷载 N/mm² */
 function calcGlass(p) {
   const a = p.a, b = p.b, E = p.E, nu = p.nu;
-  const a4 = Math.pow(a, 4);
   const gN = p.gammaG * 1e-6;          // kN/m³ → N/mm³
   const wk = p.wk / 1000;              // kPa  → N/mm²
   const alpha = p.alpha;
+  const two = p.support === 'two';     // 对边简支
+  const sgp = p.interlayer === 'SGP';
+
+  /* 计算跨度：四边取短边；对边取选定跨度（受弯方向两支承边的间距） */
+  const L = two ? p.span : Math.min(a, b);
+  const L2 = L * L, L4 = Math.pow(L, 4);
+
+  /* 附录系数：四边按宽长比查表；对边为单向板，μ = 0.013、m = 0.125 */
+  const ab = a / b;
+  const mu = two ? 0.013 : linterp(AR, MUY, ab);
+  const bm = two ? 0.125 : linterp(AR, BMY, ab);
+  const useEta = !two;                 // 对边支承不做大挠度折减（2.3 系列模板）
+  const defLim = L / p.defDiv;
 
   const groups = p.groups;
   const nG = groups.length;
 
-  /* ① 组等效厚度：te = (Σ t³)^⅓，单片组自然退化为 te = t */
+  /* ① 组等效厚度
+     PVB（或不计胶片）：t_e = (Σ t³)^⅓
+     SGP：按 2.3.4 的剪力传递算法，刚度用 t_e,w、强度与荷载分配用 t_e */
   groups.forEach(g => {
+    const ts = g.plies.map(q => q.t);
     g.sumC = g.plies.reduce((s, q) => s + Math.pow(q.t, 3), 0);
-    g.te = Math.cbrt(g.sumC);
+    g.sg = sgp && ts.length >= 2;      // 该组按 SGP 组合截面工作
+    if (g.sg) {
+      g.lam = laminateGroup(ts, p.tv, G_INTER.SGP, E, L);
+      g.teW = g.lam.teW;
+      g.teS = g.lam.teS;
+    } else {
+      g.lam = null;
+      g.teW = g.teS = Math.cbrt(g.sumC);
+    }
+    g.te = g.teS;                      // 兼容：默认指强度等效厚度
   });
 
   /* 自重：全部玻璃片厚度之和 */
@@ -550,50 +655,57 @@ function calcGlass(p) {
   const Ek = 5 * alpha * Gk;
 
   /* ② 组间分配：按组等效厚度立方比
-        仅当有中空腔（≥2 组）时，最外侧（第 1 组）才乘 1.1 增大系数 */
-  const denomG = groups.reduce((s, g) => s + Math.pow(g.te, 3), 0);
+        仅当有中空腔（≥2 组）时，最外侧（第 1 组）才乘 1.1 增大系数
+        风荷载与地震作用都用同一分配比例（2.3.4 对地震同样按组分配） */
+  const denomG = groups.reduce((s, g) => s + Math.pow(g.teS, 3), 0);
   groups.forEach((g, k) => {
-    g.share = Math.pow(g.te, 3) / denomG;
+    g.share = Math.pow(g.teS, 3) / denomG;
     g.amp = (nG >= 2 && k === 0) ? 1.1 : 1;
     g.Wke = wk * g.share * g.amp;
+    g.Eke = Ek * g.share * g.amp;
   });
 
-  /* ③ 组内再分配：按单片厚度立方比 */
-  groups.forEach(g => g.plies.forEach(q => {
-    q.Wk = g.Wke * Math.pow(q.t, 3) / g.sumC;
-  }));
-
-  const ab = a / b;
-  const mu = linterp(AR, MUY, ab);
-  const bm = linterp(AR, BMY, ab);
-  const defLim = a / p.defDiv;
-
-  /* ④ 挠度：按组，用组等效厚度 */
+  /* ③ 组内：
+     PVB ─ 按单片厚度立方比再分配，各片单独算应力（用单片厚度）
+     SGP ─ 组合截面整体工作，不再按片分配，整组一个应力（用组等效厚度） */
   groups.forEach(g => {
-    const D = E * Math.pow(g.te, 3) / (12 * (1 - nu * nu));
-    const theta = g.Wke * a4 / (E * Math.pow(g.te, 4));
-    const eta = linterp(TH, ETAY, theta);
-    const def = mu * g.Wke * a4 / D * eta;
+    g.plies.forEach(q => {
+      q.Wk = g.sg ? g.Wke : g.Wke * Math.pow(q.t, 3) / g.sumC;
+      q.EkUse = g.sg ? g.Eke : q.Ek;
+    });
+  });
+
+  /* ④ 挠度：按组，用刚度等效厚度 t_e,w */
+  groups.forEach(g => {
+    const D = E * Math.pow(g.teW, 3) / (12 * (1 - nu * nu));
+    const theta = g.Wke * L4 / (E * Math.pow(g.teW, 4));
+    const eta = useEta ? linterp(TH, ETAY, theta) : 1;
+    const def = mu * g.Wke * L4 / D * eta;
     g.flex = { D, theta, eta, def, ratio: def / defLim };
   });
 
-  /* ⑤ 强度：按片，用单片厚度 */
+  /* ⑤ 强度：PVB 按单片厚度；SGP 按组等效厚度（组内各片共用同一应力，
+        分别与各自的 f_g 校核） */
   const flat = [];
   groups.forEach((g, gi) => g.plies.forEach((q, ji) => {
-    const fg = fgOf(q.type, q.t);
-    const theta = (q.Wk + p.psE * q.Ek) * a4 / (E * Math.pow(q.t, 4));
-    const eta = linterp(TH, ETAY, theta);
-    const Sw = p.gw * q.Wk + p.psE * p.gE * q.Ek;
-    const SE = p.gE * q.Ek + p.psw * p.gw * q.Wk;
+    const fg = fgOf(q.type, q.t, p.support);
+    const tEff = g.sg ? g.teS : q.t;
+    const theta = (q.Wk + p.psE * q.EkUse) * L4 / (E * Math.pow(tEff, 4));
+    const eta = useEta ? linterp(TH, ETAY, theta) : 1;
+    const Sw = p.gw * q.Wk + p.psE * p.gE * q.EkUse;
+    const SE = p.gE * q.EkUse + p.psw * p.gw * q.Wk;
     const Sd = Math.max(Sw, SE);
-    const sigma = 6 * bm * Sd * a * a * eta / (q.t * q.t);
-    q.fg = fg; q.theta = theta; q.eta = eta; q.Sw = Sw; q.SE = SE; q.Sd = Sd;
-    q.sigma = sigma; q.ratio = sigma / fg;
+    const sigma = 6 * bm * Sd * L2 * eta / (tEff * tEff);
+    q.fg = fg; q.tEff = tEff; q.sgFlag = g.sg; q.theta = theta; q.eta = eta;
+    q.Sw = Sw; q.SE = SE; q.Sd = Sd; q.sigma = sigma;
+    q.ratio = sigma / fg;
     flat.push({ gi: gi, ji: ji, q: q });
   }));
 
   return { groups: groups, flat: flat, nG: nG, Gk: Gk, Ek: Ek,
-           mu: mu, bm: bm, ab: ab, defLim: defLim, wk: wk, gN: gN, alpha: alpha, a4: a4 };
+           mu: mu, bm: bm, ab: ab, defLim: defLim, wk: wk, gN: gN, alpha: alpha,
+           L: L, L2: L2, L4: L4, two: two, sgp: sgp, useEta: useEta,
+           tv: p.tv, G: G_INTER[p.interlayer] };
 }
 /* ===== 计算核心结束 ===== */
 /* ===== 计算核心导出（供 Node 测试用） ===== */
@@ -732,7 +844,8 @@ function tex2html(src) {
 
   const el = {};
   ['cfg', 'cfgHint', 'plyHost', 'a', 'b', 'wk', 'ig', 'E', 'nu', 'gg',
-   'defdiv', 'gG', 'gw', 'gE', 'psE', 'psw', 'printBtn', 'fxOpen', 'fxClose']
+   'defdiv', 'gG', 'gw', 'gE', 'psE', 'psw', 'printBtn', 'fxOpen', 'fxClose',
+   'support', 'spanSide', 'spanRow', 'spanHint', 'inter', 'tv', 'tvRow']
     .forEach(id => { el[id] = document.getElementById(id); });
 
   const f2 = x => x.toFixed(2);
@@ -775,13 +888,14 @@ function tex2html(src) {
     const n = totalPlies(struct);
     ensureState(n);
     const st = plyState;
+    const il = el.inter ? el.inter.value : 'PVB';
 
     let h = '', k = 0;
     struct.forEach((counts, gi) => {
       if (gi > 0) h += '<div class="seam ig">中 空 腔</div>';
 
       let title;
-      if (nG === 1) title = counts.length > 1 ? '玻璃（PVB 夹胶）' : '玻璃（单片）';
+      if (nG === 1) title = counts.length > 1 ? '玻璃（' + il + ' 夹胶）' : '玻璃（单片）';
       else {
         const pos = gi === 0 ? '室外侧' : (gi === nG - 1 ? '室内侧' : '中间');
         title = '第 ' + (gi + 1) + ' 组 · ' + pos;
@@ -789,7 +903,7 @@ function tex2html(src) {
       h += '<div class="card"><h2>' + title + '</h2><div class="body">';
 
       counts.forEach((c, ji) => {
-        if (ji > 0) h += '<div class="seam pvb">PVB</div>';
+        if (ji > 0) h += '<div class="seam pvb">' + il + '</div>';
         const idx = k++;
         const s = st[idx];
         h += '<div class="grid2">' +
@@ -805,14 +919,17 @@ function tex2html(src) {
       });
 
       h += counts.length > 1
-        ? '<p class="hint">等效厚度 t<sub>e</sub> = (Σ t<sub>i</sub>³)<sup>1/3</sup>，' +
-          'PVB 不计入刚度。</p>'
-        : '<p class="hint">单片，等效厚度即为准自身厚度。</p>';
+        ? (il === 'SGP'
+            ? '<p class="hint">SGP：按 2.3.4 计算等效厚度，刚度用 t<sub>e,w</sub>、' +
+              '强度用 t<sub>e</sub>，计算书见第 ② 步。</p>'
+            : '<p class="hint">等效厚度 t<sub>e</sub> = (Σ t<sub>i</sub>³)<sup>1/3</sup>，' +
+              'PVB 不计入刚度。</p>')
+        : '<p class="hint">单片，等效厚度即为自身厚度。</p>';
       h += '</div></div>';
     });
 
     el.plyHost.innerHTML = h;
-    el.cfgHint.textContent = cfg.note + '（共 ' + n + ' 片玻璃 / ' + nG + ' 个构造组）';
+    syncOptions();
 
     for (let i = 0; i < n; i++) {
       const ti = document.getElementById('plyT' + i);
@@ -820,6 +937,32 @@ function tex2html(src) {
       ti.addEventListener('input', () => { plyState[i].t = parseFloat(ti.value); render(); });
       gi.addEventListener('change', () => { plyState[i].type = gi.value; render(); });
     }
+  }
+
+  /* 联动显示：胶片厚度（仅 SGP）、支承边（仅对边），并给出跨度与取值口径提示 */
+  function syncOptions() {
+    const two = el.support.value === 'two';
+    const sgp = el.inter.value === 'SGP';
+    el.tvRow.hidden = !sgp;
+    el.spanRow.hidden = !two;
+
+    const cfg = getCurrentConfig();
+    const n = totalPlies(cfg.struct);
+    el.cfgHint.innerHTML = cfg.note + '（共 ' + n + ' 片玻璃 / ' + cfg.struct.length + ' 个构造组）' +
+      (sgp
+        ? '<br>SGP：按 2.3.4 计算等效厚度（G = ' + G_INTER.SGP + ' MPa）；' +
+          '组内各片<b>整体工作</b>，荷载不再按片分配，应力用组等效厚度校核。'
+        : '<br>PVB：等效厚度取 (Σ t³)<sup>1/3</sup>，不计胶片剪切传递；' +
+          '荷载按单片厚度立方比分配，各片单独校核。');
+
+    const A = num('a'), B = num('b');
+    const L = two ? (el.spanSide.value === 'a' ? Math.min(A, B) : Math.max(A, B))
+                  : Math.min(A, B);
+    el.spanHint.innerHTML = two
+      ? '对边简支：跨度 L = <b>' + L + ' mm</b>，μ = 0.013、m = 0.125，' +
+        '<b>不做大挠度折减</b>，f<sub>g</sub> 按<b>边缘强度</b>取值。'
+      : '四边简支：跨度取短边 <b>' + L + ' mm</b>，μ / m 按宽长比查附录表，' +
+        '做大挠度折减，f<sub>g</sub> 取中部强度。';
   }
 
   function readInputs() {
@@ -831,13 +974,20 @@ function tex2html(src) {
       ts.push(parseFloat(document.getElementById('plyT' + i).value));
       types.push(document.getElementById('plyG' + i).value);
     }
+    const A = num('a'), B = num('b');
+    const two = el.support.value === 'two';
+    /* 对边简支的跨度：支承两条短边则跨度取长边，反之取短边 */
+    const span = !two ? Math.min(A, B)
+               : (el.spanSide.value === 'a' ? Math.min(A, B) : Math.max(A, B));
     return {
-      a: num('a'), b: num('b'),
+      a: A, b: B,
       groups: buildGroups(struct, ts, types),
       wk: num('wk'),
       alpha: parseFloat(el.ig.value),
       E: num('E'), nu: num('nu'), gammaG: num('gg'), defDiv: num('defdiv'),
-      gG: num('gG'), gw: num('gw'), gE: num('gE'), psE: num('psE'), psw: num('psw')
+      gG: num('gG'), gw: num('gw'), gE: num('gE'), psE: num('psE'), psw: num('psw'),
+      support: el.support.value, span: span,
+      interlayer: el.inter.value, tv: num('tv')
     };
   }
 
@@ -845,6 +995,7 @@ function tex2html(src) {
     const ts = p.groups.flatMap(g => g.plies.map(q => q.t));
     const positive = [p.a, p.b, p.wk, p.E, p.nu, p.gammaG, p.defDiv,
                       p.gG, p.gw, p.gE].concat(ts);
+    if (p.interlayer === 'SGP') positive.push(p.tv);
     const nonNegative = [p.psE, p.psw];
     return positive.every(v => isFinite(v) && v > 0) &&
            nonNegative.every(v => isFinite(v) && v >= 0) &&
@@ -886,33 +1037,83 @@ function tex2html(src) {
 
   function buildSteps(p, r) {
     const a = p.a, b = p.b, E = p.E, nu = p.nu;
-    const A2 = a + '^{2}', A4 = a + '^{4}';
+    const L = r.L;
+    const A2 = L + '^{2}', A4 = L + '^{4}';
     const sE = N(p.psE), sW = N(p.psw);
     const nG = r.nG;
+    const sgp = r.sgp;
     const S = [];
 
     /* ① 几何与附录系数 */
-    let L1 = [fxl('宽长比', '\\frac{a}{b}',
-                  '\\frac{' + a + '}{' + b + '}', f3(r.ab))];
-    r.groups.forEach((g, gi) => {
-      const terms = g.plies.map(q => N(q.t) + '^{3}').join('+');
-      const sub = nG > 1
-        ? '\\sqrt[3]{' + terms + '}'
-        : (g.plies.length > 1 ? '\\sqrt[3]{' + terms + '}' : N(g.plies[0].t));
-      L1.push(fxl('第' + (gi + 1) + '组',
-                  't_{e,' + (gi + 1) + '}=\\sqrt[3]{\\sum t_i^{3}}',
-                  '\\sqrt[3]{' + terms + '}', f2(g.te) + '\\ \\mathrm{mm}'));
-    });
+    const L1 = [fxl('宽长比', '\\frac{a}{b}',
+                    '\\frac{' + a + '}{' + b + '}', f3(r.ab))];
+    if (!sgp) {
+      r.groups.forEach((g, gi) => {
+        const terms = g.plies.map(q => N(q.t) + '^{3}').join('+');
+        L1.push(fxl(nG === 1 ? '全截面' : '第' + (gi + 1) + '组',
+                    't_{e,' + (gi + 1) + '}=\\sqrt[3]{\\sum t_i^{3}}',
+                    '\\sqrt[3]{' + terms + '}', f2(g.teS) + '\\ \\mathrm{mm}'));
+      });
+    }
     L1.push(fxl('弯矩', 'm=f_m\\left(\\frac{a}{b}\\right)',
                 'f_m\\left(' + f3(r.ab) + '\\right)', f4(r.bm)));
     L1.push(fxl('挠度', '\\mu=f_{\\mu}\\left(\\frac{a}{b}\\right)',
                 'f_{\\mu}\\left(' + f3(r.ab) + '\\right)', f4(r.mu)));
     S.push({
       t: '面板几何与附录系数',
-      n: '同一构造组内的玻璃由 PVB 粘合，按等效厚度 t_e = (Σ t_i³)^⅓ 折算后参与中空层的刚度与荷载分配；' +
-         '弯矩系数 m、挠度系数 μ 由宽长比 a/b 在规范附录表中线性插值取得。',
+      n: r.two
+        ? '对边简支为单向板：弯矩系数 m = 0.125、挠度系数 μ = 0.013 为定值，' +
+          '不随宽长比变化，也不做大挠度折减；计算跨度 L = ' + L + ' mm。'
+        : '四边简支：弯矩系数 m、挠度系数 μ 由宽长比 a/b 在规范附录表中线性插值取得；' +
+          '计算跨度取短边 ' + L + ' mm' +
+          (sgp ? '。等效厚度见下一步。' : '。'),
       L: L1
     });
+
+    /* ② SGP 夹层等效厚度（仅 SGP，按 2.3.4） */
+    if (sgp) {
+      const L2s = [];
+      r.groups.forEach((g, gi) => {
+        if (!g.lam || g.plies.length < 2) {
+          L2s.push(fxl(nG === 1 ? '全截面' : '第' + (gi + 1) + '组',
+            't_e=t', N(g.plies[0].t), f2(g.teS) + '\\ \\mathrm{mm}'));
+          return;
+        }
+        const m = g.lam;
+        const t1 = g.plies[0].t, t2 = g.plies[1].t;
+        const tag = nG === 1 ? '' : '第' + (gi + 1) + '组';
+        const pre = g.plies.length > 2 ? '（' + g.plies.length + ' 片逐次复合，以下为最后一步）' : '';
+        L2s.push(fxl(tag, 't_s=0.5\\left(t_1+t_2\\right)+t_v',
+          '0.5\\left(' + N(t1) + '+' + N(t2) + '\\right)+' + N(p.tv),
+          f2(m.ts) + '\\ \\mathrm{mm}' + (pre ? '\\ ' + pre : '')));
+        L2s.push(fxl('', 'I_s=t_1 t_{s.2}^{2}+t_2 t_{s.1}^{2}',
+          N(t1) + '\\times ' + f2(m.ts2) + '^{2}+' + N(t2) + '\\times ' + f2(m.ts1) + '^{2}',
+          f2(m.Is) + '\\ \\mathrm{mm^3}'));
+        L2s.push(fxl('', '\\Gamma=\\frac{1}{1+9.6\\frac{E\\,I_s\\,t_v}{G\\,t_s^{2}L^{2}}}',
+          '\\frac{1}{1+9.6\\frac{' + N(E) + '\\times ' + f2(m.Is) + '\\times ' + N(p.tv) +
+            '}{' + r.G + '\\times ' + f2(m.ts) + '^{2}\\times ' + L + '^{2}}}',
+          f4(m.Gamma)));
+        L2s.push(fxl('刚度', 't_{e,w}=\\sqrt[3]{t_1^{3}+t_2^{3}+12\\Gamma I_s}',
+          '\\sqrt[3]{' + N(t1) + '^{3}+' + N(t2) + '^{3}+12\\times ' + f4(m.Gamma) +
+            '\\times ' + f2(m.Is) + '}', f2(m.teW0) + '\\ \\mathrm{mm}'));
+        L2s.push(fxl('强度', 't_{1e}=\\sqrt{\\frac{t_{e,w}^{3}}{t_1+2\\Gamma t_{s.2}}}',
+          '\\sqrt{\\frac{' + f2(m.teW0) + '^{3}}{' + N(t1) + '+2\\times ' + f4(m.Gamma) +
+            '\\times ' + f2(m.ts2) + '}}', f2(m.t1e) + '\\ \\mathrm{mm}'));
+        L2s.push(fxl('', 't_{2e}=\\sqrt{\\frac{t_{e,w}^{3}}{t_2+2\\Gamma t_{s.1}}}',
+          '\\sqrt{\\frac{' + f2(m.teW0) + '^{3}}{' + N(t2) + '+2\\times ' + f4(m.Gamma) +
+            '\\times ' + f2(m.ts1) + '}}', f2(m.t2e) + '\\ \\mathrm{mm}'));
+        L2s.push(fxl('封顶', 't_e=\\min\\left(t_{1e},t_{2e},t_{\\max}\\right)',
+          '\\min\\left(' + f2(m.t1e) + ',' + f2(m.t2e) + ',' + f2(m.tmax) + '\\right)',
+          f2(g.teS) + '\\ \\mathrm{mm}'));
+      });
+      S.push({
+        t: 'SGP 夹层等效厚度（2.3.4 方法）',
+        n: 'SGP 剪切模量 G = ' + r.G + ' MPa（上海地标 50℃ / 1min），能传递剪力，' +
+           '故夹层不再是简单叠合：先由 Γ 反映剪力传递程度，刚度用 t_e,w、强度用 t_e，' +
+           '且均不大于玻璃加胶片的总厚度 t_max = Σt + t_v。',
+        L: L2s
+      });
+    }
 
     /* ② 自重与地震 */
     const tAll = r.groups.flatMap(g => g.plies.map(q => q.t));
@@ -921,21 +1122,38 @@ function tex2html(src) {
           eFix(r.gN, -6) + '\\times \\left(' + tAll.map(N).join('+') + '\\right)',
           K3(r.Gk) + '\\ \\mathrm{kPa}'),
       fxl('地震', 'E_k=5\\alpha G_k',
-          '5\\times ' + N(r.alpha) + '\\times ' + K3(r.Gk) + '\\times 10^{-3}',
+          '5\\times ' + N(r.alpha) + '\\times ' + K3(r.Gk),
           K3(r.Ek) + '\\ \\mathrm{kPa}')
     ];
     let flatNo = 0;
-    r.flat.forEach(f => {
-      flatNo++;
-      L2.push(fxl('玻璃' + flatNo,
-        'E_{k}=5\\alpha \\gamma_g t_i',
-        '5\\times ' + N(r.alpha) + '\\times ' + eFix(r.gN, -6) + '\\times ' + N(f.q.t),
-        K3(f.q.Ek) + '\\ \\mathrm{kPa}'));
-    });
+    if (sgp) {
+      /* SGP：地震作用与风荷载同比例分配到组，组内整体工作 */
+      r.groups.forEach((g, gi) => {
+        L2.push(fxl(nG === 1 ? '全截面' : '第' + (gi + 1) + '组',
+          g.amp !== 1 ? 'E_{ke,' + (gi + 1) + '}=1.1\\,E_k\\frac{t_{e,' + (gi + 1) + '}^{3}}{' +
+                         r.groups.map((x, i) => 't_{e,' + (i + 1) + '}^{3}').join('+') + '}'
+                       : 'E_{ke,' + (gi + 1) + '}=E_k\\frac{t_{e,' + (gi + 1) + '}^{3}}{' +
+                         r.groups.map((x, i) => 't_{e,' + (i + 1) + '}^{3}').join('+') + '}',
+          (g.amp !== 1 ? '1.1\\times ' : '') + K3(r.Ek) + '\\times \\frac{' + f2(g.teS) + '^{3}}{' +
+            r.groups.map(x => f2(x.teS) + '^{3}').join('+') + '}',
+          K3(g.Eke) + '\\ \\mathrm{kPa}'));
+      });
+    } else {
+      r.flat.forEach(f => {
+        flatNo++;
+        L2.push(fxl('玻璃' + flatNo,
+          'E_{k,' + flatNo + '}=5\\alpha \\gamma_g t_' + flatNo,
+          '5\\times ' + N(r.alpha) + '\\times ' + eFix(r.gN, -6) + '\\times ' + N(f.q.t),
+          K3(f.q.Ek) + '\\ \\mathrm{kPa}'));
+      });
+    }
     S.push({
       t: '玻璃自重与水平地震作用',
       n: '玻璃密度输入单位为 kN/m³，代入时换算为 N/mm³（1 kN/m³ = 10⁻⁶ N/mm³）；' +
-         'α 取相应设防烈度的水平地震影响系数最大值，本例 α = ' + N(r.alpha) + '。',
+         'α 取相应设防烈度的水平地震影响系数最大值，本例 α = ' + N(r.alpha) + '。' +
+         (sgp && nG > 1
+           ? 'SGP 组合截面下地震作用与风荷载同比例分配到各构造组，组内不再细分。'
+           : ''),
       L: L2
     });
 
@@ -969,7 +1187,12 @@ function tex2html(src) {
         flatIdx++;
         const den = g.plies.map(x => N(x.t) + '^{3}').join('+');
         const denSym = g.plies.map((x, i2) => 't_{' + (flatIdx - ji + i2) + '}^{3}').join('+');
-        if (g.plies.length > 1) {
+        if (g.sg) {
+          L4.push(fxl('玻璃' + flatIdx,
+            'W_{k,' + flatIdx + '}=W_{ke,' + (gi + 1) + '}\\quad(\\text{整体工作，不再分配})',
+            eFix(g.Wke, -3),
+            K3(q.Wk) + '\\ \\mathrm{kPa}'));
+        } else if (g.plies.length > 1) {
           L4.push(fxl('玻璃' + flatIdx,
             'W_{k,' + flatIdx + '}=W_{ke,' + (gi + 1) + '}\\frac{t_{' + flatIdx + '}^{3}}{' + denSym + '}',
             eFix(g.Wke, -3) + '\\times \\frac{' + N(q.t) + '^{3}}{' + den + '}',
@@ -984,8 +1207,11 @@ function tex2html(src) {
     });
     S.push({
       t: '组内各单片再分配',
-      n: '同一构造组内的各片玻璃，再按各自厚度的三次方比例分担该组所承受的荷载；' +
-         '单片组则该层荷载全部由其承担。',
+      n: sgp
+        ? 'SGP 夹层为组合截面，组内各片整体工作，荷载<b>不再按片分配</b>，' +
+          '整组用同一个应力校核（与组内各片 f_g 分别比较）。单片组则直接承担该组荷载。'
+        : '同一构造组内的各片玻璃，再按各自厚度的三次方比例分担该组所承受的荷载；' +
+          '单片组则该层荷载全部由其承担。',
       L: L4
     });
 
@@ -993,21 +1219,23 @@ function tex2html(src) {
     const L5 = [];
     r.groups.forEach((g, gi) => {
       const tag = nG === 1 ? '全截面' : '第' + (gi + 1) + '组';
-      L5.push(fxl(tag, 'D=\\frac{E\\,t_e^{3}}{12\\left(1-\\nu^{2}\\right)}',
-        '\\frac{' + N(E) + '\\times ' + f2(g.te) + '^{3}}{12\\left(1-' + N(nu) + '^{2}\\right)}',
+      L5.push(fxl(tag, 'D=\\frac{E\\,t_{e,w}^{3}}{12\\left(1-\\nu^{2}\\right)}',
+        '\\frac{' + N(E) + '\\times ' + f2(g.teW) + '^{3}}{12\\left(1-' + N(nu) + '^{2}\\right)}',
         g.flex.D.toFixed(0) + '\\ \\mathrm{N\\cdot mm}'));
-      L5.push(fxl('', '\\theta=\\frac{W_{ke}\\,a^{4}}{E\\,t_e^{4}}',
-        '\\frac{' + eFix(g.Wke, -3) + '\\times ' + A4 + '}{' + N(E) + '\\times ' + f2(g.te) + '^{4}}',
+      L5.push(fxl('', '\\theta=\\frac{W_{ke}\\,L^{4}}{E\\,t_{e,w}^{4}}',
+        '\\frac{' + eFix(g.Wke, -3) + '\\times ' + A4 + '}{' + N(E) + '\\times ' + f2(g.teW) + '^{4}}',
         f3(g.flex.theta)));
-      L5.push(fxl('', '\\eta=f_{\\eta}\\left(\\theta\\right)',
-        'f_{\\eta}\\left(' + f3(g.flex.theta) + '\\right)', f3(g.flex.eta)));
-      L5.push(fxl('', 'd=\\frac{\\mu\\,W_{ke}\\,a^{4}}{D}\\eta',
+      L5.push(r.useEta
+        ? fxl('', '\\eta=f_{\\eta}\\left(\\theta\\right)',
+            'f_{\\eta}\\left(' + f3(g.flex.theta) + '\\right)', f3(g.flex.eta))
+        : fxl('', '\\eta=1\\quad(\\text{对边简支，不做大挠度折减})', '', f3(g.flex.eta)));
+      L5.push(fxl('', 'd=\\frac{\\mu\\,W_{ke}\\,L^{4}}{D}\\eta',
         '\\frac{' + f4(r.mu) + '\\times ' + eFix(g.Wke, -3) + '\\times ' + A4 + '}{' +
           g.flex.D.toFixed(0) + '}\\times ' + f3(g.flex.eta),
         f2(g.flex.def) + '\\ \\mathrm{mm}'));
     });
-    L5.push(fxl('限值', '[d]=\\frac{a}{' + N(p.defDiv) + '}',
-      '\\frac{' + a + '}{' + N(p.defDiv) + '}', f2(r.defLim) + '\\ \\mathrm{mm}'));
+    L5.push(fxl('限值', '[d]=\\frac{L}{' + N(p.defDiv) + '}',
+      '\\frac{' + L + '}{' + N(p.defDiv) + '}', f2(r.defLim) + '\\ \\mathrm{mm}'));
     r.groups.forEach((g, gi) => {
       L5.push(fxl(nG === 1 ? '全截面' : '第' + (gi + 1) + '组', 'd\\le [d]',
         f2(g.flex.def) + '\\le ' + f2(r.defLim),
@@ -1016,8 +1244,11 @@ function tex2html(src) {
     });
     S.push({
       t: '挠度校核（按组）',
-      n: '四边简支板：先由等效厚度得弯曲刚度 D，再由 θ 在附录表中插值取折减系数 η，' +
-         '最后得到大挠度折减后的挠度 d；限值取短边 1/' + N(p.defDiv) + '。',
+      n: r.two
+        ? '对边简支：单向板，d = μ·W_ke·L⁴/D，μ = 0.013 为定值，' +
+          '模板不做大挠度折减（η = 1）；限值取跨度 L/' + N(p.defDiv) + '。'
+        : '四边简支板：先由等效厚度得弯曲刚度 D，再由 θ 在附录表中插值取折减系数 η，' +
+          '最后得到大挠度折减后的挠度 d；限值取短边 1/' + N(p.defDiv) + '。',
       L: L5
     });
 
@@ -1025,26 +1256,31 @@ function tex2html(src) {
     let ctrl = 0;
     r.flat.forEach((f, i) => { if (f.q.ratio > r.flat[ctrl].q.ratio) ctrl = i; });
     const c = r.flat[ctrl];
+    /* SGP 组合截面：整组一个应力，厚度取组等效厚度 t_e；PVB 取单片厚度 t */
+    const tSym = c.q.sgFlag ? 't_e' : 't';
     const L6 = [
-      fxl('控制片', '\\theta=\\frac{\\left(W_k+\\psi_E E_k\\right)a^{4}}{E\\,t^{4}}',
-        '\\frac{\\left(' + eFix(c.q.Wk, -3) + '+' + sE + '\\times ' + eFix(c.q.Ek, -3) +
-          '\\right)' + A4 + '}{' + N(E) + '\\times ' + N(c.q.t) + '^{4}}', f3(c.q.theta)),
-      fxl('', '\\eta=f_{\\eta}\\left(\\theta\\right)',
-        'f_{\\eta}\\left(' + f3(c.q.theta) + '\\right)', f3(c.q.eta)),
+      fxl('控制片', '\\theta=\\frac{\\left(W_k+\\psi_E E_k\\right)L^{4}}{E\\,' + tSym + '^{4}}',
+        '\\frac{\\left(' + eFix(c.q.Wk, -3) + '+' + sE + '\\times ' + eFix(c.q.EkUse, -3) +
+          '\\right)' + A4 + '}{' + N(E) + '\\times ' + f2(c.q.tEff) + '^{4}}', f3(c.q.theta)),
+      r.useEta
+        ? fxl('', '\\eta=f_{\\eta}\\left(\\theta\\right)',
+            'f_{\\eta}\\left(' + f3(c.q.theta) + '\\right)', f3(c.q.eta))
+        : fxl('', '\\eta=1\\quad(\\text{对边简支，不做大挠度折减})', '', f3(c.q.eta)),
       fxl('', 'S_w=\\gamma_w W_k+\\psi_E\\gamma_E E_k',
         N(p.gw) + '\\times ' + eFix(c.q.Wk, -3) + '+' + sE + '\\times ' + N(p.gE) +
-          '\\times ' + eFix(c.q.Ek, -3), K3(c.q.Sw) + '\\ \\mathrm{kPa}'),
+          '\\times ' + eFix(c.q.EkUse, -3), K3(c.q.Sw) + '\\ \\mathrm{kPa}'),
       fxl('', 'S_E=\\gamma_E E_k+\\psi_w\\gamma_w W_k',
-        N(p.gE) + '\\times ' + eFix(c.q.Ek, -3) + '+' + sW + '\\times ' + N(p.gw) +
+        N(p.gE) + '\\times ' + eFix(c.q.EkUse, -3) + '+' + sW + '\\times ' + N(p.gw) +
           '\\times ' + eFix(c.q.Wk, -3), K3(c.q.SE) + '\\ \\mathrm{kPa}'),
       fxl('', 'S_d=\\max\\left(S_w,S_E\\right)',
         '\\max\\left(' + K3(c.q.Sw) + ',' + K3(c.q.SE) + '\\right)',
         K3(c.q.Sd) + '\\ \\mathrm{kPa}'),
-      fxl('', '\\sigma=\\frac{6\\,m\\,S_d\\,a^{2}\\eta}{t^{2}}',
+      fxl('', '\\sigma=\\frac{6\\,m\\,S_d\\,L^{2}\\eta}{' + tSym + '^{2}}',
         '\\frac{6\\times ' + f4(r.bm) + '\\times ' + eFix(c.q.Sd, -3) + '\\times ' + A2 +
-          '\\times ' + f3(c.q.eta) + '}{' + N(c.q.t) + '^{2}}',
+          '\\times ' + f3(c.q.eta) + '}{' + f2(c.q.tEff) + '^{2}}',
         f2(c.q.sigma) + '\\ \\mathrm{MPa}'),
-      fxl('', 'f_g', c.q.type + '\\ t=' + N(c.q.t) + '\\mathrm{mm}', c.q.fg + '\\ \\mathrm{MPa}'),
+      fxl('', 'f_g', c.q.type + '\\ t=' + N(c.q.t) + '\\mathrm{mm}\\ ' +
+        (r.two ? '边缘' : '中部'), c.q.fg + '\\ \\mathrm{MPa}'),
       fxl('校核', '\\sigma\\le f_g',
         f2(c.q.sigma) + '\\le ' + c.q.fg,
         c.q.ratio <= 1 ? '\\text{满足}' : '\\text{不满足}',
@@ -1053,8 +1289,15 @@ function tex2html(src) {
     S.push({
       t: '强度校核（控制片）',
       n: '以应力比最大的第 ' + (ctrl + 1) + ' 片为控制片逐步代入；其余各片算法完全相同，' +
-         '数值见上方《强度校核（按片）》表。弯矩系数 m = ' + f4(r.bm) +
-         '，θ 与 η 同挠度一节按附录表插值。',
+         '数值见上方《强度校核（按片）》表。弯矩系数 m = ' + f4(r.bm) + '，计算跨度 L = ' +
+         L + ' mm' +
+         (r.useEta ? '，θ 与 η 同挠度一节按附录表插值'
+                   : '，对边简支不做大挠度折减，η = 1') +
+         '。' + (c.q.sgFlag
+           ? 'SGP 组合截面：整组共同工作，应力按组等效厚度 t_e = ' + f2(c.q.tEff) +
+             ' mm 计算，再与组内各片的 f_g 分别比较。'
+           : 'PVB：应力按该片自身厚度 t = ' + f2(c.q.tEff) + ' mm 计算。') +
+         ' f_g 取' + (r.two ? '边缘' : '中部') + '强度。',
       L: L6
     });
 
@@ -1080,7 +1323,8 @@ function tex2html(src) {
     document.getElementById('verdict').innerHTML =
       '<div class="item"><div class="k">构造型式</div>' +
         '<div class="v">' + getCurrentConfig().key + '</div>' +
-        '<div class="sub">' + r.flat.length + ' 片玻璃 / ' + r.nG + ' 个构造组</div></div>' +
+        '<div class="sub">' + r.flat.length + ' 片玻璃 / ' + r.nG + ' 个构造组 · ' +
+          (r.two ? '对边简支' : '四边简支') + ' · ' + p.interlayer + '</div></div>' +
       '<div class="item"><div class="k">挠度（最不利组）</div>' +
         '<div class="v">' + f3(maxF) + '</div>' +
         '<div class="sub">' + badge(maxF) + ' &nbsp;限值 ' + f2(r.defLim) + ' mm</div></div>' +
@@ -1091,6 +1335,7 @@ function tex2html(src) {
 
     document.getElementById('basic').innerHTML = [
       ['宽长比 a/b', f3(r.ab)],
+      ['计算跨度 L', f2(r.L) + ' mm'],
       ['弯矩系数 m', f4(r.bm)],
       ['挠度系数 μ', f4(r.mu)],
       ['自重 G_k', K3(r.Gk) + ' kPa'],
@@ -1103,7 +1348,8 @@ function tex2html(src) {
      .join('');
 
     /* 挠度表：按组 */
-    let fh = '<table><thead><tr><th>构造组</th><th>构造</th><th>t_e<br>mm</th>' +
+    let fh = '<table><thead><tr><th>构造组</th><th>构造</th><th>t_e,w<br>mm</th>' +
+             (r.sgp ? '<th>Γ</th>' : '') +
              '<th>W_ke<br>kPa</th><th>D<br>N·mm</th><th>θ</th><th>η</th>' +
              '<th>d<br>mm</th><th>d/[d]</th></tr></thead><tbody>';
     let gi = 0;
@@ -1113,7 +1359,8 @@ function tex2html(src) {
       const struct = g.plies.map(q => N(q.t)).join('.');
       fh += '<tr' + (g.flex.ratio === maxF ? ' class="ctrl"' : '') + '>' +
               '<td>' + label + '</td><td>' + struct + '</td>' +
-              '<td class="num">' + f2(g.te) + '</td>' +
+              '<td class="num">' + f2(g.teW) + '</td>' +
+              (r.sgp ? '<td class="num">' + f3(g.lam ? g.lam.Gamma : 1) + '</td>' : '') +
               '<td class="num">' + K3(g.Wke) + '</td>' +
               '<td class="num">' + g.flex.D.toFixed(0) + '</td>' +
               '<td class="num">' + f2(g.flex.theta) + '</td>' +
@@ -1125,7 +1372,7 @@ function tex2html(src) {
     document.getElementById('flexTable').innerHTML = fh + '</tbody></table>';
 
     /* 强度表：按片 */
-    let sh = '<table><thead><tr><th>玻璃</th><th>组</th><th>t<br>mm</th>' +
+    let sh = '<table><thead><tr><th>玻璃</th><th>组</th><th>计算厚度<br>mm</th>' +
              '<th>种类</th><th>W_k<br>kPa</th><th>E_k<br>kPa</th><th>θ</th><th>η</th>' +
              '<th>S_d<br>kPa</th><th>σ<br>MPa</th><th>f_g<br>MPa</th>' +
              '<th>σ/f_g</th></tr></thead><tbody>';
@@ -1135,10 +1382,10 @@ function tex2html(src) {
       sh += '<tr' + (n - 1 === maxSi ? ' class="ctrl"' : '') + '>' +
               '<td>玻璃 ' + n + '</td>' +
               '<td>' + (r.nG === 1 ? '—' : '第 ' + (gidx + 1) + ' 组') + '</td>' +
-              '<td class="num">' + N(q.t) + '</td>' +
+              '<td class="num">' + f2(q.tEff) + (g.sg ? ' <span style="color:#9a7b14">组</span>' : '') + '</td>' +
               '<td>' + q.type + '</td>' +
               '<td class="num">' + K3(q.Wk) + '</td>' +
-              '<td class="num">' + K3(q.Ek) + '</td>' +
+              '<td class="num">' + K3(q.EkUse) + '</td>' +
               '<td class="num">' + f2(q.theta) + '</td>' +
               '<td class="num">' + f3(q.eta) + '</td>' +
               '<td class="num">' + K3(q.Sd) + '</td>' +
@@ -1181,12 +1428,18 @@ function tex2html(src) {
 
   el.printBtn.addEventListener('click', () => window.print());
 
-  ['a', 'b', 'wk', 'ig', 'E', 'nu', 'gg', 'defdiv', 'gG', 'gw', 'gE', 'psE', 'psw']
+  ['a', 'b', 'wk', 'ig', 'E', 'nu', 'gg', 'defdiv', 'gG', 'gw', 'gE', 'psE', 'psw',
+   'tv', 'support', 'spanSide']
     .forEach(id => {
       const e = document.getElementById(id);
-      e.addEventListener('input', render);
-      e.addEventListener('change', render);
+      const fn = () => { syncOptions(); render(); };
+      e.addEventListener('input', fn);
+      e.addEventListener('change', fn);
     });
+
+  /* 切换胶片类型要重画玻璃卡（分隔条与提示文字会跟着变） */
+  ['input', 'change'].forEach(t =>
+    el.inter.addEventListener(t, () => { syncOptions(); buildPlyCards(); render(); }));
 
   buildPlyCards();
   render();
