@@ -606,6 +606,13 @@
       </div>
 
       <div class="card">
+        <h2>计算条件</h2>
+        <div class="body">
+          <div class="kv" id="condBox" style="grid-template-columns:repeat(4,1fr)"></div>
+        </div>
+      </div>
+
+      <div class="card">
         <h2>截面几何特性</h2>
         <div class="body">
           <div class="secgrid" id="secKv"></div>
@@ -1158,9 +1165,14 @@ function tex2html(src) {
    'cardLoad', 'reg', 'rowReg', 'pm', 'pt', 'ig', 'rowPanel', 'rowIg',
    'advBox', 'gG', 'gW', 'gE', 'gL', 'psL', 'psW',
    'div', 'limAbs', 'fMan', 'tcMan', 'modeSw', 'lblBasic', 'lblAdv',
-   'verdict', 'secKv', 'loadKv', 'depNote', 'deflBox', 'strBox',
+   'verdict', 'condBox', 'secKv', 'loadKv', 'depNote', 'deflBox', 'strBox',
    'fxSteps', 'fxOpen', 'fxClose', 'printBtn', 'verLine'
   ].forEach(function (id) { el[id] = document.getElementById(id); });
+
+  const FORM_LIST = [
+    ['simple', '单跨（简支）'], ['two', '双跨（连续）'],
+    ['cant', '悬臂'], ['cantf', '悬臂 + 飞边']
+  ];
 
   /* 基础模式开放的范围 */
   const BASIC_SEC = ['tube', 'box', 'tee'];
@@ -1203,11 +1215,9 @@ function tex2html(src) {
     fillOpts(el.mat, list, function (m) { return m.name; }, function (m) { return m.id; }, cur);
   }
   function buildFormOptions() {
-    const all = [
-      ['simple', '单跨（简支）'], ['two', '双跨（连续）'],
-      ['cant', '悬臂'], ['cantf', '悬臂 + 飞边']
-    ];
-    const list = (mode === 'basic') ? all.filter(function (f) { return BASIC_FORM.indexOf(f[0]) >= 0; }) : all;
+    const list = (mode === 'basic')
+      ? FORM_LIST.filter(function (f) { return BASIC_FORM.indexOf(f[0]) >= 0; })
+      : FORM_LIST;
     let cur = el.form.value;
     if (!list.some(function (f) { return f[0] === cur; })) cur = 'simple';
     fillOpts(el.form, list, function (f) { return f[1]; }, function (f) { return f[0]; }, cur);
@@ -1485,16 +1495,20 @@ function tex2html(src) {
                  '<i>B₁</i>' + foInp('B1', raw.B1));
     }
 
-    /* ---------- 横向总宽（底部） ---------- */
+    /* ---------- 横向总宽（底部） ----------
+       梯形必须按下底 B₂ 自己的宽度画，不能拿包围盒（最宽的那条边）当界限，
+       否则短底边的标注线会画到长底边上去。 */
     const hKey = (type === 'circle' || type === 'tube') ? 'D'
                : (hasB1 ? 'B2' : 'B');
     const hLbl = hKey === 'D' ? 'D' : (hKey === 'B2' ? 'B₂' : 'B');
-    s += ln(xLo, dimY, xHi, dimY, '#9aa3b2', 1);
-    s += ln(xLo, dimY - 4, xLo, dimY + 4, '#9aa3b2', 1);
-    s += ln(xHi, dimY - 4, xHi, dimY + 4, '#9aa3b2', 1);
-    s += ln(xLo, yLo, xLo, dimY, '#d3d9e5', 0.8, '2 3');
-    s += ln(xHi, yLo, xHi, dimY, '#d3d9e5', 0.8, '2 3');
-    s += foBox((xLo + xHi) / 2 - 33, 200, 66, 24,
+    const wA = hasB1 ? px(-p.B2 / 2) : xLo;
+    const wB = hasB1 ? px(p.B2 / 2) : xHi;
+    s += ln(wA, dimY, wB, dimY, '#9aa3b2', 1);
+    s += ln(wA, dimY - 4, wA, dimY + 4, '#9aa3b2', 1);
+    s += ln(wB, dimY - 4, wB, dimY + 4, '#9aa3b2', 1);
+    s += ln(wA, yLo, wA, dimY, '#d3d9e5', 0.8, '2 3');
+    s += ln(wB, yLo, wB, dimY, '#d3d9e5', 0.8, '2 3');
+    s += foBox((wA + wB) / 2 - 33, 200, 66, 24,
                '<i>' + hLbl + '</i>' + foInp(hKey, raw[hKey]));
 
     /* ---------- 壁厚（右侧，引线 + 加粗示意线） ---------- */
@@ -1720,6 +1734,19 @@ function tex2html(src) {
       '<div class="item"><div class="k">结论</div>' +
       '<div class="v" style="padding-top:6px">' + badge(r.ok) + '</div>' +
       '<div class="sub">' + (r.ok ? '强度与挠度均满足' : (r.okStrength ? '挠度超限' : (r.okDefl ? '强度超限' : '强度、挠度均超限'))) + '</div></div>';
+
+    /* 计算条件：一眼看清算的是什么工况 */
+    const aC0 = inp.form === 'two'
+      ? Math.min(Math.max(inp.a, 0.02), Math.max(inp.L - 0.02, 0.03))
+      : inp.a;
+    const fname = (FORM_LIST.filter(function (f) { return f[0] === inp.form; })[0] || ['', '—'])[1];
+    const fextra = inp.form === 'two' ? '（a = ' + fmt(aC0, 2) + ' m）'
+                 : (inp.form === 'cantf' ? '（a = ' + fmt(inp.a, 2) + ' m）' : '');
+    el.condBox.innerHTML =
+      '<div><div class="k">受力形式</div><div class="v">' + fname + fextra + '</div></div>' +
+      '<div><div class="k">跨度 L</div><div class="v">' + fmt(inp.L, 2) + ' m</div></div>' +
+      '<div><div class="k">立柱间距 B</div><div class="v">' + fmt(inp.B, 2) + ' m</div></div>' +
+      '<div><div class="k">风荷载 W<sub>k</sub></div><div class="v">' + fmt(inp.wk, 2) + ' kPa</div></div>';
 
     /* 截面特性 */
     el.secKv.innerHTML =
@@ -2120,7 +2147,7 @@ function tex2html(src) {
   });
 
   /* 启动（默认基础模式） */
-  document.getElementById('verLine').textContent = '版本 2026-10-21 03:14';
+  document.getElementById('verLine').textContent = '版本 2026-10-21 03:19';
   applyMode();
 })();
 </script>
