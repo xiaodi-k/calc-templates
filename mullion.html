@@ -359,12 +359,12 @@
       gap: 3px; width: 100%; height: 100%; box-sizing: border-box;
     }
     .dbox i {
-      font-style: normal; font-size: 12.5px; color: var(--muted);
+      font-style: normal; font-size: 13.5px; color: var(--muted);
       font-weight: 600; letter-spacing: .2px; flex: 0 0 auto;
     }
     .dbox input {
-      width: 100%; min-width: 0; margin: 0; padding: 1px 3px;
-      font: 700 14px/1.25 ui-monospace, "SFMono-Regular", Consolas, monospace;
+      width: 100%; min-width: 0; margin: 0; padding: 1px 4px;
+      font: 700 14.5px/1.25 ui-monospace, "SFMono-Regular", Consolas, monospace;
       font-variant-numeric: tabular-nums;
       color: #16325c; text-align: center;
       background: #fff; border: 1px solid #c2d2ee; border-radius: 5px;
@@ -377,8 +377,9 @@
     .dbox input.warn {
       border-color: #e0a400; background: #fff9ec;
     }
-    .dbox input.dim-w { max-width: 34px; }
-    .dbox input.dim-l { max-width: 46px; }
+    /* 宽度按"能完整显示两位小数"给：内容区能放下 4~5 个字符 */
+    .dbox input.dim-w { max-width: 46px; }
+    .dbox input.dim-l { max-width: 58px; }
     @media print {
       .dbox input { border-color: transparent; background: transparent; }
     }
@@ -1417,9 +1418,11 @@ function tex2html(src) {
     return '<foreignObject x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '">' +
            '<div xmlns="http://www.w3.org/1999/xhtml" class="dbox">' + inner + '</div></foreignObject>';
   }
-  function foInp(key, raw, cls) {
+  const TIP_COMMIT = '改完按回车（或点其他地方）生效';
+  function foInp(key, raw, cls, title) {
     return '<input type="text" inputmode="decimal" autocomplete="off" spellcheck="false" ' +
-           'data-dim="' + key + '" class="' + (cls || 'dim-w') + '" value="' + esc(raw) + '" aria-label="' + key + '"/>';
+           'data-dim="' + key + '" class="' + (cls || 'dim-w') + '" value="' + esc(raw) +
+           '" title="' + esc(title || TIP_COMMIT) + '" aria-label="' + key + '"/>';
   }
   function ln(x1, y1, x2, y2, col, w, dash) {
     return '<line x1="' + x1.toFixed(1) + '" y1="' + y1.toFixed(1) + '" x2="' + x2.toFixed(1) +
@@ -1434,7 +1437,7 @@ function tex2html(src) {
     const bh = Math.max(g.ymax - g.ymin, 1e-6);
     const hasB1 = (type === 'trap' || type === 'htrap');
     const wallKind = ['tube', 'box', 'tee', 'ibeam', 'htri', 'hrhomb', 'htrap'].indexOf(type) >= 0;
-    const padL = 66, padR = wallKind ? 64 : 22;
+    const padL = 66, padR = wallKind ? 76 : 22;
     const availW = W - padL - padR;
     const top = hasB1 ? 44 : 30, bot = 186;
     const availH = bot - top;
@@ -1467,7 +1470,7 @@ function tex2html(src) {
     s += ln(dimX - 4, yLo, dimX + 4, yLo, '#9aa3b2', 1);
     s += ln(dimX + 5, yHi, xLo, yHi, '#d3d9e5', 0.8, '2 3');
     s += ln(dimX + 5, yLo, xLo, yLo, '#d3d9e5', 0.8, '2 3');
-    s += foBox(0, (yHi + yLo) / 2 - 11, 52, 22,
+    s += foBox(0, (yHi + yLo) / 2 - 12, 60, 24,
                '<i>' + vKey + '</i>' + foInp(vKey, raw[vKey]));
 
     /* ---------- 上底 B1（梯形，顶部） ---------- */
@@ -1478,7 +1481,7 @@ function tex2html(src) {
       s += ln(b1b, 22, b1b, 30, '#9aa3b2', 1);
       s += ln(b1a, 30, b1a, yHi, '#d3d9e5', 0.8, '2 3');
       s += ln(b1b, 30, b1b, yHi, '#d3d9e5', 0.8, '2 3');
-      s += foBox((b1a + b1b) / 2 - 26, 1, 52, 22,
+      s += foBox((b1a + b1b) / 2 - 33, 0, 66, 24,
                  '<i>B₁</i>' + foInp('B1', raw.B1));
     }
 
@@ -1491,7 +1494,7 @@ function tex2html(src) {
     s += ln(xHi, dimY - 4, xHi, dimY + 4, '#9aa3b2', 1);
     s += ln(xLo, yLo, xLo, dimY, '#d3d9e5', 0.8, '2 3');
     s += ln(xHi, yLo, xHi, dimY, '#d3d9e5', 0.8, '2 3');
-    s += foBox((xLo + xHi) / 2 - 26, 200, 52, 22,
+    s += foBox((xLo + xHi) / 2 - 33, 200, 66, 24,
                '<i>' + hLbl + '</i>' + foInp(hKey, raw[hKey]));
 
     /* ---------- 壁厚（右侧，引线 + 加粗示意线） ---------- */
@@ -1516,12 +1519,12 @@ function tex2html(src) {
         anns.push({ k: 't', l: 't', lx: px((xo + xi) / 2), ly: py(0),
                     mk: [px(xi), py(0), px(xo), py(0)] });
       }
-      const tagX = W - 62;
+      const tagX = W - 74;
       anns.forEach(function (a, i) {
-        const yy = anns.length > 1 ? (i === 0 ? 40 : 76) : 52;
+        const yy = anns.length > 1 ? (i === 0 ? 38 : 74) : 50;
         if (a.mk) s += ln(a.mk[0], a.mk[1], a.mk[2], a.mk[3], '#2f6feb', 2.6);
-        s += ln(tagX, yy + 11, a.lx, a.ly, '#b9c6dd', 0.9, '3 2');
-        s += foBox(tagX, yy, 58, 22, '<i>' + a.l + '</i>' + foInp(a.k, raw[a.k]));
+        s += ln(tagX, yy + 12, a.lx, a.ly, '#b9c6dd', 0.9, '3 2');
+        s += foBox(tagX, yy, 72, 24, '<i>' + a.l + '</i>' + foInp(a.k, raw[a.k]));
       });
     }
 
@@ -1533,7 +1536,7 @@ function tex2html(src) {
   function foBInp(key, raw, cls, title) {
     return '<input type="text" inputmode="decimal" autocomplete="off" spellcheck="false" ' +
            'data-bk="' + key + '" class="' + (cls || 'dim-w') + '" value="' + esc(raw) +
-           (title ? '" title="' + title : '') + '" aria-label="' + key + '"/>';
+           '" title="' + esc(title || TIP_COMMIT) + '" aria-label="' + key + '"/>';
   }
 
   /* 受力简图：跨度 L、分段 a、风荷载 W_k 都在图上直接改 */
@@ -1550,7 +1553,7 @@ function tex2html(src) {
     let s = '<svg viewBox="0 0 ' + W + ' ' + Hh + '" role="img">';
 
     /* ---------- 风荷载（左上角，直接在图上输入） ---------- */
-    s += foBox(4, 4, 98, 24,
+    s += foBox(2, 2, 120, 26,
                '<i>W<sub>k</sub></i>' + foBInp('wk', beamRaw.wk, 'dim-l') + '<i>kPa</i>');
 
     /* ---------- 面板（悬臂带飞边时） ---------- */
@@ -1559,8 +1562,8 @@ function tex2html(src) {
       const pB = a > 0 ? Y(L) : Y(L + a);
       s += '<rect x="' + (xm + 7) + '" y="' + pT.toFixed(1) + '" width="26" height="' + Math.max(pB - pT, 1).toFixed(1) +
            '" fill="#eef4ff" stroke="#c8d8f5" stroke-width="1" stroke-dasharray="3 3"/>';
-      s += '<text x="' + (xm + 20) + '" y="' + ((pT + pB) / 2 + 3).toFixed(1) +
-           '" text-anchor="middle" font-size="10" fill="#8aa4cc">面板</text>';
+      s += '<text x="' + (xm + 20) + '" y="' + ((pT + pB) / 2 + 4).toFixed(1) +
+           '" text-anchor="middle" font-size="11.5" fill="#8aa4cc">面板</text>';
     }
 
     /* ---------- 立柱 ---------- */
@@ -1581,8 +1584,8 @@ function tex2html(src) {
       const yA = Y(L + a / 2);
       s += '<line x1="' + (xm - 58) + '" y1="' + yA.toFixed(1) + '" x2="' + (xm - 6) + '" y2="' + yA.toFixed(1) +
            '" stroke="#c98a2b" stroke-width="1.4" marker-end="url(#ar2)"/>';
-      s += '<text x="' + (xm - 60) + '" y="' + (yA + 3).toFixed(1) +
-           '" text-anchor="end" font-size="10.5" fill="#b07a24">F<tspan font-size="8" dy="3">a</tspan></text>';
+      s += '<text x="' + (xm - 62) + '" y="' + (yA + 4).toFixed(1) +
+           '" text-anchor="end" font-size="13" fill="#b07a24">F<tspan font-size="10" dy="3">a</tspan></text>';
     }
 
     /* ---------- 支座 ---------- */
@@ -1614,7 +1617,7 @@ function tex2html(src) {
     s += ln(lx, Y(0), lx, Y(L), '#9aa3b2', 1);
     s += ln(lx - 4, Y(0), lx + 4, Y(0), '#9aa3b2', 1);
     s += ln(lx - 4, Y(L), lx + 4, Y(L), '#9aa3b2', 1);
-    s += foBox(lx + 6, (Y(0) + Y(L)) / 2 - 11, 62, 22,
+    s += foBox(lx + 6, (Y(0) + Y(L)) / 2 - 12, 80, 24,
                '<i>L</i>' + foBInp('L', beamRaw.L) + '<i>m</i>');
 
     /* ---------- 分段 / 飞边 a（可编辑） ---------- */
@@ -1622,22 +1625,22 @@ function tex2html(src) {
       /* a 越界时图照样画得下：先夹进 (0, L)，图上再告诉用户实际取值 */
       const aC = Math.min(Math.max(a, 0.02), Math.max(L - 0.02, 0.03));
       const yMid = Y(Math.max(L - aC, 0.01));
-      const ay = Math.min(Math.max((yMid + Y(L)) / 2 - 11, 30), 168);
+      const ay = Math.min(Math.max((yMid + Y(L)) / 2 - 12, 32), 166);
       s += ln(xm - 40, yMid, xm - 40, Y(L), '#9aa3b2', 1);
       s += ln(xm - 44, yMid, xm - 36, yMid, '#9aa3b2', 1);
       s += ln(xm - 44, Y(L), xm - 36, Y(L), '#9aa3b2', 1);
       const aWarn = Math.abs(aC - a) > 1e-9;
-      s += foBox(2, ay, 62, 22, '<i>a</i>' +
+      /* 左边要留位置给分段尺寸线，宽度按住 60，单位由下方分段文字给出 */
+      s += foBox(2, ay, 60, 24, '<i>a</i>' +
         foBInp('a', beamRaw.a, 'dim-w' + (aWarn ? ' warn' : ''),
-               aWarn ? 'a 需在 0 ~ L 之间，已按 ' + fmt(aC, 2) + ' m 计算' : '') +
-        '<i>m</i>');
-      s += '<text x="' + (xm - 48) + '" y="' + ((Y(0) + yMid) / 2 + 3).toFixed(1) +
-           '" text-anchor="end" font-size="10.5" fill="#6b7280">' + fmt(L - aC, 2) + ' m</text>';
+               aWarn ? 'a 需在 0 ~ L 之间，已按 ' + fmt(aC, 2) + ' m 计算' : ''));
+      s += '<text x="' + (xm - 52) + '" y="' + ((Y(0) + yMid) / 2 + 4).toFixed(1) +
+           '" text-anchor="end" font-size="12.5" fill="#6b7280">' + fmt(L - aC, 2) + ' m</text>';
     } else if (inp.form === 'cantf') {
       s += ln(xm + 44, Y(L), xm + 44, Y(L + a), '#9aa3b2', 1);
       s += ln(xm + 40, Y(L), xm + 48, Y(L), '#9aa3b2', 1);
       s += ln(xm + 40, Y(L + a), xm + 48, Y(L + a), '#9aa3b2', 1);
-      s += foBox(xm + 50, (Y(L) + Y(L + a)) / 2 - 11, 62, 22,
+      s += foBox(xm + 50, (Y(L) + Y(L + a)) / 2 - 12, 80, 24,
                  '<i>a</i>' + foBInp('a', beamRaw.a) + '<i>m</i>');
     }
 
@@ -2006,30 +2009,24 @@ function tex2html(src) {
   }
 
   /* ---------- 直接在图上改尺寸 ---------- */
+  /* 输入过程中只记原文、不重算 —— 让用户可以敲完整再生效；
+     等回车或失焦（change）时才落定并重画几何。 */
   function onSecEdit(e, commit) {
     const t = e.target;
     if (!t || !t.getAttribute) return;
     const k = t.getAttribute('data-dim');
     if (!k) return;
     dimRaw[curType][k] = t.value;
+    if (!commit) return;
     const v = parseFloat(t.value);
-    /* commit = 失焦/回车：非法值退回上一次的合法值并规范显示 */
-    if (commit) {
-      const ok = isFinite(v) && v > 0;
-      const nv = ok ? v : dimValues[curType][k];
-      dimValues[curType][k] = nv;
-      dimRaw[curType][k] = String(nv);
-      render();
-      return;
+    const ok = isFinite(v) && v > 0;
+    if (ok) {
+      dimValues[curType][k] = v;
+      dimRaw[curType][k] = t.value.trim();   /* 保留用户敲的原样，别把 3.0 改成 3 */
+    } else {
+      dimRaw[curType][k] = String(dimValues[curType][k]);   /* 非法就退回上一次的合法值 */
     }
-    /* 输入中：敲到一半（"1"、"1."）不动，等它合法了再刷新 */
-    if (!isFinite(v) || v <= 0) return;
-    dimValues[curType][k] = v;
-    const inp = readInput();
-    let r;
-    try { r = compute(inp); } catch (err) { return; }
-    redraw(el.secPrev, function () { return drawSection(inp.type, inp.p, r.pr); });
-    renderOutputs(inp, r);
+    render();
   }
   function onBeamEdit(e, commit) {
     const t = e.target;
@@ -2037,25 +2034,18 @@ function tex2html(src) {
     const k = t.getAttribute('data-bk');
     if (!k) return;
     beamRaw[k] = t.value;
+    if (!commit) return;
     const v = parseFloat(t.value);
-    if (commit) {
-      let nv = isFinite(v) ? v : beamVals[k];
+    if (isFinite(v)) {
+      let nv = v;
       if (k === 'L') nv = Math.max(nv, 0.05);
       if (k === 'wk') nv = Math.max(nv, 0);
       beamVals[k] = nv;
-      beamRaw[k] = String(nv);
-      render();
-      return;
+      beamRaw[k] = t.value.trim();   /* 保留用户敲的原样 */
+    } else {
+      beamRaw[k] = String(beamVals[k]);   /* 非法就退回上一次的合法值 */
     }
-    if (!isFinite(v)) return;
-    if (k === 'L' && !(v > 0)) return;
-    if (k === 'wk' && v < 0) return;
-    beamVals[k] = v;
-    const inp = readInput();
-    let r;
-    try { r = compute(inp); } catch (err) { return; }
-    redraw(el.beamPrev, function () { return drawBeam(inp, r); });
-    renderOutputs(inp, r);
+    render();
   }
 
   function applyMode() {
@@ -2130,7 +2120,7 @@ function tex2html(src) {
   });
 
   /* 启动（默认基础模式） */
-  document.getElementById('verLine').textContent = '版本 2026-10-21 02:54';
+  document.getElementById('verLine').textContent = '版本 2026-10-21 03:14';
   applyMode();
 })();
 </script>
