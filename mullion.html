@@ -373,6 +373,9 @@
     .dbox input:focus {
       border-color: #2f6feb; box-shadow: 0 0 0 2px rgba(47,111,235,.15);
     }
+    /* 系数覆盖：手动改过的项标出来，一眼看出哪些不是自动值 */
+    #advBox input[data-auto="0"] { background: #fffdf3; border-color: #e2c98f; }
+
     /* 值超出可用范围（如双跨的 a 不在 0~L 内）时标黄，鼠标悬停给原因 */
     .dbox input.warn {
       border-color: #e0a400; background: #fff9ec;
@@ -589,7 +592,7 @@
               </div>
             </div>
             <p class="hint" style="margin-top:10px">
-              留空表示按规范自动取值。厚度分组只影响碳钢（GB 50017-2017 表 4.4.1）。
+              框内是当前自动取值（随地区、材料变化）；改过的项会锁定，清空即交回自动。厚度分组只影响碳钢（GB 50017-2017 表 4.4.1）。
             </p>
           </details>
         </div>
@@ -1174,6 +1177,9 @@ function tex2html(src) {
     ['cant', '悬臂'], ['cantf', '悬臂 + 飞边']
   ];
 
+  /* 可覆盖的系数与限值（高级模式才有入口） */
+  const OVERRIDE = ['gG', 'gW', 'gE', 'gL', 'psL', 'psW', 'div', 'limAbs', 'fMan', 'tcMan'];
+
   /* 基础模式开放的范围 */
   const BASIC_SEC = ['tube', 'box', 'tee'];
   const BASIC_MAT = ['Q355', 'AL6063T6'];
@@ -1697,6 +1703,25 @@ function tex2html(src) {
     }
   }
 
+  /* 覆盖框：默认值直接显示出来（地区/材料一变就跟着变），
+     手动改过就锁住（data-auto="0"），清空即回到自动。 */
+  function syncOverride(inp) {
+    const reg = REGIONS[el.reg.value] || REGIONS['全国'];
+    const list = [
+      ['gG', reg.gG], ['gW', reg.gW], ['gE', reg.gE],
+      ['gL', 1.5], ['psL', 0.7], ['psW', 0.6],
+      ['div', inp.mat.dv], ['limAbs', 30]
+    ];
+    list.forEach(function (x) {
+      const e = el[x[0]];
+      if (!e) return;
+      if (e.getAttribute && e.getAttribute('data-auto') === '0') return;   /* 手动锁定 */
+      /* 正在清空重输的时候别抢着回填 */
+      if (e === document.activeElement && String(e.value).trim() === '') return;
+      e.value = String(+x[1].toFixed(3));
+    });
+  }
+
   function renderOutputs(inp, r) {
     el.secHint.textContent = '按真实比例绘制。改标注里的数字，图形与计算结果实时更新。';
 
@@ -1714,6 +1739,8 @@ function tex2html(src) {
       ? '强度按板件厚度分组：t* = ' + fmt(inp.tcMan !== null ? inp.tcMan : r.pr.tc, 1) + ' mm（' +
         r.pr.tcNote + '）→ ' + st.note + '。'
       : '强度取材料表值，不随厚度变化。挠度限值分母 ' + inp.mat.dv + '。';
+
+    syncOverride(inp, r);
 
     const hints = {
       simple: '两端铰支，均布风荷载。挠度限值取 L/n 与绝对限值之小。',
@@ -2099,8 +2126,10 @@ function tex2html(src) {
       el.pm.value = '玻璃';
       el.pt.value = '20';
       el.ig.value = '0.08';
-      ['gG', 'gW', 'gE', 'gL', 'psL', 'psW', 'div', 'limAbs', 'fMan', 'tcMan'].forEach(function (k) {
+      /* 切回基础等于放弃所有手动覆盖，回到自动值（隐藏状态下也保持一致） */
+      OVERRIDE.forEach(function (k) {
         el[k].value = '';
+        el[k].setAttribute('data-auto', '1');
       });
     }
     render();
@@ -2120,12 +2149,18 @@ function tex2html(src) {
     curType = el.sec.value;
     render();
   });
-  ['mat', 'form', 'B', 'reg', 'pm', 'pt', 'ig',
-   'gG', 'gW', 'gE', 'gL', 'psL', 'psW', 'div', 'limAbs', 'fMan', 'tcMan'].forEach(function (id) {
+  ['mat', 'form', 'B', 'reg', 'pm', 'pt', 'ig'].concat(OVERRIDE).forEach(function (id) {
     const e = el[id];
     if (!e) return;
+    const isOv = OVERRIDE.indexOf(id) >= 0;
     ['input', 'change'].forEach(function (t) {
-      e.addEventListener(t, function () { render(); });
+      e.addEventListener(t, function () {
+        if (isOv) {
+          /* 有内容 = 手动锁定；清空 = 交回自动 */
+          e.setAttribute('data-auto', String(e.value).trim() === '' ? '1' : '0');
+        }
+        render();
+      });
     });
   });
 
@@ -2147,7 +2182,7 @@ function tex2html(src) {
   });
 
   /* 启动（默认基础模式） */
-  document.getElementById('verLine').textContent = '版本 2026-10-21 03:19';
+  document.getElementById('verLine').textContent = '版本 2026-10-21 03:25';
   applyMode();
 })();
 </script>
