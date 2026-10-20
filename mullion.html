@@ -808,7 +808,8 @@ function tex2html(src) {
     tee:    { name: 'T形', dims: [['H', '总高 H', 160], ['B', '翼缘宽 B', 90], ['tf', '翼缘厚 t_f', 12], ['tw', '腹板厚 t_w', 8]] },
     trap:   { name: '梯形', dims: [['H', '高度 H', 160], ['B1', '上底 B₁', 120], ['B2', '下底 B₂', 80]] },
     htrap:  { name: '空心梯形', dims: [['H', '高度 H', 160], ['B1', '上底 B₁', 120], ['B2', '下底 B₂', 80], ['t', '壁厚 t', 10]] },
-    ibeam:  { name: '对称工字形', dims: [['H', '总高 H', 200], ['B', '翼缘宽 B', 120], ['tf', '翼缘厚 t_f', 12], ['tw', '腹板厚 t_w', 10]] }
+    ibeam:  { name: '对称工字形', dims: [['H', '总高 H', 200], ['B', '翼缘宽 B', 120], ['tf', '翼缘厚 t_f', 12], ['tw', '腹板厚 t_w', 10]] },
+    csh:    { name: 'C 形（开口槽钢）', dims: [['H', '总高 H', 200], ['B', '总宽 B', 70], ['tf', '翼缘厚 t_f', 12], ['tw', '腹板厚 t_w', 8]] }
   };
 
   /* ---------- 材料 ---------- */
@@ -1023,6 +1024,14 @@ function tex2html(src) {
         [-tw / 2, yb + tf], [-tw / 2, yt - tf], [-B / 2, yt - tf], [-B / 2, yt]
       ], hole: false });
       dims = [['H', H], ['B', B], ['t_f', tf], ['t_w', tw]];
+    } else if (type === 'csh') {
+      /* 开口朝右的 C 形：左侧腹板 + 上下两片翼缘（右腹板没有） */
+      const yb = -H / 2, yt = H / 2;
+      polys.push({ pts: [
+        [-B / 2, yb], [B / 2, yb], [B / 2, yb + tf], [-B / 2 + tw, yb + tf],
+        [-B / 2 + tw, yt - tf], [B / 2, yt - tf], [B / 2, yt], [-B / 2, yt]
+      ], hole: false });
+      dims = [['H', H], ['B', B], ['t_f', tf], ['t_w', tw]];
     }
 
     let xmin = Infinity, xmax = -Infinity, ymin = Infinity, ymax = -Infinity;
@@ -1129,7 +1138,7 @@ function tex2html(src) {
     /* 碳钢厚度分组用的控制厚度：受弯最外纤维所在板件 */
     let tc, tcNote;
     if (type === 'tube') { tc = p.t; tcNote = '圆管壁厚 t'; }
-    else if (type === 'box' || type === 'tee' || type === 'ibeam') { tc = p.tf; tcNote = '翼缘厚 t_f'; }
+    else if (type === 'box' || type === 'tee' || type === 'ibeam' || type === 'csh') { tc = p.tf; tcNote = '翼缘厚 t_f'; }
     else if (type === 'htri' || type === 'hrhomb' || type === 'htrap') { tc = p.t; tcNote = '壁厚 t'; }
     else { tc = Math.max(p.H || 0, p.D || 0); tcNote = '实心截面，取截面厚度'; }
 
@@ -1452,7 +1461,7 @@ function tex2html(src) {
     const bw = Math.max(g.xmax - g.xmin, 1e-6);
     const bh = Math.max(g.ymax - g.ymin, 1e-6);
     const hasB1 = (type === 'trap' || type === 'htrap');
-    const wallKind = ['tube', 'box', 'tee', 'ibeam', 'htri', 'hrhomb', 'htrap'].indexOf(type) >= 0;
+    const wallKind = ['tube', 'box', 'tee', 'ibeam', 'csh', 'htri', 'hrhomb', 'htrap'].indexOf(type) >= 0;
     const padL = 66, padR = wallKind ? 76 : 22;
     const availW = W - padL - padR;
     const top = hasB1 ? 44 : 30, bot = 186;
@@ -1533,6 +1542,12 @@ function tex2html(src) {
                     mk: [px(p.B * 0.3), py(p.H / 2 - p.tf), px(p.B * 0.3), py(p.H / 2)] });
         anns.push({ k: 'tw', l: 't_w', lx: px(p.tw / 2), ly: py(0),
                     mk: [px(-p.tw / 2), py(0), px(p.tw / 2), py(0)] });
+      } else if (type === 'csh') {
+        /* 开口朝右：翼缘厚标在上翼缘，腹板厚标在左侧那片腹板（引线从开口穿过） */
+        anns.push({ k: 'tf', l: 't_f', lx: px(p.B * 0.2), ly: py(p.H / 2 - p.tf / 2),
+                    mk: [px(p.B * 0.2), py(p.H / 2 - p.tf), px(p.B * 0.2), py(p.H / 2)] });
+        anns.push({ k: 'tw', l: 't_w', lx: px(-p.B / 2 + p.tw / 2), ly: py(0),
+                    mk: [px(-p.B / 2), py(0), px(-p.B / 2 + p.tw), py(0)] });
       } else {
         const xo = rightEdgeX(g.polys[0].pts, 0);
         const xi = g.polys[1] ? rightEdgeX(g.polys[1].pts, 0) : 0;
@@ -2182,7 +2197,7 @@ function tex2html(src) {
   });
 
   /* 启动（默认基础模式） */
-  document.getElementById('verLine').textContent = '版本 2026-10-21 03:25';
+  document.getElementById('verLine').textContent = '版本 2026-10-21 03:34';
   applyMode();
 })();
 </script>
