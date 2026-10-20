@@ -352,12 +352,36 @@
       border-radius: 10px; background: #fff; padding: 6px 4px 2px;
     }
     .secprev svg { display: block; width: 100%; height: auto; }
-    .secmeta {
-      display: flex; flex-wrap: wrap; gap: 4px 14px;
-      padding: 4px 8px 6px; font-size: 11.5px; color: var(--muted);
-      font-variant-numeric: tabular-nums;
+
+    /* ===== 标注内嵌输入框（尺寸直接改，不再另起输入区） ===== */
+    .dbox {
+      display: flex; align-items: center; justify-content: center;
+      gap: 3px; width: 100%; height: 100%; box-sizing: border-box;
     }
-    .secmeta b { color: #333; font-weight: 700; }
+    .dbox i {
+      font-style: normal; font-size: 12.5px; color: var(--muted);
+      font-weight: 600; letter-spacing: .2px; flex: 0 0 auto;
+    }
+    .dbox input {
+      width: 100%; min-width: 0; margin: 0; padding: 1px 3px;
+      font: 700 14px/1.25 ui-monospace, "SFMono-Regular", Consolas, monospace;
+      font-variant-numeric: tabular-nums;
+      color: #16325c; text-align: center;
+      background: #fff; border: 1px solid #c2d2ee; border-radius: 5px;
+      box-sizing: border-box; outline: none;
+    }
+    .dbox input:focus {
+      border-color: #2f6feb; box-shadow: 0 0 0 2px rgba(47,111,235,.15);
+    }
+    /* 值超出可用范围（如双跨的 a 不在 0~L 内）时标黄，鼠标悬停给原因 */
+    .dbox input.warn {
+      border-color: #e0a400; background: #fff9ec;
+    }
+    .dbox input.dim-w { max-width: 34px; }
+    .dbox input.dim-l { max-width: 46px; }
+    @media print {
+      .dbox input { border-color: transparent; background: transparent; }
+    }
 
     .beamprev {
       margin: 10px 0 4px; border: 1px solid #e3e7f0;
@@ -398,6 +422,12 @@
     td.mono, .mono { font-variant-numeric: tabular-nums; }
     .small { font-size: 12px; }
 
+    /* ===== 基础模式：关掉所有小字提示 ===== */
+    body.m-basic .hint,
+    body.m-basic .fxnote,
+    body.m-basic .dep,
+    body.m-basic .fx-tools { display: none !important; }
+
     /* ===== 打印：本页结构比玻璃页复杂，覆盖成单列流式布局 ===== */
     @media print {
       .inputs .card > .body { display: block !important; }
@@ -429,7 +459,7 @@
           <span class="ios-lbl on" id="lblBasic">基础</span>
           <button type="button" class="ios-sw" id="modeSw"
                   role="switch" aria-checked="false"
-                  title="基础：常用参数　／　高级：可覆盖分项系数、组合值系数与挠度限值"></button>
+                  title="基础：圆管/箱型/T形 · Q355 或 6063-T6 · 单跨与双跨（地区、面板、地震按常规取值）　／　高级：12 种截面 · 17 种材料 · 单跨/双跨/悬臂/飞边悬臂 · 地区与系数全部可调"></button>
           <span class="ios-lbl" id="lblAdv">高级</span>
         </div>
       </div>
@@ -442,8 +472,6 @@
             <select id="sec" style="flex:1 1 auto"></select>
           </div>
           <div class="secprev" id="secPrev"></div>
-          <div class="secmeta" id="secMeta"></div>
-          <div class="grid2" id="dimHost" style="margin-top:6px"></div>
           <p class="hint" id="secHint"></p>
         </div>
       </div>
@@ -465,22 +493,7 @@
         <div class="body">
           <div class="row">
             <label for="form">形式</label>
-            <select id="form" style="flex:1 1 auto">
-              <option value="simple" selected>单跨（简支）</option>
-              <option value="two">双跨（连续）</option>
-              <option value="cant">悬臂</option>
-              <option value="cantf">悬臂 + 飞边</option>
-            </select>
-          </div>
-          <div class="row">
-            <label for="L">立柱跨度 L</label>
-            <input type="number" id="L" value="5.62" step="0.1" min="0.2" />
-            <span class="unit">m</span>
-          </div>
-          <div class="row" id="rowA">
-            <label for="a" id="lblA">第二跨 a</label>
-            <input type="number" id="a" value="1" step="0.1" />
-            <span class="unit">m</span>
+            <select id="form" style="flex:1 1 auto"></select>
           </div>
           <div class="row">
             <label for="B">立柱间距 B</label>
@@ -492,15 +505,10 @@
         </div>
       </div>
 
-      <div class="card">
+      <div class="card" id="cardLoad">
         <h2>荷载</h2>
         <div class="body">
-          <div class="row">
-            <label for="wk">风荷载标准值 W<sub>k</sub></label>
-            <input type="number" id="wk" value="2.4" step="0.05" min="0" />
-            <span class="unit">kPa</span>
-          </div>
-          <div class="row">
+          <div class="row" id="rowReg">
             <label for="reg">项目地区</label>
             <select id="reg">
               <option value="全国">全国（GB 50009）</option>
@@ -508,7 +516,7 @@
               <option value="海外">海外（γ = 1.0）</option>
             </select>
           </div>
-          <div class="grid2" style="margin-top:2px">
+          <div class="grid2" id="rowPanel" style="margin-top:2px">
             <div>
               <label for="pm">面板材质</label>
               <select id="pm"></select>
@@ -521,7 +529,7 @@
               </div>
             </div>
           </div>
-          <div class="row" style="margin-top:10px">
+          <div class="row" id="rowIg" style="margin-top:10px">
             <label for="ig">抗震设防</label>
             <select id="ig" style="flex:1 1 auto"></select>
           </div>
@@ -638,6 +646,7 @@
   </main>
 
   <footer>
+    截面尺寸、跨度与风荷载可直接改图上的标注（点数字即改）。
     截面特性按几何精确积分（多边形 + 孔洞），圆/圆管用解析式。
     强度：碳钢按 GB 50017-2017 表 4.4.1 依板件厚度分组取 f，铝合金与不锈钢取材料表值。
     挠度：风（及护栏活荷载）标准值弹性计算，限值按受力形式自动取控制跨度，并与绝对限值取小。
@@ -850,13 +859,6 @@ function tex2html(src) {
   const f3 = function (x) { return fmt(x, 3); };
   const num = function (id) { const v = parseFloat(el[id].value); return isFinite(v) ? v : 0; };
   const optNum = function (id) { const v = parseFloat(el[id].value); return isFinite(v) ? v : null; };
-  function symOf(k) {
-    if (k === 'tf') return 't<sub>f</sub>';
-    if (k === 'tw') return 't<sub>w</sub>';
-    if (k === 'B1') return 'B<sub>1</sub>';
-    if (k === 'B2') return 'B<sub>2</sub>';
-    return k;
-  }
 
   /* ================= 几何 ================= */
   function signedAreaOf(pts) {
@@ -1150,31 +1152,65 @@ function tex2html(src) {
 
   /* ================= 界面 ================= */
   const el = {};
-  ['sec', 'secPrev', 'secMeta', 'dimHost', 'secHint', 'mat', 'matInfo', 'matHint',
-   'form', 'L', 'a', 'rowA', 'lblA', 'B', 'beamPrev', 'formHint',
-   'wk', 'reg', 'pm', 'pt', 'ig', 'advBox', 'gG', 'gW', 'gE', 'gL', 'psL', 'psW',
+  ['sec', 'secPrev', 'secHint', 'mat', 'matInfo', 'matHint',
+   'form', 'B', 'beamPrev', 'formHint',
+   'cardLoad', 'reg', 'rowReg', 'pm', 'pt', 'ig', 'rowPanel', 'rowIg',
+   'advBox', 'gG', 'gW', 'gE', 'gL', 'psL', 'psW',
    'div', 'limAbs', 'fMan', 'tcMan', 'modeSw', 'lblBasic', 'lblAdv',
    'verdict', 'secKv', 'loadKv', 'depNote', 'deflBox', 'strBox',
    'fxSteps', 'fxOpen', 'fxClose', 'printBtn', 'verLine'
   ].forEach(function (id) { el[id] = document.getElementById(id); });
 
-  let mode = 'basic';
-  let dimValues = {};   /* 每种截面各自记住尺寸 */
-  let curType = (el.sec.value && SECTIONS[el.sec.value]) ? el.sec.value : 'box';
+  /* 基础模式开放的范围 */
+  const BASIC_SEC = ['tube', 'box', 'tee'];
+  const BASIC_MAT = ['Q355', 'AL6063T6'];
+  const BASIC_FORM = ['simple', 'two'];
 
-  /* 初始化下拉 */
+  let mode = 'basic';
+  let dimValues = {};   /* 数值：每种截面各自记住尺寸 */
+  let dimRaw = {};      /* 原文：保住用户敲到一半的 "5." 这类输入 */
+  let curType = 'box';
+  /* 跨度与风荷载：数值 + 原文，直接在简图上编辑 */
+  let beamVals = { L: 5.62, a: 1, wk: 2.4 };
+  let beamRaw = { L: '5.62', a: '1', wk: '2.4' };
+
+  /* 初始化：尺寸字典 */
   Object.keys(SECTIONS).forEach(function (k) {
-    const o = document.createElement('option');
-    o.value = k; o.textContent = SECTIONS[k].name;
-    if (k === curType) o.selected = true;
-    el.sec.appendChild(o);
+    const d = {}, w = {};
+    SECTIONS[k].dims.forEach(function (x) { d[x[0]] = x[2]; w[x[0]] = String(x[2]); });
+    dimValues[k] = d;
+    dimRaw[k] = w;
   });
-  MATS.forEach(function (m) {
-    const o = document.createElement('option');
-    o.value = m.id; o.textContent = m.name;
-    if (m.id === 'Q355') o.selected = true;
-    el.mat.appendChild(o);
-  });
+
+  /* 下拉按模式重建：基础只给常用项，高级全开 */
+  function fillOpts(sel, list, labelOf, valOf, cur) {
+    sel.innerHTML = list.map(function (x) {
+      const v = valOf(x);
+      return '<option value="' + v + '"' + (v === cur ? ' selected' : '') + '>' + labelOf(x) + '</option>';
+    }).join('');
+    sel.value = cur;   /* 显式同步，别只靠 selected 属性 */
+  }
+  function buildSecOptions() {
+    const keys = (mode === 'basic') ? BASIC_SEC : Object.keys(SECTIONS);
+    if (keys.indexOf(curType) < 0) curType = keys.indexOf('box') >= 0 ? 'box' : keys[0];
+    fillOpts(el.sec, keys, function (k) { return SECTIONS[k].name; }, function (k) { return k; }, curType);
+  }
+  function buildMatOptions() {
+    const list = (mode === 'basic') ? MATS.filter(function (m) { return BASIC_MAT.indexOf(m.id) >= 0; }) : MATS;
+    let cur = el.mat.value;
+    if (!list.some(function (m) { return m.id === cur; })) cur = 'Q355';
+    fillOpts(el.mat, list, function (m) { return m.name; }, function (m) { return m.id; }, cur);
+  }
+  function buildFormOptions() {
+    const all = [
+      ['simple', '单跨（简支）'], ['two', '双跨（连续）'],
+      ['cant', '悬臂'], ['cantf', '悬臂 + 飞边']
+    ];
+    const list = (mode === 'basic') ? all.filter(function (f) { return BASIC_FORM.indexOf(f[0]) >= 0; }) : all;
+    let cur = el.form.value;
+    if (!list.some(function (f) { return f[0] === cur; })) cur = 'simple';
+    fillOpts(el.form, list, function (f) { return f[1]; }, function (f) { return f[0]; }, cur);
+  }
   PANELS.forEach(function (p) {
     const o = document.createElement('option');
     o.value = p[0]; o.textContent = p[0] + '（γg = ' + p[1] + ' kN/m³）';
@@ -1187,40 +1223,11 @@ function tex2html(src) {
     if (s[0] === '7 度 0.10g') o.selected = true;
     el.ig.appendChild(o);
   });
-  Object.keys(SECTIONS).forEach(function (k) {
-    const d = {};
-    SECTIONS[k].dims.forEach(function (x) { d[x[0]] = x[2]; });
-    dimValues[k] = d;
-  });
 
-  /* ---- 尺寸输入卡 ---- */
-  function buildDims() {
-    const def = SECTIONS[curType];
-    el.dimHost.innerHTML = def.dims.map(function (d) {
-      return '<div><label for="dim_' + d[0] + '">' + d[1] + '</label>' +
-        '<div class="row" style="margin-bottom:0;gap:6px">' +
-        '<input type="number" id="dim_' + d[0] + '" value="' + dimValues[curType][d[0]] + '" step="1" min="0.5" />' +
-        '<span class="unit">mm</span></div></div>';
-    }).join('');
-    def.dims.forEach(function (d) {
-      const e = document.getElementById('dim_' + d[0]);
-      e.addEventListener('input', function () {
-        dimValues[curType][d[0]] = parseFloat(e.value) || 0;
-        render();
-      });
-      e.addEventListener('change', function () {
-        dimValues[curType][d[0]] = parseFloat(e.value) || 0;
-        render();
-      });
-    });
-  }
-
+  /* 尺寸只在标注里改，这里直接从字典取 */
   function readParams() {
     const def = SECTIONS[curType], p = {};
-    def.dims.forEach(function (d) {
-      const e = document.getElementById('dim_' + d[0]);
-      p[d[0]] = e ? (parseFloat(e.value) || 0) : (dimValues[curType][d[0]] || 0);
-    });
+    def.dims.forEach(function (d) { p[d[0]] = dimValues[curType][d[0]]; });
     return p;
   }
 
@@ -1247,10 +1254,10 @@ function tex2html(src) {
       fMan: mAdv ? optNum('fMan') : null,
       tcMan: mAdv ? optNum('tcMan') : null,
       form: el.form.value,
-      L: Math.max(num('L'), 0.05),
-      a: el.form.value === 'cant' ? 0 : num('a'),
+      L: Math.max(beamVals.L, 0.05),
+      a: el.form.value === 'cant' ? 0 : beamVals.a,
       B: Math.max(num('B'), 0.05),
-      wk: Math.max(num('wk'), 0),
+      wk: Math.max(beamVals.wk, 0),
       gg: pm[1],
       panelName: pm[0],
       pt: Math.max(num('pt'), 0),
@@ -1388,13 +1395,49 @@ function tex2html(src) {
   }
 
   /* ================= 绘图 ================= */
+  /* 水平线 y 与多边形右侧的交点（用于给壁厚标注定位） */
+  function rightEdgeX(pts, y) {
+    let best = null;
+    for (let i = 0; i < pts.length; i++) {
+      const a = pts[i], b = pts[(i + 1) % pts.length];
+      if (a[1] === b[1]) continue;
+      if ((a[1] - y) * (b[1] - y) <= 0) {
+        const t = (y - a[1]) / (b[1] - a[1]);
+        const x = a[0] + (b[0] - a[0]) * t;
+        if (best === null || x > best) best = x;
+      }
+    }
+    return best === null ? 0 : best;
+  }
+  function esc(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  }
+  /* SVG 内嵌 HTML 输入框：尺寸直接标在图上改 */
+  function foBox(x, y, w, h, inner) {
+    return '<foreignObject x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '">' +
+           '<div xmlns="http://www.w3.org/1999/xhtml" class="dbox">' + inner + '</div></foreignObject>';
+  }
+  function foInp(key, raw, cls) {
+    return '<input type="text" inputmode="decimal" autocomplete="off" spellcheck="false" ' +
+           'data-dim="' + key + '" class="' + (cls || 'dim-w') + '" value="' + esc(raw) + '" aria-label="' + key + '"/>';
+  }
+  function ln(x1, y1, x2, y2, col, w, dash) {
+    return '<line x1="' + x1.toFixed(1) + '" y1="' + y1.toFixed(1) + '" x2="' + x2.toFixed(1) +
+           '" y2="' + y2.toFixed(1) + '" stroke="' + col + '" stroke-width="' + w + '"' +
+           (dash ? ' stroke-dasharray="' + dash + '"' : '') + '/>';
+  }
+
   function drawSection(type, p, props) {
-    const W = 340, Hh = 250;
+    const W = 340, Hh = 242;
     const g = secGeo(type, p);
     const bw = Math.max(g.xmax - g.xmin, 1e-6);
     const bh = Math.max(g.ymax - g.ymin, 1e-6);
-    const padL = 48, padR = 16, top = 14, bot = Hh - 52;
-    const availW = W - padL - padR, availH = bot - top;
+    const hasB1 = (type === 'trap' || type === 'htrap');
+    const wallKind = ['tube', 'box', 'tee', 'ibeam', 'htri', 'hrhomb', 'htrap'].indexOf(type) >= 0;
+    const padL = 66, padR = wallKind ? 64 : 22;
+    const availW = W - padL - padR;
+    const top = hasB1 ? 44 : 30, bot = 186;
+    const availH = bot - top;
     const sc = Math.min(availW / bw, availH / bh);
     const cx0 = g.xmin + bw / 2, cy0 = g.ymin + bh / 2;
     const ox = padL + availW / 2, oy = (top + bot) / 2;
@@ -1409,102 +1452,151 @@ function tex2html(src) {
       d += 'Z';
     });
 
-    const xT = px(g.xmin), xB2 = px(g.xmax);
-    const yT = py(g.ymax), yB = py(g.ymin);
-    const dimX = xT - 18;
+    const xLo = px(g.xmin), xHi = px(g.xmax);
+    const yHi = py(g.ymax), yLo = py(g.ymin);
+    const dimX = 56, dimY = 198;
+    const raw = dimRaw[type] || {};
 
     let s = '<svg viewBox="0 0 ' + W + ' ' + Hh + '" role="img">';
-    s += '<defs><pattern id="hatch" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">' +
-         '<line x1="0" y1="0" x2="0" y2="5" stroke="#c9d6ef" stroke-width="1"/></pattern></defs>';
     s += '<path d="' + d + '" fill="#dbe7fb" fill-rule="evenodd" stroke="#2f6feb" stroke-width="1.6" stroke-linejoin="round"/>';
 
-    /* 高度尺寸 */
-    s += '<line x1="' + dimX + '" y1="' + yT + '" x2="' + dimX + '" y2="' + yB + '" stroke="#9aa3b2" stroke-width="1"/>';
-    s += '<line x1="' + (dimX - 4) + '" y1="' + yT + '" x2="' + (dimX + 4) + '" y2="' + yT + '" stroke="#9aa3b2" stroke-width="1"/>';
-    s += '<line x1="' + (dimX - 4) + '" y1="' + yB + '" x2="' + (dimX + 4) + '" y2="' + yB + '" stroke="#9aa3b2" stroke-width="1"/>';
-    s += '<line x1="' + (dimX + 5) + '" y1="' + yT + '" x2="' + xT + '" y2="' + yT + '" stroke="#d3d9e5" stroke-width=".8" stroke-dasharray="2 3"/>';
-    s += '<line x1="' + (dimX + 5) + '" y1="' + yB + '" x2="' + xT + '" y2="' + yB + '" stroke="#d3d9e5" stroke-width=".8" stroke-dasharray="2 3"/>';
-    s += '<text x="' + (dimX - 7) + '" y="' + ((yT + yB) / 2) + '" text-anchor="end" dominant-baseline="middle" font-size="11" fill="#6b7280">' +
-         g.dims[0][1] + '</text>';
+    /* ---------- 竖向总高（左侧） ---------- */
+    const vKey = (type === 'circle' || type === 'tube') ? 'D' : 'H';
+    s += ln(dimX, yHi, dimX, yLo, '#9aa3b2', 1);
+    s += ln(dimX - 4, yHi, dimX + 4, yHi, '#9aa3b2', 1);
+    s += ln(dimX - 4, yLo, dimX + 4, yLo, '#9aa3b2', 1);
+    s += ln(dimX + 5, yHi, xLo, yHi, '#d3d9e5', 0.8, '2 3');
+    s += ln(dimX + 5, yLo, xLo, yLo, '#d3d9e5', 0.8, '2 3');
+    s += foBox(0, (yHi + yLo) / 2 - 11, 52, 22,
+               '<i>' + vKey + '</i>' + foInp(vKey, raw[vKey]));
 
-    /* 宽度尺寸 */
-    const dimY = yB + 18;
-    s += '<line x1="' + xT + '" y1="' + dimY + '" x2="' + xB2 + '" y2="' + dimY + '" stroke="#9aa3b2" stroke-width="1"/>';
-    s += '<line x1="' + xT + '" y1="' + (dimY - 4) + '" x2="' + xT + '" y2="' + (dimY + 4) + '" stroke="#9aa3b2" stroke-width="1"/>';
-    s += '<line x1="' + xB2 + '" y1="' + (dimY - 4) + '" x2="' + xB2 + '" y2="' + (dimY + 4) + '" stroke="#9aa3b2" stroke-width="1"/>';
-    s += '<line x1="' + xT + '" y1="' + yB + '" x2="' + xT + '" y2="' + (dimY + 4) + '" stroke="#d3d9e5" stroke-width=".8" stroke-dasharray="2 3"/>';
-    s += '<line x1="' + xB2 + '" y1="' + yB + '" x2="' + xB2 + '" y2="' + (dimY + 4) + '" stroke="#d3d9e5" stroke-width=".8" stroke-dasharray="2 3"/>';
-    if (bw * sc > 26) {
-      s += '<text x="' + ((xT + xB2) / 2) + '" y="' + (dimY + 13) + '" text-anchor="middle" font-size="11" fill="#6b7280">' +
-           (type === 'circle' || type === 'tube' ? p.D : (type === 'trap' || type === 'htrap' ? p.B2 : p.B)) + '</text>';
+    /* ---------- 上底 B1（梯形，顶部） ---------- */
+    if (hasB1) {
+      const b1a = px(-p.B1 / 2), b1b = px(p.B1 / 2);
+      s += ln(b1a, 26, b1b, 26, '#9aa3b2', 1);
+      s += ln(b1a, 22, b1a, 30, '#9aa3b2', 1);
+      s += ln(b1b, 22, b1b, 30, '#9aa3b2', 1);
+      s += ln(b1a, 30, b1a, yHi, '#d3d9e5', 0.8, '2 3');
+      s += ln(b1b, 30, b1b, yHi, '#d3d9e5', 0.8, '2 3');
+      s += foBox((b1a + b1b) / 2 - 26, 1, 52, 22,
+                 '<i>B₁</i>' + foInp('B1', raw.B1));
     }
-    s += '</svg>';
 
+    /* ---------- 横向总宽（底部） ---------- */
+    const hKey = (type === 'circle' || type === 'tube') ? 'D'
+               : (hasB1 ? 'B2' : 'B');
+    const hLbl = hKey === 'D' ? 'D' : (hKey === 'B2' ? 'B₂' : 'B');
+    s += ln(xLo, dimY, xHi, dimY, '#9aa3b2', 1);
+    s += ln(xLo, dimY - 4, xLo, dimY + 4, '#9aa3b2', 1);
+    s += ln(xHi, dimY - 4, xHi, dimY + 4, '#9aa3b2', 1);
+    s += ln(xLo, yLo, xLo, dimY, '#d3d9e5', 0.8, '2 3');
+    s += ln(xHi, yLo, xHi, dimY, '#d3d9e5', 0.8, '2 3');
+    s += foBox((xLo + xHi) / 2 - 26, 200, 52, 22,
+               '<i>' + hLbl + '</i>' + foInp(hKey, raw[hKey]));
+
+    /* ---------- 壁厚（右侧，引线 + 加粗示意线） ---------- */
+    if (wallKind) {
+      const anns = [];
+      if (type === 'tube') {
+        anns.push({ k: 't', l: 't', lx: px(p.D / 2 - p.t / 2), ly: py(0),
+                    mk: [px(p.D / 2 - p.t), py(0), px(p.D / 2), py(0)] });
+      } else if (type === 'box' || type === 'ibeam') {
+        anns.push({ k: 'tf', l: 't_f', lx: px(p.B / 2 - p.tw / 2), ly: py(p.H / 2 - p.tf / 2),
+                    mk: [px(p.B / 2 - p.tw / 2), py(p.H / 2 - p.tf), px(p.B / 2 - p.tw / 2), py(p.H / 2)] });
+        anns.push({ k: 'tw', l: 't_w', lx: px(p.B / 2 - p.tw / 2), ly: py(0),
+                    mk: [px(p.B / 2 - p.tw), py(0), px(p.B / 2), py(0)] });
+      } else if (type === 'tee') {
+        anns.push({ k: 'tf', l: 't_f', lx: px(p.B * 0.3), ly: py(p.H / 2 - p.tf / 2),
+                    mk: [px(p.B * 0.3), py(p.H / 2 - p.tf), px(p.B * 0.3), py(p.H / 2)] });
+        anns.push({ k: 'tw', l: 't_w', lx: px(p.tw / 2), ly: py(0),
+                    mk: [px(-p.tw / 2), py(0), px(p.tw / 2), py(0)] });
+      } else {
+        const xo = rightEdgeX(g.polys[0].pts, 0);
+        const xi = g.polys[1] ? rightEdgeX(g.polys[1].pts, 0) : 0;
+        anns.push({ k: 't', l: 't', lx: px((xo + xi) / 2), ly: py(0),
+                    mk: [px(xi), py(0), px(xo), py(0)] });
+      }
+      const tagX = W - 62;
+      anns.forEach(function (a, i) {
+        const yy = anns.length > 1 ? (i === 0 ? 40 : 76) : 52;
+        if (a.mk) s += ln(a.mk[0], a.mk[1], a.mk[2], a.mk[3], '#2f6feb', 2.6);
+        s += ln(tagX, yy + 11, a.lx, a.ly, '#b9c6dd', 0.9, '3 2');
+        s += foBox(tagX, yy, 58, 22, '<i>' + a.l + '</i>' + foInp(a.k, raw[a.k]));
+      });
+    }
+
+    s += '</svg>';
     return s;
   }
 
-  /* 受力简图 */
+  /* 简图上的输入框用 data-bk 区分（与截面尺寸的 data-dim 分开） */
+  function foBInp(key, raw, cls, title) {
+    return '<input type="text" inputmode="decimal" autocomplete="off" spellcheck="false" ' +
+           'data-bk="' + key + '" class="' + (cls || 'dim-w') + '" value="' + esc(raw) +
+           (title ? '" title="' + title : '') + '" aria-label="' + key + '"/>';
+  }
+
+  /* 受力简图：跨度 L、分段 a、风荷载 W_k 都在图上直接改 */
   function drawBeam(inp, r) {
-    const W = 340, Hh = 200;
+    const W = 340, Hh = 210;
     const L = inp.L, a = inp.a;
     const isCant = inp.form === 'cant' || inp.form === 'cantf';
     const total = inp.form === 'two' ? L : (isCant ? Math.max(L, L + a) : L);
-    const top = isCant ? total : L;
-    const y0 = Hh - 34, yTop = 26;
-    const sc = (y0 - yTop) / Math.max(top, 0.1);
-    const xm = 96;
+    const y0 = 170, yTop = 44;
+    const sc = (y0 - yTop) / Math.max(total, 0.1);
+    const xm = 108;
     const Y = function (v) { return y0 - v * sc; };
-    const th = isCant ? total : L;
 
     let s = '<svg viewBox="0 0 ' + W + ' ' + Hh + '" role="img">';
 
-    /* 面板（悬臂带飞边时） */
+    /* ---------- 风荷载（左上角，直接在图上输入） ---------- */
+    s += foBox(4, 4, 98, 24,
+               '<i>W<sub>k</sub></i>' + foBInp('wk', beamRaw.wk, 'dim-l') + '<i>kPa</i>');
+
+    /* ---------- 面板（悬臂带飞边时） ---------- */
     if (inp.form === 'cantf' && a !== 0) {
-      const pyTop = a > 0 ? Y(L + a) : Y(L);
-      const pyBot = a > 0 ? Y(L) : Y(L + a);
-      s += '<rect x="' + (xm + 7) + '" y="' + pyTop + '" width="26" height="' + Math.max(pyBot - pyTop, 1) +
+      const pT = a > 0 ? Y(L + a) : Y(L);
+      const pB = a > 0 ? Y(L) : Y(L + a);
+      s += '<rect x="' + (xm + 7) + '" y="' + pT.toFixed(1) + '" width="26" height="' + Math.max(pB - pT, 1).toFixed(1) +
            '" fill="#eef4ff" stroke="#c8d8f5" stroke-width="1" stroke-dasharray="3 3"/>';
-      s += '<text x="' + (xm + 20) + '" y="' + ((pyTop + pyBot) / 2) + '" text-anchor="middle" font-size="10" fill="#8aa4cc">面板</text>';
+      s += '<text x="' + (xm + 20) + '" y="' + ((pT + pB) / 2 + 3).toFixed(1) +
+           '" text-anchor="middle" font-size="10" fill="#8aa4cc">面板</text>';
     }
 
-    /* 立柱 */
-    s += '<line x1="' + xm + '" y1="' + Y(0) + '" x2="' + xm + '" y2="' + Y(L) +
+    /* ---------- 立柱 ---------- */
+    s += '<line x1="' + xm + '" y1="' + Y(0).toFixed(1) + '" x2="' + xm + '" y2="' + Y(L).toFixed(1) +
          '" stroke="#2f6feb" stroke-width="4" stroke-linecap="round"/>';
 
-    /* 荷载箭头 */
-    const nArrow = isCant ? 6 : 7;
-    for (let i = 0; i <= nArrow; i++) {
-      const yy = Y(L * i / nArrow);
-      s += '<line x1="' + (xm - 30) + '" y1="' + yy + '" x2="' + (xm - 4) + '" y2="' + yy +
+    /* ---------- 风荷载箭头 ---------- */
+    const nA = isCant ? 6 : 7;
+    for (let i = 0; i <= nA; i++) {
+      const yy = Y(L * i / nA);
+      s += '<line x1="' + (xm - 28) + '" y1="' + yy.toFixed(1) + '" x2="' + (xm - 4) + '" y2="' + yy.toFixed(1) +
            '" stroke="#8fa7d6" stroke-width="1.1" marker-end="url(#ar)"/>';
     }
-    s += '<line x1="' + (xm - 30) + '" y1="' + Y(0) + '" x2="' + (xm - 30) + '" y2="' + Y(L) +
-         '" stroke="#8fa7d6" stroke-width="1" stroke-dasharray="3 3"/>';
-    s += '<text x="' + (xm - 34) + '" y="' + Y(L / 2) + '" text-anchor="end" font-size="10.5" fill="#6b7280">W<tspan font-size="8" dy="3">k</tspan></text>';
+    s += ln(xm - 28, Y(0), xm - 28, Y(L), '#8fa7d6', 1, '3 3');
 
-    /* 飞边集中力 */
+    /* ---------- 飞边集中力 ---------- */
     if (inp.form === 'cantf' && a !== 0) {
       const yA = Y(L + a / 2);
-      s += '<line x1="' + (xm - 52) + '" y1="' + yA + '" x2="' + (xm - 6) + '" y2="' + yA +
+      s += '<line x1="' + (xm - 58) + '" y1="' + yA.toFixed(1) + '" x2="' + (xm - 6) + '" y2="' + yA.toFixed(1) +
            '" stroke="#c98a2b" stroke-width="1.4" marker-end="url(#ar2)"/>';
-      s += '<text x="' + (xm - 56) + '" y="' + (yA + 3) + '" text-anchor="end" font-size="10" fill="#b07a24">F<tspan font-size="8" dy="3">a</tspan></text>';
-      s += '<line x1="' + (xm + 40) + '" y1="' + Y(L) + '" x2="' + (xm + 40) + '" y2="' + Y(L + a) +
-           '" stroke="#9aa3b2" stroke-width="1"/>';
-      s += '<line x1="' + (xm + 36) + '" y1="' + Y(L) + '" x2="' + (xm + 44) + '" y2="' + Y(L) + '" stroke="#9aa3b2" stroke-width="1"/>';
-      s += '<line x1="' + (xm + 36) + '" y1="' + Y(L + a) + '" x2="' + (xm + 44) + '" y2="' + Y(L + a) + '" stroke="#9aa3b2" stroke-width="1"/>';
-      s += '<text x="' + (xm + 47) + '" y="' + ((Y(L) + Y(L + a)) / 2 + 3) + '" font-size="10" fill="#6b7280">a = ' + a + '</text>';
+      s += '<text x="' + (xm - 60) + '" y="' + (yA + 3).toFixed(1) +
+           '" text-anchor="end" font-size="10.5" fill="#b07a24">F<tspan font-size="8" dy="3">a</tspan></text>';
     }
 
-    /* 支座 */
+    /* ---------- 支座 ---------- */
     function tri(x, y) {
-      return '<path d="M' + x + ',' + y + ' l-7,12 l14,0 Z" fill="#fff" stroke="#333" stroke-width="1.2"/>' +
-             '<line x1="' + (x - 9) + '" y1="' + (y + 12) + '" x2="' + (x + 9) + '" y2="' + (y + 12) + '" stroke="#333" stroke-width="1.2"/>';
+      return '<path d="M' + x + ',' + y.toFixed(1) + ' l-7,12 l14,0 Z" fill="#fff" stroke="#333" stroke-width="1.2"/>' +
+             '<line x1="' + (x - 9) + '" y1="' + (y + 12).toFixed(1) + '" x2="' + (x + 9) +
+             '" y2="' + (y + 12).toFixed(1) + '" stroke="#333" stroke-width="1.2"/>';
     }
     function fix(x, y) {
-      let h = '<line x1="' + x + '" y1="' + y + '" x2="' + x + '" y2="' + (y + 12) + '" stroke="#333" stroke-width="1.4"/>';
+      let h = '<line x1="' + x + '" y1="' + y.toFixed(1) + '" x2="' + x + '" y2="' + (y + 12).toFixed(1) +
+              '" stroke="#333" stroke-width="1.4"/>';
       for (let i = 0; i < 5; i++) {
-        h += '<line x1="' + (x - 10 + i * 5) + '" y1="' + (y + 12) + '" x2="' + (x - 5 + i * 5) + '" y2="' + (y + 20) +
-             '" stroke="#333" stroke-width="1"/>';
+        h += '<line x1="' + (x - 10 + i * 5) + '" y1="' + (y + 12).toFixed(1) + '" x2="' + (x - 5 + i * 5) +
+             '" y2="' + (y + 20).toFixed(1) + '" stroke="#333" stroke-width="1"/>';
       }
       return h;
     }
@@ -1513,19 +1605,41 @@ function tex2html(src) {
     } else if (inp.form === 'two') {
       const yMid = Y(Math.max(L - a, 0.01));
       s += tri(xm, Y(L)); s += tri(xm, yMid); s += tri(xm, Y(0) - 12);
-      s += '<line x1="' + (xm - 44) + '" y1="' + (Y(0) - 16) + '" x2="' + (xm - 44) + '" y2="' + yMid + '" stroke="#9aa3b2" stroke-width="1"/>';
-      s += '<text x="' + (xm - 48) + '" y="' + ((Y(0) + yMid) / 2) + '" text-anchor="end" font-size="10" fill="#6b7280">' + fmt(L - a, 2) + ' m</text>';
-      s += '<line x1="' + (xm - 44) + '" y1="' + yMid + '" x2="' + (xm - 44) + '" y2="' + Y(L) + '" stroke="#9aa3b2" stroke-width="1"/>';
-      s += '<text x="' + (xm - 48) + '" y="' + ((Y(L) + yMid) / 2) + '" text-anchor="end" font-size="10" fill="#6b7280">' + fmt(a, 2) + ' m</text>';
     } else {
       s += fix(xm, Y(0) - 12);
     }
 
-    /* L 标注 */
-    s += '<line x1="' + (xm + 26) + '" y1="' + Y(0) + '" x2="' + (xm + 26) + '" y2="' + Y(L) + '" stroke="#9aa3b2" stroke-width="1"/>';
-    s += '<line x1="' + (xm + 22) + '" y1="' + Y(0) + '" x2="' + (xm + 30) + '" y2="' + Y(0) + '" stroke="#9aa3b2" stroke-width="1"/>';
-    s += '<line x1="' + (xm + 22) + '" y1="' + Y(L) + '" x2="' + (xm + 30) + '" y2="' + Y(L) + '" stroke="#9aa3b2" stroke-width="1"/>';
-    s += '<text x="' + (xm + 32) + '" y="' + ((Y(0) + Y(L)) / 2 + 3) + '" font-size="10.5" fill="#374151">L = ' + L + ' m</text>';
+    /* ---------- 跨度 L（右侧，可编辑） ---------- */
+    const lx = xm + 24;
+    s += ln(lx, Y(0), lx, Y(L), '#9aa3b2', 1);
+    s += ln(lx - 4, Y(0), lx + 4, Y(0), '#9aa3b2', 1);
+    s += ln(lx - 4, Y(L), lx + 4, Y(L), '#9aa3b2', 1);
+    s += foBox(lx + 6, (Y(0) + Y(L)) / 2 - 11, 62, 22,
+               '<i>L</i>' + foBInp('L', beamRaw.L) + '<i>m</i>');
+
+    /* ---------- 分段 / 飞边 a（可编辑） ---------- */
+    if (inp.form === 'two') {
+      /* a 越界时图照样画得下：先夹进 (0, L)，图上再告诉用户实际取值 */
+      const aC = Math.min(Math.max(a, 0.02), Math.max(L - 0.02, 0.03));
+      const yMid = Y(Math.max(L - aC, 0.01));
+      const ay = Math.min(Math.max((yMid + Y(L)) / 2 - 11, 30), 168);
+      s += ln(xm - 40, yMid, xm - 40, Y(L), '#9aa3b2', 1);
+      s += ln(xm - 44, yMid, xm - 36, yMid, '#9aa3b2', 1);
+      s += ln(xm - 44, Y(L), xm - 36, Y(L), '#9aa3b2', 1);
+      const aWarn = Math.abs(aC - a) > 1e-9;
+      s += foBox(2, ay, 62, 22, '<i>a</i>' +
+        foBInp('a', beamRaw.a, 'dim-w' + (aWarn ? ' warn' : ''),
+               aWarn ? 'a 需在 0 ~ L 之间，已按 ' + fmt(aC, 2) + ' m 计算' : '') +
+        '<i>m</i>');
+      s += '<text x="' + (xm - 48) + '" y="' + ((Y(0) + yMid) / 2 + 3).toFixed(1) +
+           '" text-anchor="end" font-size="10.5" fill="#6b7280">' + fmt(L - aC, 2) + ' m</text>';
+    } else if (inp.form === 'cantf') {
+      s += ln(xm + 44, Y(L), xm + 44, Y(L + a), '#9aa3b2', 1);
+      s += ln(xm + 40, Y(L), xm + 48, Y(L), '#9aa3b2', 1);
+      s += ln(xm + 40, Y(L + a), xm + 48, Y(L + a), '#9aa3b2', 1);
+      s += foBox(xm + 50, (Y(L) + Y(L + a)) / 2 - 11, 62, 22,
+                 '<i>a</i>' + foBInp('a', beamRaw.a) + '<i>m</i>');
+    }
 
     s += '<defs>' +
          '<marker id="ar" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">' +
@@ -1548,39 +1662,41 @@ function tex2html(src) {
            (unit ? '<span>' + unit + '</span>' : '') + '</div></div>';
   };
 
-  function render() {
-    const inp = readInput();
-    let r;
-    try { r = compute(inp); } catch (e) { console.error(e); return; }
+  /* 重绘某个图，并把焦点还给同名输入框（否则每敲一个字符焦点就丢了） */
+  function redraw(host, fn) {
+    const act = document.activeElement;
+    let key = null, pos = null;
+    if (act && act !== document.body && host.contains(act)) {
+      key = act.getAttribute('data-dim') || act.getAttribute('data-bk');
+      try { pos = act.selectionStart; } catch (e) { pos = null; }
+    }
+    host.innerHTML = fn();
+    if (key) {
+      const n = host.querySelector('[data-dim="' + key + '"],[data-bk="' + key + '"]');
+      if (n) {
+        n.focus();
+        if (pos !== null) { try { n.setSelectionRange(pos, pos); } catch (e) {} }
+      }
+    }
+  }
 
-    /* 截面预览 */
-    el.secPrev.innerHTML = drawSection(inp.type, inp.p, r.pr);
-    el.secMeta.innerHTML = SECTIONS[inp.type].dims.map(function (d) {
-      return '<span>' + symOf(d[0]) + ' <b>' + fmt(inp.p[d[0]], 1) + '</b></span>';
-    }).join('');
-    el.secHint.textContent = '按真实比例绘制，随尺寸实时更新。';
+  function renderOutputs(inp, r) {
+    el.secHint.textContent = '按真实比例绘制。改标注里的数字，图形与计算结果实时更新。';
 
-    /* 材料信息 */
+    /* 材料信息：基础只给抗弯强度 */
     const st = r.st;
-    el.matInfo.innerHTML =
-      '<div><div class="k">f（抗弯）</div><div class="v">' + fmt(r.f, 0) + '</div></div>' +
-      '<div><div class="k">f<sub>v</sub></div><div class="v">' + fmt(st.fv, 0) + '</div></div>' +
-      '<div><div class="k">E</div><div class="v">' + fmt(r.E, 0) + '</div></div>' +
-      '<div><div class="k">f<sub>c</sub></div><div class="v">' + fmt(st.fc, 0) + '</div></div>' +
-      '<div><div class="k">ρ</div><div class="v">' + fmt(inp.mat.rho, 0) + '</div></div>' +
-      '<div><div class="k">挠度 1/n</div><div class="v">' + fmt(inp.div, 0) + '</div></div>';
+    el.matInfo.innerHTML = (mode === 'basic')
+      ? '<div><div class="k">f（抗弯）</div><div class="v">' + fmt(r.f, 0) + ' MPa</div></div>'
+      : '<div><div class="k">f（抗弯）</div><div class="v">' + fmt(r.f, 0) + '</div></div>' +
+        '<div><div class="k">f<sub>v</sub></div><div class="v">' + fmt(st.fv, 0) + '</div></div>' +
+        '<div><div class="k">E</div><div class="v">' + fmt(r.E, 0) + '</div></div>' +
+        '<div><div class="k">f<sub>c</sub></div><div class="v">' + fmt(st.fc, 0) + '</div></div>' +
+        '<div><div class="k">ρ</div><div class="v">' + fmt(inp.mat.rho, 0) + '</div></div>' +
+        '<div><div class="k">挠度 1/n</div><div class="v">' + fmt(inp.div, 0) + '</div></div>';
     el.matHint.innerHTML = inp.mat.cls === 'steel'
       ? '强度按板件厚度分组：t* = ' + fmt(inp.tcMan !== null ? inp.tcMan : r.pr.tc, 1) + ' mm（' +
         r.pr.tcNote + '）→ ' + st.note + '。'
       : '强度取材料表值，不随厚度变化。挠度限值分母 ' + inp.mat.dv + '。';
-
-    /* 梁简图 */
-    el.beamPrev.innerHTML = drawBeam(inp, r);
-
-    /* 形式提示 */
-    const lbl = { simple: '第二跨 a', two: '第二跨 a', cant: '飞边长度 a', cantf: '飞边长度 a（可负）' };
-    el.lblA.innerHTML = lbl[inp.form];
-    el.rowA.hidden = (inp.form === 'simple' || inp.form === 'cant');
 
     const hints = {
       simple: '两端铰支，均布风荷载。挠度限值取 L/n 与绝对限值之小。',
@@ -1646,9 +1762,11 @@ function tex2html(src) {
       '</tbody></table>' +
       '<div class="kv" style="margin-top:12px">' +
       '<div><div class="k">计算挠度 d</div><div class="v">' + fmt(r.d, 2) + ' mm</div></div>' +
+      '<div><div class="k">挠度限值 [d]</div><div class="v">' + fmt(r.lim, 1) + ' mm</div></div>' +
+      '<div><div class="k">利用率 d/[d]</div><div class="v">' + f3(r.rDefl) + '</div></div>' +
       '<div><div class="k">控制跨度 l₀</div><div class="v">' + fmt(r.l0, 3) + ' m</div></div>' +
       '<div><div class="k">相对限值 l₀/' + fmt(r.div, 0) + '</div><div class="v">' + fmt(r.limRel, 1) + ' mm</div></div>' +
-      '<div><div class="k">限值 [d]</div><div class="v">' + fmt(r.lim, 1) + ' mm</div></div>' +
+      '<div><div class="k">控制项</div><div class="v">' + (r.limRel <= r.limAbs ? '相对限值' : '绝对限值') + '</div></div>' +
       '</div>' +
       '<p class="hint" style="margin-top:10px">' + r.l0Note + '；' + r.limCtrl +
       '（绝对限值 ' + fmt(r.limAbs, 0) + ' mm）。利用率 <b>' + f3(r.rDefl) + '</b> ' +
@@ -1668,6 +1786,8 @@ function tex2html(src) {
       '<div><div class="k">设计弯矩 M<sub>d</sub>' + mdKind + '</div><div class="v">' + fmt(r.Md, 3) + ' kN·m</div></div>' +
       '<div><div class="k">截面模量 W<sub>x</sub></div><div class="v">' + fmt(r.Wx / 1e3, 1) + ' cm³</div></div>' +
       '<div><div class="k">应力 σ</div><div class="v">' + fmt(r.sigma, 1) + ' MPa</div></div>' +
+      '<div><div class="k">强度 f</div><div class="v">' + fmt(r.f, 0) + ' MPa</div></div>' +
+      '<div><div class="k">利用率 σ/f</div><div class="v">' + f3(r.rStrength) + '</div></div>' +
       '</div>' +
       '<p class="hint" style="margin-top:10px">σ ≤ f = ' + fmt(r.f, 0) + ' MPa（' + st.note + '）。利用率 <b>' +
       f3(r.rStrength) + '</b> ' + (r.okStrength ? '<span class="ok">满足</span>' : '<span class="ng">超限</span>') + '。</p>' +
@@ -1675,6 +1795,15 @@ function tex2html(src) {
       '构件自重 ' + fmt(r.sw, 3) + ' kN/m，尚未计入轴力（立柱以受弯为主，轴力影响可忽略）。</p>';
 
     renderSteps(buildSteps(inp, r));
+  }
+
+  function render() {
+    const inp = readInput();
+    let r;
+    try { r = compute(inp); } catch (e) { console.error(e); return; }
+    redraw(el.secPrev, function () { return drawSection(inp.type, inp.p, r.pr); });
+    redraw(el.beamPrev, function () { return drawBeam(inp, r); });
+    renderOutputs(inp, r);
   }
 
   /* ================= 分步公式 ================= */
@@ -1875,13 +2004,84 @@ function tex2html(src) {
   function setAllSteps(open) {
     document.querySelectorAll('#fxSteps .fxstep').forEach(function (d) { d.open = open; });
   }
+
+  /* ---------- 直接在图上改尺寸 ---------- */
+  function onSecEdit(e, commit) {
+    const t = e.target;
+    if (!t || !t.getAttribute) return;
+    const k = t.getAttribute('data-dim');
+    if (!k) return;
+    dimRaw[curType][k] = t.value;
+    const v = parseFloat(t.value);
+    /* commit = 失焦/回车：非法值退回上一次的合法值并规范显示 */
+    if (commit) {
+      const ok = isFinite(v) && v > 0;
+      const nv = ok ? v : dimValues[curType][k];
+      dimValues[curType][k] = nv;
+      dimRaw[curType][k] = String(nv);
+      render();
+      return;
+    }
+    /* 输入中：敲到一半（"1"、"1."）不动，等它合法了再刷新 */
+    if (!isFinite(v) || v <= 0) return;
+    dimValues[curType][k] = v;
+    const inp = readInput();
+    let r;
+    try { r = compute(inp); } catch (err) { return; }
+    redraw(el.secPrev, function () { return drawSection(inp.type, inp.p, r.pr); });
+    renderOutputs(inp, r);
+  }
+  function onBeamEdit(e, commit) {
+    const t = e.target;
+    if (!t || !t.getAttribute) return;
+    const k = t.getAttribute('data-bk');
+    if (!k) return;
+    beamRaw[k] = t.value;
+    const v = parseFloat(t.value);
+    if (commit) {
+      let nv = isFinite(v) ? v : beamVals[k];
+      if (k === 'L') nv = Math.max(nv, 0.05);
+      if (k === 'wk') nv = Math.max(nv, 0);
+      beamVals[k] = nv;
+      beamRaw[k] = String(nv);
+      render();
+      return;
+    }
+    if (!isFinite(v)) return;
+    if (k === 'L' && !(v > 0)) return;
+    if (k === 'wk' && v < 0) return;
+    beamVals[k] = v;
+    const inp = readInput();
+    let r;
+    try { r = compute(inp); } catch (err) { return; }
+    redraw(el.beamPrev, function () { return drawBeam(inp, r); });
+    renderOutputs(inp, r);
+  }
+
   function applyMode() {
-    el.advBox.hidden = (mode !== 'adv');
-    el.lblBasic.classList.toggle('on', mode === 'basic');
-    el.lblAdv.classList.toggle('on', mode === 'adv');
-    el.modeSw.classList.toggle('on', mode === 'adv');
-    el.modeSw.setAttribute('aria-checked', mode === 'adv' ? 'true' : 'false');
-    if (mode === 'basic') {
+    const basic = (mode === 'basic');
+    document.body.classList.toggle('m-basic', basic);
+    el.advBox.hidden = basic;
+    el.cardLoad.hidden = basic;
+    el.rowReg.hidden = basic;
+    el.rowPanel.hidden = basic;
+    el.rowIg.hidden = basic;
+    el.lblBasic.classList.toggle('on', basic);
+    el.lblAdv.classList.toggle('on', !basic);
+    el.modeSw.classList.toggle('on', !basic);
+    el.modeSw.setAttribute('aria-checked', basic ? 'false' : 'true');
+
+    /* 下拉按模式重建，越界的选项自动落回基础项 */
+    buildSecOptions();
+    buildMatOptions();
+    buildFormOptions();
+
+    if (basic) {
+      /* 基础模式的隐含取值：全国 / 玻璃 20 mm / 7 度 0.10g */
+      el.reg.value = '全国';
+      el.pm.value = '玻璃';
+      el.pt.value = '20';
+      el.ig.value = '0.08';
       ['gG', 'gW', 'gE', 'gL', 'psL', 'psW', 'div', 'limAbs', 'fMan', 'tcMan'].forEach(function (k) {
         el[k].value = '';
       });
@@ -1894,12 +2094,16 @@ function tex2html(src) {
   el.lblBasic.addEventListener('click', function () { switchMode('basic'); });
   el.lblAdv.addEventListener('click', function () { switchMode('adv'); });
 
+  el.secPrev.addEventListener('input', function (e) { onSecEdit(e, false); });
+  el.secPrev.addEventListener('change', function (e) { onSecEdit(e, true); });
+  el.beamPrev.addEventListener('input', function (e) { onBeamEdit(e, false); });
+  el.beamPrev.addEventListener('change', function (e) { onBeamEdit(e, true); });
+
   el.sec.addEventListener('change', function () {
     curType = el.sec.value;
-    buildDims();
     render();
   });
-  ['mat', 'form', 'L', 'a', 'B', 'wk', 'reg', 'pm', 'pt', 'ig',
+  ['mat', 'form', 'B', 'reg', 'pm', 'pt', 'ig',
    'gG', 'gW', 'gE', 'gL', 'psL', 'psW', 'div', 'limAbs', 'fMan', 'tcMan'].forEach(function (id) {
     const e = el[id];
     if (!e) return;
@@ -1925,10 +2129,9 @@ function tex2html(src) {
     prevOpen = null;
   });
 
-  /* 启动 */
-  document.getElementById('verLine').textContent = '版本 2026-10-21 02:12';
-  buildDims();
-  render();
+  /* 启动（默认基础模式） */
+  document.getElementById('verLine').textContent = '版本 2026-10-21 02:54';
+  applyMode();
 })();
 </script>
 </body>
