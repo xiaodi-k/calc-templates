@@ -662,6 +662,7 @@
     强度：碳钢按 GB 50017-2017 表 4.4.1 依板件厚度分组取 f，铝合金与不锈钢取材料表值。
     挠度：风（及护栏活荷载）标准值弹性计算，限值按受力形式自动取控制跨度，并与绝对限值取小。
     悬臂+飞边按护栏立柱模型计算，飞边长度 a 允许为负（面板顶端低于立柱顶端）。
+    立柱可与水平面成夹角 α（高级模式）：风荷载沿面板法向恒垂直于立柱，重力取 cos α 分量，活荷载按水平投影取 cos²α 分量；α &lt; 75° 判定为采光顶龙骨并计入活荷载。
     <span class="ver" id="verLine"></span>
   </footer>
 
@@ -1198,9 +1199,13 @@ function tex2html(src) {
   let dimValues = {};   /* 数值：每种截面各自记住尺寸 */
   let dimRaw = {};      /* 原文：保住用户敲到一半的 "5." 这类输入 */
   let curType = 'box';
-  /* 跨度与风荷载：数值 + 原文，直接在简图上编辑 */
-  let beamVals = { L: 5.62, a: 1, wk: 2.4 };
-  let beamRaw = { L: '5.62', a: '1', wk: '2.4' };
+  /* 跨度、风荷载、倾角、活荷载：数值 + 原文，直接在简图上编辑 */
+  let beamVals = { L: 5.62, a: 1, wk: 2.4, ang: 90, lk: 0.5 };
+  let beamRaw = { L: '5.62', a: '1', wk: '2.4', ang: '90', lk: '0.5' };
+
+  /* 立柱与水平面夹角 α（°）：<75° 判定为采光顶龙骨，需计活荷载 */
+  const ANG_MIN = 1, ANG_ROOF = 75;
+  const clampAng = function (v) { return Math.min(Math.max(v, ANG_MIN), 90); };
 
   /* 初始化：尺寸字典 */
   Object.keys(SECTIONS).forEach(function (k) {
@@ -1284,6 +1289,10 @@ function tex2html(src) {
       a: el.form.value === 'cant' ? 0 : beamVals.a,
       B: Math.max(num('B'), 0.05),
       wk: Math.max(beamVals.wk, 0),
+      /* 倾角只在高级模式开放；基础模式恒为 90°（竖直立柱） */
+      ang: mAdv ? clampAng(beamVals.ang) : 90,
+      isRoof: mAdv && clampAng(beamVals.ang) < ANG_ROOF,
+      lk: mAdv ? Math.max(beamVals.lk, 0) : 0,
       gg: pm[1],
       panelName: pm[0],
       pt: Math.max(num('pt'), 0),
@@ -1300,25 +1309,65 @@ function tex2html(src) {
     const E = inp.mat.E, I = pr.Ix, W = pr.Wx;
     const L = inp.L, a = inp.a, B = inp.B;
 
-    /* 荷载 */
-    const qk = inp.wk * B;                       /* kN/m = N/mm */
-    const Gk = inp.gg * inp.pt / 1000;           /* kPa */
-    const Ek = 5 * inp.amax * Gk;                /* kPa */
-    const qd = Math.max(inp.gW * inp.wk * B, inp.gE * Ek * B);
+    /* ---------- 倾角与荷载分解 ----------
+       统一规则：所有荷载一律取「垂直于立柱轴线」的分量。
+         风 W_k    沿面板法向，本来就垂直于立柱     → ×1
+         重力（立柱自重、面板自重）竖直向下        → ×cos α
+         活荷载 L_k 竖直向下，按水平投影取值       → ×cos²α（一次水平投影、一次分解）
+         地震 E_k   水平                          → ×sin α
+       α = 90° 时 cos α = 0，全部重力项归零，结果与传统竖直立柱完全一致。 */
+    const al = inp.ang * Math.PI / 180;
+    const ca = Math.cos(al), sa = Math.sin(al);
+    const isRoof = inp.isRoof;
+
+    /* 荷载：全部是垂直于立柱的线荷载，kN/m */
+    const qk = inp.wk * B;                                  /* 风 */
+    const Gk = inp.gg * inp.pt / 1000;                      /* kPa，面板自重 */
+    const Ek = 5 * inp.amax * Gk;                           /* kPa，水平地震 */
+    const gsw = pr.A * inp.mat.rho * 1e-6 * 9.8e-3;         /* kN/m，立柱自重 */
+    const qGk = (gsw + Gk * B) * ca;                        /* 永久：自重 + 面板自重 */
+    const qLk = isRoof ? inp.lk * B * ca * ca : 0;          /* 活：采光顶，按水平投影 */
+    const qEk = Ek * B * sa;                                /* 地震：水平力取垂直分量 */
+
+    /* 三个组合取包络：风控制 / 活控制 / 地震。永久荷载 γ_G 不折减 */
+    const S1 = inp.gG * qGk + inp.gW * qk + inp.gL * inp.psL * qLk;
+    const S2 = inp.gG * qGk + inp.gL * qLk + inp.gW * inp.psW * qk;
+    const S3 = inp.gG * qGk + inp.gE * qEk;
+    const qd = Math.max(S1, S2, S3);
+    const qdKind = qd === S1 ? '风荷载控制' : (qd === S2 ? '活荷载控制' : '地震控制');
+
+    /* 沿立柱轴线的压力（重力沿轴向的分量），仅作提示，不参与受弯验算 */
+    const Nax = (gsw + Gk * B + (isRoof ? inp.lk * B * ca : 0)) * sa;
 
     const r = {
       pr: pr, st: st, f: f, E: E, I: I, W: W, Wx: W, Wy: pr.Wy,
-      qk: qk, Gk: Gk, Ek: Ek, qd: qd,
+      qk: qk, Gk: Gk, Ek: Ek, qd: qd, qdKind: qdKind,
+      ang: inp.ang, ca: ca, sa: sa, isRoof: isRoof,
+      gsw: gsw, qGk: qGk, qLk: qLk, qEk: qEk, Nax: Nax,
+      lk: inp.lk,
       form: inp.form, L: L, a: a, B: B,
       formName: { simple: '单跨（简支）', two: '双跨（连续）', cant: '悬臂', cantf: '悬臂 + 飞边' }[inp.form]
+    };
+
+    /* 挠度标准组合：d = d_永久 + (风 与 活 互为主要可变荷载的两种组合取大) */
+    const dComb = function (dW, dG, dL) {
+      const A = dW + inp.psL * dL, B = dL + inp.psW * dW;
+      r.dCombA = A; r.dCombB = B;
+      r.dG = dG; r.dW = dW; r.dL = dL;
+      r.dParts = [
+        { k: '风荷载', v: dW },
+        { k: '自重+面板（垂直分量）', v: dG },
+        { k: '活荷载（垂直分量）', v: dL }
+      ];
+      return dG + Math.max(A, B);
     };
 
     if (inp.form === 'simple') {
       r.L1 = L; r.L2 = 0;
       r.Mstd = qk * L * L / 8;
       r.Md = qd * L * L / 8;
-      r.d = 5 * qk * Math.pow(L * 1000, 4) / (384 * E * I);
-      r.dParts = [{ k: '均布风荷载', v: r.d }];
+      const uD = 5 * Math.pow(L * 1000, 4) / (384 * E * I);   /* mm per kN/m */
+      r.d = dComb(qk * uD, qGk * uD, qLk * uD);
       r.xMax = L * 1000 / 2;
       r.l0 = L;
       r.l0Note = '单跨取跨度 L';
@@ -1340,8 +1389,10 @@ function tex2html(src) {
       r.MdKind = Math.abs(MB) >= Math.max(M1, M2) ? '中支座负弯矩' : (M1 >= M2 ? '第一跨跨中' : '第二跨跨中');
       r.Mstd = MBstd; r.MstdKind = r.MdKind;
 
-      const t = twoSpanDefl(qk, E, I, L1 * 1000, L2 * 1000);
-      r.d = t.dmax; r.xMax = t.xmax; r.MBstd = t.MB;
+      /* 挠度与 q 成正比，先算单位均布荷载的挠度再按比例分配 */
+      const t = twoSpanDefl(1, E, I, L1 * 1000, L2 * 1000);
+      r.xMax = t.xmax; r.MBstd = MBstd;
+      r.d = dComb(qk * t.dmax, qGk * t.dmax, qLk * t.dmax);
       r.spanOfMax = t.xmax <= L1 * 1000 ? 1 : 2;
       r.l0 = r.spanOfMax === 1 ? L1 : L2;
       r.l0Note = '最大挠度出现在第 ' + r.spanOfMax + ' 跨，取该跨跨度';
@@ -1350,25 +1401,30 @@ function tex2html(src) {
       const Fa = a * B * inp.wk;             /* kN，a 可负 */
       const c = L + a / 2;                   /* m */
       const F = Math.max(B * 1.0, 1.5);      /* kN 护栏水平活荷载 */
-      r.Fa = Fa; r.c = c; r.F = F;
+      const FL = F * sa;                     /* 水平活荷载垂直于立柱的分量 */
+      r.Fa = Fa; r.c = c; r.F = F; r.FL = FL;
+
+      const uG = Math.pow(L * 1000, 4) / (8 * E * I);      /* 均布 → mm per kN/m */
+      const uF = Math.pow(L * 1000, 3) / (3 * E * I);      /* 顶端集中 → mm per kN */
 
       const Mw = qk * L * L / 2 + Fa * c;
-      const ML = F * L;
-      r.Mw = Mw; r.ML = ML;
-      r.Md = Math.max(inp.gW * Mw + inp.gL * inp.psL * ML,
-                      inp.gL * ML + inp.gW * inp.psW * Mw);
-      r.comboA = inp.gW * Mw + inp.gL * inp.psL * ML;
-      r.comboB = inp.gL * ML + inp.gW * inp.psW * Mw;
+      const MG = qGk * L * L / 2;
+      const ML = FL * L + qLk * L * L / 2;
+      r.Mw = Mw; r.MG = MG; r.ML = ML;
+      r.Md = Math.max(inp.gG * MG + inp.gW * Mw + inp.gL * inp.psL * ML,
+                      inp.gG * MG + inp.gL * ML + inp.gW * inp.psW * Mw);
+      r.comboA = inp.gG * MG + inp.gW * Mw + inp.gL * inp.psL * ML;
+      r.comboB = inp.gG * MG + inp.gL * ML + inp.gW * inp.psW * Mw;
       r.Mstd = qk * L * L / 2 + Fa * c;
 
-      const dw = qk * Math.pow(L * 1000, 4) / (8 * E * I) +
-                 (Fa * 1000) * Math.pow(Math.max(c, 0) * 1000, 3) / (3 * E * I);
-      const dL = F * 1000 * Math.pow(L * 1000, 3) / (3 * E * I);
+      const dw = qk * uG + (Fa * 1000) * Math.pow(Math.max(c, 0) * 1000, 3) / (3 * E * I);
+      const dG = qGk * uG;
+      const dL = (FL * 1000) * uF + qLk * uG;
       r.dw = dw; r.dL = dL;
-      r.d = Math.max(dw + 0.7 * dL, dL + 0.6 * dw);
-      r.dCombA = dw + 0.7 * dL;
-      r.dCombB = dL + 0.6 * dw;
-      r.dParts = [{ k: '风（含飞边）', v: dw }, { k: '护栏活荷载', v: dL }];
+      r.d = dComb(dw, dG, dL);
+      r.dParts = [{ k: '风（含飞边）', v: dw },
+                  { k: '自重+面板（垂直分量）', v: dG },
+                  { k: '活荷载（垂直分量）', v: dL }];
       r.xMax = L * 1000;
       const Lc = Math.max(L, L + a);
       r.Lc = Lc;
@@ -1391,8 +1447,8 @@ function tex2html(src) {
     r.okDefl = r.d <= r.lim;
     r.ok = r.okStrength && r.okDefl;
 
-    /* 自重 */
-    r.sw = pr.A * inp.mat.rho * 1e-6 * 9.8e-3;   /* kN/m */
+    /* 自重（竖直向下的总量，未分解） */
+    r.sw = gsw;
     return r;
   }
 
@@ -1576,7 +1632,7 @@ function tex2html(src) {
 
   /* 受力简图：跨度 L、分段 a、风荷载 W_k 都在图上直接改 */
   function drawBeam(inp, r) {
-    const W = 340, Hh = 210;
+    const W = 340;
     const L = inp.L, a = inp.a;
     const isCant = inp.form === 'cant' || inp.form === 'cantf';
     const total = inp.form === 'two' ? L : (isCant ? Math.max(L, L + a) : L);
@@ -1585,48 +1641,133 @@ function tex2html(src) {
     const xm = 108;
     const Y = function (v) { return y0 - v * sc; };
 
+    /* ================= 倾角：整幅图绕「立柱底端」旋转 (90° − α) =================
+       局部坐标（α=90° 的竖直画法）先照旧算，再整体旋转 + 缩放 + 平移塞进画布。
+       α = 90° 时旋转角为 0、缩放为 1、平移为 0 —— 画法与原来逐像素一致。
+       画布尺寸恒定 340×210：倾斜后构件变矮（∝sin α）宽度增加，实测够放，
+       画布跟着变高只会多留白，还会让整块图在改角度时忽大忽小。 */
+    const th = 90 - inp.ang;
+    const showLk = inp.isRoof;          /* α<75°：采光顶，图上加活荷载输入 */
+    const rot = Math.abs(th) > 1e-9;
+    const Hh = 210;                /* 恒高：不随 α 变 */
+    const pivX = xm, pivY = y0;
+    const cs = Math.cos(th * Math.PI / 180), sn = Math.sin(th * Math.PI / 180);
+    /* 顶部的两条输入框（W_k / L_k）占着左上角，α 输入框固定在右上角 */
+    const resTopLk = showLk ? 60 : 30;
+
+    let k = 1, tx = 0, ty = 0;
+    if (rot) {
+      /* 局部图的极值范围按受力形式取实际最外沿，别用一个大矩形包络——
+         矩形一旋转就把自己撑得很大，图会被缩到一半 */
+      const KX = [inp.form === 'two' ? xm - 106 : xm - 70,
+                  inp.form === 'cantf' ? xm + 130 : xm + 110];
+      const KY = [34, inp.form === 'cant' || inp.form === 'cantf' ? 182 : 174];
+      let bx0 = Infinity, bx1 = -Infinity, by0 = Infinity, by1 = -Infinity;
+      KX.forEach(function (x) {
+        KY.forEach(function (y) {
+          const dx = x - pivX, dy = y - pivY;
+          const X = pivX + dx * cs - dy * sn, Yy = pivY + dx * sn + dy * cs;
+          bx0 = Math.min(bx0, X); bx1 = Math.max(bx1, X);
+          by0 = Math.min(by0, Yy); by1 = Math.max(by1, Yy);
+        });
+      });
+      const bw = Math.max(bx1 - bx0, 1), bh = Math.max(by1 - by0, 1);
+      const calc = function (top) {
+        const kk = Math.min(1, (W - 8) / bw, (Hh - top - 6) / bh);
+        const txx = 4 + (W - 8 - bw * kk) / 2 - (kk * bx0 + pivX * (1 - kk));
+        const tyy = top + (Hh - top - 6 - bh * kk) / 2 - (kk * by0 + pivY * (1 - kk));
+        return { k: kk, tx: txx, ty: tyy,
+                 left: kk * bx0 + pivX * (1 - kk) + txx };
+      };
+      /* 先按 30 让开右上角的 α 框；若图伸进左上角那一列，再给 L_k 多让一行 */
+      let f = calc(30);
+      if (showLk && f.left < 124) f = calc(resTopLk);
+      k = f.k; tx = f.tx; ty = f.ty;
+    }
+    /* 局部坐标 → 画布坐标 */
+    function map(x, y) {
+      const dx = x - pivX, dy = y - pivY;
+      return [pivX + k * (dx * cs - dy * sn) + tx, pivY + k * (dx * sn + dy * cs) + ty];
+    }
+    /* 局部 +x 方向在画布上的单位向量：标注框靠它往外推，避免压住立柱 */
+    const q0 = map(xm, y0), q1 = map(xm + 100, y0);
+    const qn = Math.sqrt(Math.pow(q1[0] - q0[0], 2) + Math.pow(q1[1] - q0[1], 2)) || 1;
+    const exv = [(q1[0] - q0[0]) / qn, (q1[1] - q0[1]) / qn];
+    const n1 = function (v) { return (+v).toFixed(1); };
+    /* 旋转后的连线 */
+    function rl(x1, y1, x2, y2, col, w, dash) {
+      const p = map(x1, y1), q = map(x2, y2);
+      return '<line x1="' + n1(p[0]) + '" y1="' + n1(p[1]) + '" x2="' + n1(q[0]) + '" y2="' + n1(q[1]) +
+             '" stroke="' + col + '" stroke-width="' + w + '"' +
+             (dash ? ' stroke-dasharray="' + dash + '"' : '') + '/>';
+    }
+    /* 标注框：先登记偏好位置（挂在局部锚点上，沿局部 ±x 往外推 gap），
+       最后统一做避让再落位 —— 旋转后框会互相挤，硬编码坐标挪不干净 */
+    const boxes = [];
+    function boxAt(ax, ay, w, h, inner, gap, fixed) {
+      const p = map(ax, ay), g = gap === undefined ? 6 : gap;
+      boxes.push({
+        x: p[0] + exv[0] * g, y: p[1] + exv[1] * g - 12,
+        w: w, h: h, html: inner, fixed: !!fixed
+      });
+    }
+    /* 左上角被 W_k / L_k 占着，其余框不许往那儿钻 */
+    const cornerW = 124, cornerH = showLk ? 60 : 30;
+
     let s = '<svg viewBox="0 0 ' + W + ' ' + Hh + '" role="img">';
 
-    /* ---------- 风荷载（左上角，直接在图上输入） ---------- */
-    s += foBox(2, 2, 120, 26,
-               '<i>W<sub>k</sub></i>' + foBInp('wk', beamRaw.wk, 'dim-l') + '<i>kPa</i>');
+    /* ---------- 风荷载 / 活荷载（左上角，直接在图上输入） ---------- */
+    boxes.push({ x: 2, y: 2, w: 120, h: 26, fixed: true,
+                 html: '<i>W<sub>k</sub></i>' + foBInp('wk', beamRaw.wk, 'dim-l') + '<i>kPa</i>' });
+    if (showLk) {
+      boxes.push({ x: 2, y: 32, w: 120, h: 26, fixed: true,
+                   html: '<i>L<sub>k</sub></i>' + foBInp('lk', beamRaw.lk, 'dim-l') + '<i>kPa</i>' });
+    }
 
     /* ---------- 面板（悬臂带飞边时） ---------- */
     if (inp.form === 'cantf' && a !== 0) {
       const pT = a > 0 ? Y(L + a) : Y(L);
       const pB = a > 0 ? Y(L) : Y(L + a);
-      s += '<rect x="' + (xm + 7) + '" y="' + pT.toFixed(1) + '" width="26" height="' + Math.max(pB - pT, 1).toFixed(1) +
-           '" fill="#eef4ff" stroke="#c8d8f5" stroke-width="1" stroke-dasharray="3 3"/>';
-      s += '<text x="' + (xm + 20) + '" y="' + ((pT + pB) / 2 + 4).toFixed(1) +
+      const c1 = map(xm + 7, pT), c2 = map(xm + 33, pT);
+      const c3 = map(xm + 33, pB), c4 = map(xm + 7, pB);
+      s += '<path d="M' + n1(c1[0]) + ',' + n1(c1[1]) + ' L' + n1(c2[0]) + ',' + n1(c2[1]) +
+           ' L' + n1(c3[0]) + ',' + n1(c3[1]) + ' L' + n1(c4[0]) + ',' + n1(c4[1]) +
+           ' Z" fill="#eef4ff" stroke="#c8d8f5" stroke-width="1" stroke-dasharray="3 3"/>';
+      const ct = map(xm + 20, (pT + pB) / 2);
+      s += '<text x="' + n1(ct[0]) + '" y="' + n1(ct[1] + 4) +
            '" text-anchor="middle" font-size="11.5" fill="#8aa4cc">面板</text>';
     }
 
-    /* ---------- 支座（先画，让立柱线压在三角形上方） ---------- */
-    /* 立柱竖画，三角形尖端朝左落在立柱轴线上、底边在右侧：
+    /* ---------- 支座（先画，让立柱蓝线压在三角形上方） ---------- */
+    /* 三角形尖端朝左、落在立柱轴线上、底边在右侧：
          PIN（固定铰支座）  = 只有三角形；
-         滑动支座（可动铰） = 三角形 + 底边外侧一横（与底边平行的支承面，中间留缝表示可滑动）。 */
+         滑动支座（可动铰） = 三角形 + 外侧一竖（支承面，中间留缝表示可滑动）。 */
     const TRI_L = 12, TRI_H = 7, ROLL_GAP = 5;
     function pin(x, y) {
-      return '<path d="M' + x + ',' + y.toFixed(1) + ' l' + TRI_L + ',' + (-TRI_H) + ' l0,' + (2 * TRI_H) +
-             ' Z" fill="#fff" fill-opacity="0.85" stroke="#333" stroke-width="1.2"/>';
+      const A = map(x, y), B = map(x + TRI_L, y - TRI_H), C = map(x + TRI_L, y + TRI_H);
+      return '<path d="M' + n1(A[0]) + ',' + n1(A[1]) + ' L' + n1(B[0]) + ',' + n1(B[1]) +
+             ' L' + n1(C[0]) + ',' + n1(C[1]) + ' Z" fill="#fff" fill-opacity="0.85" stroke="#333" stroke-width="1.2"/>';
     }
     function roll(x, y) {
       const xs = x + TRI_L + ROLL_GAP;
+      const D = map(xs, y - TRI_H - 3), E2 = map(xs, y + TRI_H + 3);
       return pin(x, y) +
-             '<line x1="' + xs + '" y1="' + (y - TRI_H - 3).toFixed(1) + '" x2="' + xs +
-             '" y2="' + (y + TRI_H + 3).toFixed(1) + '" stroke="#333" stroke-width="1.2"/>';
+             '<line x1="' + n1(D[0]) + '" y1="' + n1(D[1]) + '" x2="' + n1(E2[0]) + '" y2="' + n1(E2[1]) +
+             '" stroke="#333" stroke-width="1.2"/>';
     }
     function fix(x, y) {
-      let h = '<line x1="' + x + '" y1="' + y.toFixed(1) + '" x2="' + x + '" y2="' + (y + 12).toFixed(1) +
+      const A = map(x, y), B = map(x, y + 12);
+      let h = '<line x1="' + n1(A[0]) + '" y1="' + n1(A[1]) + '" x2="' + n1(B[0]) + '" y2="' + n1(B[1]) +
               '" stroke="#333" stroke-width="1.4"/>';
       for (let i = 0; i < 5; i++) {
-        h += '<line x1="' + (x - 10 + i * 5) + '" y1="' + (y + 12).toFixed(1) + '" x2="' + (x - 5 + i * 5) +
-             '" y2="' + (y + 20).toFixed(1) + '" stroke="#333" stroke-width="1"/>';
+        const P = map(x - 10 + i * 5, y + 12), Q = map(x - 5 + i * 5, y + 20);
+        h += '<line x1="' + n1(P[0]) + '" y1="' + n1(P[1]) + '" x2="' + n1(Q[0]) + '" y2="' + n1(Q[1]) +
+             '" stroke="#333" stroke-width="1"/>';
       }
       return h;
     }
     if (inp.form === 'simple') {
-      /* 简支：下端 PIN（立柱坐落在底层支座上，定位并传竖向力）、上端滑动（竖向可伸缩） */
+      /* 简支：下端 PIN（立柱坐在底层支座上，定位并传竖向力）、上端滑动（竖向可伸缩） */
       s += roll(xm, Y(L)); s += pin(xm, Y(0));
     } else if (inp.form === 'two') {
       /* 双跨：最下方 1 个 PIN + 上端、中支座 2 个滑动支座 */
@@ -1637,66 +1778,126 @@ function tex2html(src) {
     }
 
     /* ---------- 立柱 ---------- */
-    s += '<line x1="' + xm + '" y1="' + Y(0).toFixed(1) + '" x2="' + xm + '" y2="' + Y(L).toFixed(1) +
-         '" stroke="#2f6feb" stroke-width="4" stroke-linecap="round"/>';
+    s += rl(xm, Y(0), xm, Y(L), '#2f6feb', 4);
 
-    /* ---------- 风荷载箭头 ---------- */
+    /* ---------- 风荷载箭头（沿面板法向，始终垂直于立柱） ---------- */
     const nA = isCant ? 6 : 7;
     for (let i = 0; i <= nA; i++) {
       const yy = Y(L * i / nA);
-      s += '<line x1="' + (xm - 28) + '" y1="' + yy.toFixed(1) + '" x2="' + (xm - 4) + '" y2="' + yy.toFixed(1) +
-           '" stroke="#8fa7d6" stroke-width="1.1" marker-end="url(#ar)"/>';
+      s += rl(xm - 28, yy, xm - 4, yy, '#8fa7d6', 1.1) .replace('/>', ' marker-end="url(#ar)"/>');
     }
-    s += ln(xm - 28, Y(0), xm - 28, Y(L), '#8fa7d6', 1, '3 3');
+    s += rl(xm - 28, Y(0), xm - 28, Y(L), '#8fa7d6', 1, '3 3');
 
     /* ---------- 飞边集中力 ---------- */
     if (inp.form === 'cantf' && a !== 0) {
       const yA = Y(L + a / 2);
-      s += '<line x1="' + (xm - 58) + '" y1="' + yA.toFixed(1) + '" x2="' + (xm - 6) + '" y2="' + yA.toFixed(1) +
-           '" stroke="#c98a2b" stroke-width="1.4" marker-end="url(#ar2)"/>';
-      s += '<text x="' + (xm - 62) + '" y="' + (yA + 4).toFixed(1) +
+      s += rl(xm - 58, yA, xm - 6, yA, '#c98a2b', 1.4).replace('/>', ' marker-end="url(#ar2)"/>');
+      const tf = map(xm - 62, yA);
+      s += '<text x="' + n1(tf[0]) + '" y="' + n1(tf[1] + 4) +
            '" text-anchor="end" font-size="13" fill="#b07a24">F<tspan font-size="10" dy="3">a</tspan></text>';
     }
 
     /* ---------- 跨度 L（右侧，可编辑） ---------- */
     const lx = xm + 24;
-    s += ln(lx, Y(0), lx, Y(L), '#9aa3b2', 1);
-    s += ln(lx - 4, Y(0), lx + 4, Y(0), '#9aa3b2', 1);
-    s += ln(lx - 4, Y(L), lx + 4, Y(L), '#9aa3b2', 1);
-    s += foBox(lx + 6, (Y(0) + Y(L)) / 2 - 12, 80, 24,
-               '<i>L</i>' + foBInp('L', beamRaw.L) + '<i>m</i>');
+    s += rl(lx, Y(0), lx, Y(L), '#9aa3b2', 1);
+    s += rl(lx - 4, Y(0), lx + 4, Y(0), '#9aa3b2', 1);
+    s += rl(lx - 4, Y(L), lx + 4, Y(L), '#9aa3b2', 1);
+    boxAt(lx, (Y(0) + Y(L)) / 2, 80, 24,
+          '<i>L</i>' + foBInp('L', beamRaw.L) + '<i>m</i>');
 
     /* ---------- 分段 / 飞边 a（可编辑） ---------- */
     if (inp.form === 'two') {
       /* a 越界时图照样画得下：先夹进 (0, L)，图上再告诉用户实际取值 */
       const aC = Math.min(Math.max(a, 0.02), Math.max(L - 0.02, 0.03));
       const yMid = Y(Math.max(L - aC, 0.01));
-      const ay = Math.min(Math.max((yMid + Y(L)) / 2 - 12, 32), 166);
-      s += ln(xm - 40, yMid, xm - 40, Y(L), '#9aa3b2', 1);
-      s += ln(xm - 44, yMid, xm - 36, yMid, '#9aa3b2', 1);
-      s += ln(xm - 44, Y(L), xm - 36, Y(L), '#9aa3b2', 1);
       const aWarn = Math.abs(aC - a) > 1e-9;
-      /* 左边要留位置给分段尺寸线，宽度按住 60，单位由下方分段文字给出 */
-      s += foBox(2, ay, 60, 24, '<i>a</i>' +
-        foBInp('a', beamRaw.a, 'dim-w' + (aWarn ? ' warn' : ''),
-               aWarn ? 'a 需在 0 ~ L 之间，已按 ' + fmt(aC, 2) + ' m 计算' : ''));
-      s += '<text x="' + (xm - 52) + '" y="' + ((Y(0) + yMid) / 2 + 4).toFixed(1) +
+      s += rl(xm - 40, yMid, xm - 40, Y(L), '#9aa3b2', 1);
+      s += rl(xm - 44, yMid, xm - 36, yMid, '#9aa3b2', 1);
+      s += rl(xm - 44, Y(L), xm - 36, Y(L), '#9aa3b2', 1);
+      /* 挂在尺寸线外侧（局部 −x 方向），α=90° 时落回原来的 x=2 */
+      boxAt(xm - 44, (yMid + Y(L)) / 2, 60, 24,
+            '<i>a</i>' + foBInp('a', beamRaw.a, 'dim-w' + (aWarn ? ' warn' : ''),
+            aWarn ? 'a 需在 0 ~ L 之间，已按 ' + fmt(aC, 2) + ' m 计算' : ''), -62);
+      const ts = map(xm - 52, (Y(0) + yMid) / 2);
+      s += '<text x="' + n1(ts[0]) + '" y="' + n1(ts[1] + 4) +
            '" text-anchor="end" font-size="12.5" fill="#6b7280">' + fmt(L - aC, 2) + ' m</text>';
     } else if (inp.form === 'cantf') {
-      s += ln(xm + 44, Y(L), xm + 44, Y(L + a), '#9aa3b2', 1);
-      s += ln(xm + 40, Y(L), xm + 48, Y(L), '#9aa3b2', 1);
-      s += ln(xm + 40, Y(L + a), xm + 48, Y(L + a), '#9aa3b2', 1);
-      s += foBox(xm + 50, (Y(L) + Y(L + a)) / 2 - 12, 80, 24,
-                 '<i>a</i>' + foBInp('a', beamRaw.a) + '<i>m</i>');
+      s += rl(xm + 44, Y(L), xm + 44, Y(L + a), '#9aa3b2', 1);
+      s += rl(xm + 40, Y(L), xm + 48, Y(L), '#9aa3b2', 1);
+      s += rl(xm + 40, Y(L + a), xm + 48, Y(L + a), '#9aa3b2', 1);
+      boxAt(xm + 44, (Y(L) + Y(L + a)) / 2, 80, 24,
+            '<i>a</i>' + foBInp('a', beamRaw.a) + '<i>m</i>');
     }
 
-    s += '<defs>' +
-         '<marker id="ar" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">' +
-         '<path d="M0,0 L6,3 L0,6 z" fill="#8fa7d6"/></marker>' +
-         '<marker id="ar2" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">' +
-         '<path d="M0,0 L6,3 L0,6 z" fill="#c98a2b"/></marker></defs>';
-    s += '</svg>';
-    return s;
+    /* ---------- 倾角 α：水平基准线 + 角度弧 + 图上输入 ---------- */
+    if (rot) {
+      const B = map(xm, y0), T = map(xm, Y(L));
+      let ux = T[0] - B[0], uy = T[1] - B[1];
+      const un = Math.sqrt(ux * ux + uy * uy) || 1; ux /= un; uy /= un;
+      const R = 30;
+      s += '<line x1="' + n1(B[0]) + '" y1="' + n1(B[1]) + '" x2="' + n1(B[0] + 60) + '" y2="' + n1(B[1]) +
+           '" stroke="#c3ccdb" stroke-width="1" stroke-dasharray="4 3"/>';
+      s += '<path d="M' + n1(B[0] + R) + ',' + n1(B[1]) + ' A' + R + ',' + R + ' 0 0 0 ' +
+           n1(B[0] + R * ux) + ',' + n1(B[1] + R * uy) +
+           '" fill="none" stroke="#8fa7d6" stroke-width="1.2"/>';
+      /* 弧上标个 α，可编辑的输入框固定在右上角（贴着立柱放会压住立柱和弧） */
+      let gx = (1 + ux) / 2, gy = uy / 2;
+      const gn = Math.sqrt(gx * gx + gy * gy) || 1;
+      const at = [B[0] + 37 * gx / gn, B[1] + 37 * gy / gn];
+      s += '<text x="' + n1(at[0]) + '" y="' + n1(at[1] + 4) +
+           '" text-anchor="middle" font-size="12.5" fill="#5b7bb5">α</text>';
+    }
+    /* α 输入框常驻右上角（α=90° 时也要能改角度），基础模式不出现 */
+    if (mode === 'adv') {
+      boxes.push({ x: W - 88, y: 2, w: 84, h: 24, fixed: true,
+                   html: '<i>α</i>' + foBInp('ang', beamRaw.ang, 'dim-l') + '<i>°</i>' });
+    }
+
+    /* ---------- 标注框落位：先让开左上角，再把互相压住的推开 ---------- */
+    s += placeBoxes(boxes, W, Hh, cornerW, cornerH);
+    return s + '<defs>' +
+      '<marker id="ar" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">' +
+      '<path d="M0,0 L6,3 L0,6 z" fill="#8fa7d6"/></marker>' +
+      '<marker id="ar2" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">' +
+      '<path d="M0,0 L6,3 L0,6 z" fill="#c98a2b"/></marker></defs></svg>';
+  }
+
+  /* 标注框避让：固定框（左上角荷载输入）不动，其余沿重叠较小的方向互推，
+     直到互不重叠且都在画布内。互不重叠时一次都不会动，所以 α=90° 的位置原样保留。 */
+  function placeBoxes(list, W, H, cw, ch) {
+    const bs = list.map(function (b) {
+      let x = b.x, y = b.y;
+      /* 左上角预留区：压到就往下让 */
+      if (!b.fixed && x < cw && y < ch) y = ch;
+      return { x: x, y: y, w: b.w, h: b.h, html: b.html, fixed: b.fixed };
+    });
+    const ovl = function (a, b) {
+      const ox = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x);
+      const oy = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
+      return (ox > 0 && oy > 0) ? { ox: ox, oy: oy } : null;
+    };
+    for (let it = 0; it < 80; it++) {
+      let moved = false;
+      for (let i = 0; i < bs.length; i++) {
+        for (let j = i + 1; j < bs.length; j++) {
+          const a = bs[i], b = bs[j], o = ovl(a, b);
+          if (!o) continue;
+          moved = true;
+          const dx = (a.x + a.w / 2) - (b.x + b.w / 2);
+          const dy = (a.y + a.h / 2) - (b.y + b.h / 2);
+          const px = o.ox < o.oy ? (o.ox / 2 + 1) * (dx >= 0 ? 1 : -1) : 0;
+          const py = o.ox < o.oy ? 0 : (o.oy / 2 + 1) * (dy >= 0 ? 1 : -1);
+          if (!a.fixed) { a.x += px; a.y += py; }
+          if (!b.fixed) { b.x -= px; b.y -= py; }
+        }
+      }
+      bs.forEach(function (b) {
+        b.x = Math.max(2, Math.min(W - b.w - 2, b.x));
+        b.y = Math.max(2, Math.min(H - b.h - 2, b.y));
+      });
+      if (!moved) break;
+    }
+    return bs.map(function (b) { return foBox(b.x, b.y, b.w, b.h, b.html); }).join('');
   }
 
   /* ================= 输出 ================= */
@@ -1774,7 +1975,16 @@ function tex2html(src) {
       cant: '底端固结，均布风荷载。按护栏立柱考虑顶部水平活荷载 F = max(B×1.0, 1.5) kN。',
       cantf: '底端固结，面板高出立柱顶端 a。飞边附加风荷载 F<sub>a</sub> = a·B·w<sub>k</sub> 作用于 L + a/2；a 取负表示面板顶端低于立柱顶端。'
     };
-    el.formHint.innerHTML = hints[inp.form];
+    let angNote = '';
+    if (mode === 'adv') {
+      angNote = '<br>立柱与水平面夹角 <b>α = ' + fmt(inp.ang, 1) + '°</b>：' +
+        (inp.isRoof
+          ? '<b style="color:#b45309">α &lt; 75°，本立柱按采光顶龙骨验算</b>。' +
+            '已计入立柱自重、面板重力与活荷载垂直于立柱的分量；活荷载按水平投影取值。'
+          : '自重与面板重力垂直于立柱的分量按 cos α 计入（' + fmt(inp.ang, 1) + '° 时为 ' +
+            fmt(r.ca, 3) + '），α = 90° 时归零。');
+    }
+    el.formHint.innerHTML = hints[inp.form] + angNote;
 
     /* 结论 */
     el.verdict.innerHTML =
@@ -1799,7 +2009,12 @@ function tex2html(src) {
       '<div><div class="k">受力形式</div><div class="v">' + fname + fextra + '</div></div>' +
       '<div><div class="k">跨度 L</div><div class="v">' + fmt(inp.L, 2) + ' m</div></div>' +
       '<div><div class="k">立柱间距 B</div><div class="v">' + fmt(inp.B, 2) + ' m</div></div>' +
-      '<div><div class="k">风荷载 W<sub>k</sub></div><div class="v">' + fmt(inp.wk, 2) + ' kPa</div></div>';
+      '<div><div class="k">风荷载 W<sub>k</sub></div><div class="v">' + fmt(inp.wk, 2) + ' kPa</div></div>' +
+      (mode === 'adv'
+        ? '<div><div class="k">倾角 α</div><div class="v">' + fmt(inp.ang, 1) + '°</div></div>' : '') +
+      (inp.isRoof
+        ? '<div><div class="k">活荷载 L<sub>k</sub>（水平投影）</div><div class="v">' +
+          fmt(inp.lk, 2) + ' kPa</div></div>' : '');
 
     /* 截面特性 */
     el.secKv.innerHTML =
@@ -1814,11 +2029,20 @@ function tex2html(src) {
 
     /* 荷载与内力 */
     const mdKind = inp.form === 'two' ? '（' + (r.MdKind || '') + '）' : '';
+    const tilt = 90 - inp.ang > 1e-9;
     el.loadKv.innerHTML =
       '<div><div class="k">线荷载标准值 q<sub>k</sub></div><div class="v">' + fmt(r.qk, 3) + ' kN/m</div></div>' +
       '<div><div class="k">地震 E<sub>k</sub></div><div class="v">' + fmt(r.Ek, 4) + ' kPa</div></div>' +
+      (tilt
+        ? '<div><div class="k">自重+面板 垂直分量 q<sub>G⊥</sub></div><div class="v">' +
+          fmt(r.qGk, 3) + ' kN/m</div></div>' +
+          (inp.isRoof
+            ? '<div><div class="k">活荷载 垂直分量 q<sub>L⊥</sub></div><div class="v">' +
+              fmt(r.qLk, 3) + ' kN/m</div></div>' : '')
+        : '') +
       '<div><div class="k">线荷载设计值 q<sub>d</sub></div><div class="v">' + fmt(r.qd, 3) + ' kN/m</div></div>' +
-      '<div><div class="k">设计弯矩 M<sub>d</sub></div><div class="v">' + fmt(r.Md, 3) + ' kN·m</div></div>';
+      '<div><div class="k">设计弯矩 M<sub>d</sub></div><div class="v">' + fmt(r.Md, 3) + ' kN·m</div></div>' +
+      '<div><div class="k">控制组合</div><div class="v">' + r.qdKind + '</div></div>';
 
     let dep = '';
     if (inp.form === 'cant' || inp.form === 'cantf') {
@@ -1828,20 +2052,37 @@ function tex2html(src) {
               fmt(r.Fa, 3) + ' kN，作用于 ' + fmt(r.c, 3) + ' m 高处。' : '') +
             '</div>';
     }
+    if (tilt) {
+      dep += '<div class="dep"><b>倾斜立柱的重力分解</b>（α = ' + fmt(inp.ang, 1) + '°，cos α = ' +
+             fmt(r.ca, 4) + '）　' +
+             '立柱自重 ' + fmt(r.gsw, 4) + ' kN/m + 面板自重 G<sub>k</sub>·B = ' +
+             fmt(r.Gk * inp.B, 4) + ' kN/m，合计竖向 ' + fmt(r.gsw + r.Gk * inp.B, 4) +
+             ' kN/m，垂直于立柱的分量 q<sub>G⊥</sub> = ' + fmt(r.qGk, 4) + ' kN/m。' +
+             (inp.isRoof
+               ? '<br><b style="color:#b45309">α &lt; 75°：判定为采光顶龙骨</b>，' +
+                 '另计活荷载 L<sub>k</sub>（按水平投影）垂直于立柱的分量 ' +
+                 'q<sub>L⊥</sub> = L<sub>k</sub>·B·cos²α = ' + fmt(r.qLk, 4) + ' kN/m。'
+               : '') +
+             '<br>重力沿立柱轴线方向的压力 N = ' + fmt(r.Nax, 3) + ' kN（立柱以受弯为主，未计入轴力）。</div>';
+    }
     el.depNote.innerHTML = dep;
 
     /* 挠度 */
     let dRows = '';
     if (r.dParts) {
-      dRows = r.dParts.map(function (x) {
-        return '<tr><td>' + x.k + '</td><td class="num">' + fmt(x.v, 2) + '</td><td>mm</td></tr>';
-      }).join('');
+      /* 竖直立柱时重力分量为 0，不摆两行 0.00 出来 */
+      dRows = r.dParts.filter(function (x) { return Math.abs(x.v) > 1e-9; })
+        .map(function (x) {
+          return '<tr><td>' + x.k + '</td><td class="num">' + fmt(x.v, 2) + '</td><td>mm</td></tr>';
+        }).join('');
     }
     let dHtml =
       '<table><thead><tr><th>项目</th><th>挠度</th><th>单位</th></tr></thead><tbody>' +
       (dRows || '<tr><td>均布风荷载</td><td class="num">' + fmt(r.d, 2) + '</td><td>mm</td></tr>') +
-      (inp.form === 'cant' || inp.form === 'cantf'
-        ? '<tr><td>标准组合（取大）</td><td class="num">' + fmt(r.d, 2) + '</td><td>mm</td></tr>' : '') +
+      (tilt
+        ? '<tr><td><b>标准组合（合计）</b></td><td class="num">' + fmt(r.d, 2) + '</td><td>mm</td></tr>'
+        : (inp.form === 'cant' || inp.form === 'cantf'
+            ? '<tr><td>标准组合（取大）</td><td class="num">' + fmt(r.d, 2) + '</td><td>mm</td></tr>' : '')) +
       '</tbody></table>' +
       '<div class="kv" style="margin-top:12px">' +
       '<div><div class="k">计算挠度 d</div><div class="v">' + fmt(r.d, 2) + ' mm</div></div>' +
@@ -1875,7 +2116,12 @@ function tex2html(src) {
       '<p class="hint" style="margin-top:10px">σ ≤ f = ' + fmt(r.f, 0) + ' MPa（' + st.note + '）。利用率 <b>' +
       f3(r.rStrength) + '</b> ' + (r.okStrength ? '<span class="ok">满足</span>' : '<span class="ng">超限</span>') + '。</p>' +
       '<p class="hint" style="margin:6px 0 0;border-top:1px dashed rgba(0,0,0,.08);padding-top:8px">' +
-      '构件自重 ' + fmt(r.sw, 3) + ' kN/m，尚未计入轴力（立柱以受弯为主，轴力影响可忽略）。</p>';
+      '构件自重（竖直方向总量）' + fmt(r.sw, 4) + ' kN/m' +
+      (90 - inp.ang > 1e-9
+        ? '，其中垂直于立柱的分量 ' + fmt(r.qGk, 4) + ' kN/m 已计入弯矩；' +
+          '沿轴线方向的压力 N = ' + fmt(r.Nax, 3) + ' kN，未计入轴力。'
+        : '，竖直立柱的自重为轴向压力，不产生弯矩，故未计入。') +
+      '</p>';
 
     renderSteps(buildSteps(inp, r));
   }
@@ -1968,17 +2214,61 @@ function tex2html(src) {
                 nn(inp.gg, 1) + '\\times ' + nn(inp.pt, 0) + '\\times 10^{-3}=\\ ' + nn(r.Gk, 4) + '\\ \\mathrm{kPa}'));
     L3.push(fxl('地震', 'E_{k}', '5\\alpha_{\\max}G_{k}',
                 '5\\times ' + nn(inp.amax, 2) + '\\times ' + nn(r.Gk, 4) + '=\\ ' + nn(r.Ek, 4) + '\\ \\mathrm{kPa}'));
+
+    /* 倾斜立柱：所有荷载都取垂直于立柱轴线的分量 */
+    const tilt = 90 - inp.ang > 1e-9;
+    if (tilt) {
+      L3.push(fxl('立柱自重', 'g_{k}', 'A\\,\\rho',
+        nn(r.pr.A, 0) + '\\times ' + nn(inp.mat.rho, 0) + '\\times 10^{-6}\\times 9.8\\times 10^{-3}=\\ ' +
+        nn(r.gsw, 4) + '\\ \\mathrm{kN/m}'));
+      L3.push(fxl('重力 ⊥分量', 'q_{G\\perp}', '\\left(g_{k}+G_{k}B\\right)\\cos\\alpha',
+        '\\left(' + nn(r.gsw, 4) + '+' + nn(r.Gk * inp.B, 4) + '\\right)\\times\\cos ' + nn(inp.ang, 1) +
+        '^{\\circ}=\\ ' + nn(r.qGk, 4) + '\\ \\mathrm{kN/m}'));
+      if (inp.isRoof) {
+        L3.push(fxl('活载 ⊥分量', 'q_{L\\perp}', 'L_{k}B\\cos^{2}\\alpha',
+          nn(inp.lk, 2) + '\\times ' + nn(inp.B, 2) + '\\times\\cos^{2} ' + nn(inp.ang, 1) +
+          '^{\\circ}=\\ ' + nn(r.qLk, 4) + '\\ \\mathrm{kN/m}'));
+      }
+      L3.push(fxl('地震 ⊥分量', 'q_{E\\perp}', 'E_{k}B\\sin\\alpha',
+        nn(r.Ek, 4) + '\\times ' + nn(inp.B, 2) + '\\times\\sin ' + nn(inp.ang, 1) +
+        '^{\\circ}=\\ ' + nn(r.qEk, 4) + '\\ \\mathrm{kN/m}'));
+    }
     steps.push({
-      t: '荷载标准值',
-      n: '风荷载按立柱间距 B 换算为线荷载；面板自重仅用于计算地震等效静力（立柱弯矩由水平荷载控制）。',
+      t: '荷载标准值' + (tilt ? '与倾角分解' : ''),
+      n: tilt
+        ? '立柱与水平面夹角 α = ' + nn(inp.ang, 1) + '°。' +
+          '风荷载沿面板法向，本来就垂直于立柱，取 full 值；' +
+          '重力（自重、面板自重）竖直向下，垂直分量乘 cos α；' +
+          (inp.isRoof
+            ? '<b>α &lt; 75°，判定为采光顶龙骨</b>，活荷载按水平投影取值，垂直分量再乘一次 cos α，即 cos²α；'
+            : '') +
+          '水平地震的垂直分量乘 sin α。α = 90° 时 cos α = 0，全部重力项归零，退回常规竖直立柱。'
+        : '风荷载按立柱间距 B 换算为线荷载；α = 90°（竖直立柱）时自重与面板重力不产生弯矩，面板自重仅用于计算地震等效静力。',
       L: L3
     });
 
     /* ④ 荷载组合 */
     const L4 = [];
-    L4.push(fxl('设计值', 'q_{d}', '\\max\\left(\\gamma_{W}q_{k},\\ \\gamma_{E}E_{k}B\\right)',
-      '\\max\\left(' + nn(inp.gW, 2) + '\\times ' + nn(r.qk, 3) + ',\\ ' + nn(inp.gE, 2) + '\\times ' +
-      nn(r.Ek, 4) + '\\times ' + nn(inp.B, 2) + '\\right)=\\ ' + nn(r.qd, 3) + '\\ \\mathrm{kN/m}'));
+    if (tilt) {
+      /* 三组合包络：风控制 / 活控制 / 地震，永久荷载 γ_G 不折减 */
+      L4.push(fxl('风控制', 'q_{d1}', '\\gamma_{G}q_{G\\perp}+\\gamma_{W}q_{k}+\\gamma_{L}\\psi_{L}q_{L\\perp}',
+        nn(inp.gG, 2) + '\\times ' + nn(r.qGk, 4) + '+' + nn(inp.gW, 2) + '\\times ' + nn(r.qk, 3) + '+' +
+        nn(inp.gL, 2) + '\\times ' + nn(inp.psL, 2) + '\\times ' + nn(r.qLk, 4) + '=\\ ' +
+        nn(inp.gG * r.qGk + inp.gW * r.qk + inp.gL * inp.psL * r.qLk, 4) + '\\ \\mathrm{kN/m}'));
+      L4.push(fxl('活控制', 'q_{d2}', '\\gamma_{G}q_{G\\perp}+\\gamma_{L}q_{L\\perp}+\\gamma_{W}\\psi_{W}q_{k}',
+        nn(inp.gG, 2) + '\\times ' + nn(r.qGk, 4) + '+' + nn(inp.gL, 2) + '\\times ' + nn(r.qLk, 4) + '+' +
+        nn(inp.gW, 2) + '\\times ' + nn(inp.psW, 2) + '\\times ' + nn(r.qk, 3) + '=\\ ' +
+        nn(inp.gG * r.qGk + inp.gL * r.qLk + inp.gW * inp.psW * r.qk, 4) + '\\ \\mathrm{kN/m}'));
+      L4.push(fxl('地震', 'q_{d3}', '\\gamma_{G}q_{G\\perp}+\\gamma_{E}q_{E\\perp}',
+        nn(inp.gG, 2) + '\\times ' + nn(r.qGk, 4) + '+' + nn(inp.gE, 2) + '\\times ' + nn(r.qEk, 4) +
+        '=\\ ' + nn(inp.gG * r.qGk + inp.gE * r.qEk, 4) + '\\ \\mathrm{kN/m}'));
+      L4.push(fxl('取包络', 'q_{d}', '\\max\\left(q_{d1},q_{d2},q_{d3}\\right)',
+        nn(r.qd, 4) + '\\ \\mathrm{kN/m}\\quad(' + r.qdKind + ')'));
+    } else {
+      L4.push(fxl('设计值', 'q_{d}', '\\max\\left(\\gamma_{W}q_{k},\\ \\gamma_{E}E_{k}B\\right)',
+        '\\max\\left(' + nn(inp.gW, 2) + '\\times ' + nn(r.qk, 3) + ',\\ ' + nn(inp.gE, 2) + '\\times ' +
+        nn(r.Ek, 4) + '\\times ' + nn(inp.B, 2) + '\\right)=\\ ' + nn(r.qd, 3) + '\\ \\mathrm{kN/m}'));
+    }
     if (inp.form === 'cant' || inp.form === 'cantf') {
       L4.push(fxl('活荷载', 'F', '\\max\\left(B\\times 1.0,\\ 1.5\\right)',
                   '\\max\\left(' + nn(inp.B, 2) + ',\\ 1.5\\right)=\\ ' + nn(r.F, 2) + '\\ \\mathrm{kN}'));
@@ -1995,6 +2285,7 @@ function tex2html(src) {
     steps.push({
       t: '荷载分项与组合',
       n: '分项系数按项目地区选取（全国 / 广东 / 海外）。地震工况与风工况取包络，不叠加。' +
+         (tilt ? '倾斜立柱时，风控制与活控制两种组合取大，永久荷载 γ<sub>G</sub> 不折减。' : '') +
          (inp.form === 'cant' || inp.form === 'cantf' ? '悬臂按护栏立柱，风与水平活荷载按组合值系数叠加。' : ''),
       L: L4
     });
@@ -2042,7 +2333,10 @@ function tex2html(src) {
     }
     steps.push({
       t: '挠度（标准值）',
-      n: '弹性计算，仅计水平荷载（风、护栏活荷载），不计自重引起的竖向变形。',
+      n: tilt
+        ? '弹性计算。标准组合 d = d<sub>G⊥</sub> + max(d<sub>W</sub> + ψ<sub>L</sub>·d<sub>L⊥</sub>, d<sub>L⊥</sub> + ψ<sub>W</sub>·d<sub>W</sub>)：' +
+          '自重与面板的垂直分量不折减，风与活荷载互为主要可变荷载取包络。'
+        : '弹性计算，仅计水平荷载（风、护栏活荷载），不计自重引起的竖向变形（竖直立柱自重为轴力）。',
       L: L6
     });
 
@@ -2120,6 +2414,8 @@ function tex2html(src) {
       let nv = v;
       if (k === 'L') nv = Math.max(nv, 0.05);
       if (k === 'wk') nv = Math.max(nv, 0);
+      if (k === 'ang') nv = clampAng(nv);
+      if (k === 'lk') nv = Math.max(nv, 0);
       beamVals[k] = nv;
       beamRaw[k] = t.value.trim();   /* 保留用户敲的原样 */
     } else {
@@ -2208,7 +2504,7 @@ function tex2html(src) {
   });
 
   /* 启动（默认基础模式） */
-  document.getElementById('verLine').textContent = '版本 2026-10-21 15:25';
+  document.getElementById('verLine').textContent = '版本 2026-10-21 14:42';
   applyMode();
 })();
 </script>
