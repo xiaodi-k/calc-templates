@@ -1602,11 +1602,19 @@ function tex2html(src) {
     }
 
     /* ---------- 支座（先画，让立柱线压在三角形上方） ---------- */
-    /* 铰支座：三角形尖朝左（绕顶点逆时针转 90°），尖端落在立柱轴线上，右侧竖线为支承面 */
-    function tri(x, y) {
-      return '<path d="M' + x + ',' + y.toFixed(1) + ' l12,-7 l0,14 Z" fill="#fff" fill-opacity="0.85" stroke="#333" stroke-width="1.2"/>' +
-             '<line x1="' + (x + 12) + '" y1="' + (y - 9).toFixed(1) + '" x2="' + (x + 12) +
-             '" y2="' + (y + 9).toFixed(1) + '" stroke="#333" stroke-width="1.2"/>';
+    /* 立柱竖画，三角形尖端朝左落在立柱轴线上、底边在右侧：
+         PIN（固定铰支座）  = 只有三角形；
+         滑动支座（可动铰） = 三角形 + 底边外侧一横（与底边平行的支承面，中间留缝表示可滑动）。 */
+    const TRI_L = 12, TRI_H = 7, ROLL_GAP = 5;
+    function pin(x, y) {
+      return '<path d="M' + x + ',' + y.toFixed(1) + ' l' + TRI_L + ',' + (-TRI_H) + ' l0,' + (2 * TRI_H) +
+             ' Z" fill="#fff" fill-opacity="0.85" stroke="#333" stroke-width="1.2"/>';
+    }
+    function roll(x, y) {
+      const xs = x + TRI_L + ROLL_GAP;
+      return pin(x, y) +
+             '<line x1="' + xs + '" y1="' + (y - TRI_H - 3).toFixed(1) + '" x2="' + xs +
+             '" y2="' + (y + TRI_H + 3).toFixed(1) + '" stroke="#333" stroke-width="1.2"/>';
     }
     function fix(x, y) {
       let h = '<line x1="' + x + '" y1="' + y.toFixed(1) + '" x2="' + x + '" y2="' + (y + 12).toFixed(1) +
@@ -1618,10 +1626,12 @@ function tex2html(src) {
       return h;
     }
     if (inp.form === 'simple') {
-      s += tri(xm, Y(L)); s += tri(xm, Y(0));
+      /* 简支：上端 PIN、下端滑动（竖向可伸缩，符合立柱实际受力） */
+      s += pin(xm, Y(L)); s += roll(xm, Y(0));
     } else if (inp.form === 'two') {
+      /* 双跨：1 个 PIN（定水平位置）+ 2 个滑动支座（中支座、下端） */
       const yMid = Y(Math.max(L - a, 0.01));
-      s += tri(xm, Y(L)); s += tri(xm, yMid); s += tri(xm, Y(0));
+      s += pin(xm, Y(L)); s += roll(xm, yMid); s += roll(xm, Y(0));
     } else {
       s += fix(xm, Y(0) - 12);
     }
@@ -2198,7 +2208,7 @@ function tex2html(src) {
   });
 
   /* 启动（默认基础模式） */
-  document.getElementById('verLine').textContent = '版本 2026-10-21 14:48';
+  document.getElementById('verLine').textContent = '版本 2026-10-21 15:13';
   applyMode();
 })();
 </script>
