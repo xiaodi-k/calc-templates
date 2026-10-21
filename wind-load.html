@@ -1,0 +1,1433 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>幕墙围护结构风荷载计算</title>
+<style>
+    :root {
+      --bg: #f2f4f9;
+      --card: #ffffff;
+      --text: #111111;
+      --muted: #6b7280;
+      --line: rgba(0, 0, 0, .10);
+      --ok: #1a7f37;
+      --ng: #c62828;
+
+      /* 输入区：蓝 */
+      --in: #2f6feb;
+      --in-soft: #e9f0ff;
+      --in-band: #e8eefb;
+      --in-line: #d2dff7;
+      /* 输出区：绿 */
+      --out: #0e7c66;
+      --out-soft: #e5f4f0;
+      --out-line: #c8e5dc;
+      --out-band: #edf7f4;
+    }
+    * { box-sizing: border-box; }
+    /* 必须 !important：.row/.grid2 自己带 display，会盖掉 UA 的 [hidden]{display:none} */
+    [hidden] { display: none !important; }
+    body {
+      margin: 0;
+      padding: 0 24px 72px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                   "PingFang SC", "Microsoft YaHei", sans-serif;
+      font-size: 14px;
+    }
+
+    .topbar {
+      position: sticky; top: 0; z-index: 10;
+      display: flex; align-items: center; gap: 12px;
+      padding: 16px 0; margin-bottom: 20px;
+      background: var(--bg);
+      border-bottom: 1px solid var(--line);
+    }
+    .topbar h1 { font-size: 18px; font-weight: 800; margin: 0; letter-spacing: .3px; }
+    .topbar .spacer { flex: 1; }
+    .back { color: var(--muted); text-decoration: none; font-size: 13px; }
+    .back:hover { color: var(--text); }
+
+    main {
+      display: grid;
+      grid-template-columns: 380px minmax(0, 1fr);
+      gap: 20px;
+      align-items: start;
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+    @media (max-width: 900px) {
+      main { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, .05);
+      overflow: hidden;
+    }
+    .card + .card { margin-top: 16px; }
+    .card > h2 {
+      margin: 0;
+      padding: 12px 16px;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: .5px;
+      color: var(--muted);
+      background: #fbfbfd;
+      border-bottom: 1px solid var(--line);
+    }
+    .card > .body { padding: 14px 16px 16px; }
+
+    /* ===== 输入行 ===== */
+    .row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .row:last-child { margin-bottom: 0; }
+    .row label { flex: 0 1 auto; font-size: 13px; color: #333; white-space: nowrap; }
+    .row .unit {
+      flex: none; width: 34px; font-size: 12px;
+      color: var(--muted); text-align: right;
+    }
+    .row > input[type="number"], .row > select {
+      width: auto; flex: 1 1 96px; min-width: 0;
+    }
+
+    /* ===== 输入 / 输出 分区配色 ===== */
+    .inputs, .outputs { min-width: 0; }
+    .inputs {
+      background: var(--in-band);
+      border: 1px solid var(--in-line);
+      border-radius: 14px;
+      padding: 14px;
+    }
+    .outputs {
+      background: var(--out-band);
+      border: 1px solid var(--out-line);
+      border-radius: 14px;
+      padding: 14px;
+    }
+
+    .inputs > .card {
+      border-left: 3px solid var(--in);
+      box-shadow: 0 3px 10px rgba(20, 50, 100, .05);
+    }
+    .inputs > .card > h2 {
+      background: var(--in-soft); color: var(--in);
+      border-bottom-color: var(--in-line);
+    }
+    .outputs > .card {
+      border-left: 3px solid var(--out);
+      box-shadow: 0 3px 10px rgba(10, 60, 50, .05);
+    }
+    .outputs > .card > h2 {
+      background: var(--out-soft); color: var(--out);
+      border-bottom-color: var(--out-line);
+    }
+
+    .outputs > .card.lead > h2 { font-size: 14px; letter-spacing: 1px; }
+    .outputs > .card.lead > .verdict {
+      background: linear-gradient(180deg, #eef8f5 0%, #ffffff 100%);
+    }
+
+    .colcap {
+      display: inline-flex; align-items: center; gap: 7px;
+      margin-bottom: 12px; padding: 5px 13px; border-radius: 999px;
+      font-size: 12px; font-weight: 800; letter-spacing: 1px;
+    }
+    .colcap::before {
+      content: ''; width: 7px; height: 7px; border-radius: 50%;
+      background: currentColor;
+    }
+    .colcap.in  { background: #fff; color: var(--in);  box-shadow: 0 1px 4px rgba(20, 50, 100, .10); }
+    .colcap.out { background: #fff; color: var(--out); box-shadow: 0 1px 4px rgba(20, 50, 100, .10); }
+
+    input[type="number"], select {
+      width: 100%;
+      padding: 7px 9px;
+      border: 1px solid #d5dded;
+      border-radius: 8px;
+      font: inherit;
+      color: var(--text);
+      background: #fcfdff;
+      font-variant-numeric: tabular-nums;
+    }
+    input[type="number"] { text-align: right; }
+    select { cursor: pointer; }
+    input[type="number"]:focus, select:focus {
+      outline: 2px solid #cfdcff; border-color: var(--in); background: #fff;
+    }
+
+    /* 种类下拉的文字较长，左列（种类）给更多宽度，右列（厚度）只需容纳数字 */
+    .grid2 {
+      display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr);
+      gap: 10px 10px; align-items: start;
+    }
+    .grid2 label {
+      display: block; font-size: 12px; color: var(--muted);
+      margin-bottom: 4px; white-space: nowrap;
+    }
+    .grid2 > div { min-width: 0; }
+
+    /* 构造层次分隔条 */
+    .seam {
+      display: flex; align-items: center; gap: 8px;
+      margin: 14px 0; font-size: 11px; font-weight: 800; letter-spacing: 1.5px;
+      color: var(--muted);
+    }
+    .seam::before, .seam::after {
+      content: ''; flex: 1; height: 1px; background: var(--line);
+    }
+    .seam.ig { color: var(--in); }
+    .seam.pvb {
+      margin: 8px 0; color: #9a7b14; letter-spacing: 1px;
+    }
+    .seam.pvb::before, .seam.pvb::after { background: repeating-linear-gradient(90deg, #e6d9b8 0 4px, transparent 4px 8px); }
+
+    .hint { font-size: 12px; color: var(--muted); line-height: 1.7; margin: 8px 0 0; }
+
+    details { margin-top: 4px; }
+    details > summary {
+      cursor: pointer; color: var(--muted); font-size: 12px; padding: 6px 0;
+      user-select: none;
+    }
+
+    button {
+      appearance: none; border: 0; padding: 8px 14px; border-radius: 10px;
+      font: inherit; font-weight: 700; cursor: pointer; background: #111; color: #fff;
+    }
+    button.ghost { background: #fff; color: #111; border: 1px solid var(--line); }
+    button:active { transform: scale(.98); }
+
+    /* 输入列顶部：左侧 INPUT 徽标，右侧 基础/高级 iOS 风格滑动开关 */
+    .inhead {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 10px; margin-bottom: 12px;
+    }
+    .inhead .colcap { margin-bottom: 0; }
+    .ios { display: inline-flex; align-items: center; gap: 7px; flex: 0 0 auto; }
+    .ios-lbl {
+      font-size: 11px; font-weight: 800; letter-spacing: .5px;
+      color: var(--muted); cursor: pointer; user-select: none;
+      transition: color .18s ease;
+    }
+    .ios-lbl.on { color: var(--in); }
+    .ios-sw {
+      position: relative; flex: 0 0 auto;
+      width: 40px; height: 22px; padding: 0; border: 0; border-radius: 999px;
+      background: #c3c3c9;                     /* 基础：暗 */
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .07);
+      transition: background .22s ease;
+    }
+    .ios-sw::after {
+      content: ''; position: absolute; top: 2px; left: 2px;
+      width: 18px; height: 18px; border-radius: 50%; background: #fff;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, .28);
+      transition: transform .22s cubic-bezier(.32, .72, 0, 1);
+    }
+    .ios-sw.on { background: var(--in); }       /* 高级：亮 */
+    .ios-sw.on::after { transform: translateX(18px); }
+    .ios-sw:focus-visible { outline: 2px solid #cfdcff; outline-offset: 2px; }
+    .ios-sw:active { transform: none; }   /* 覆盖 button:active 的缩放，开关不该抖 */
+
+    .verdict { display: flex; gap: 28px; flex-wrap: wrap; padding: 16px; }
+    .verdict .item .k { font-size: 12px; color: var(--muted); }
+    .verdict .item .v { font-size: 26px; font-weight: 900; line-height: 1.2; }
+    .verdict .item .sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .badge {
+      display: inline-block; padding: 3px 10px; border-radius: 999px;
+      font-size: 12px; font-weight: 800; color: #fff; background: var(--ok);
+    }
+    .badge.ng { background: var(--ng); }
+
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { padding: 8px 10px; text-align: right; border-bottom: 1px solid var(--line); }
+    th {
+      color: var(--muted); font-weight: 700; font-size: 12px;
+      background: #fbfbfd; white-space: nowrap;
+    }
+    th:first-child, td:first-child { text-align: left; }
+    tbody tr:last-child td { border-bottom: 0; }
+    td.num { font-variant-numeric: tabular-nums; }
+    tbody tr.ctrl td { background: #fffbe8; }
+    .ok { color: var(--ok); font-weight: 700; }
+    .ng { color: var(--ng); font-weight: 700; }
+
+    .kv { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .kv .k { font-size: 12px; color: var(--muted); }
+    .kv .v { font-weight: 700; font-variant-numeric: tabular-nums; }
+
+    footer { max-width: 1280px; margin: 24px auto 0; color: var(--muted); font-size: 12px; line-height: 1.7; }
+    footer .ver { display: block; margin-top: 6px; opacity: .7; font-variant-numeric: tabular-nums; }
+
+    /* ===== 公式区 ===== */
+    .card > h2.fxhead { display: flex; align-items: center; gap: 8px; }
+    .fxhead .spacer { flex: 1; }
+    button.mini { padding: 4px 10px; font-size: 12px; font-weight: 700; border-radius: 8px; }
+    .fx-tools { display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 10px; }
+
+    .fxstep { border-bottom: 1px solid var(--line); }
+    .fxstep:last-child { border-bottom: 0; }
+    .fxstep > summary {
+      cursor: pointer; user-select: none;
+      padding: 10px 2px; font-size: 13px; font-weight: 700; color: #222;
+      list-style: none;
+    }
+    .fxstep > summary::-webkit-details-marker { display: none; }
+    .fxstep > summary::before {
+      content: '+'; display: inline-block; width: 18px;
+      color: var(--muted); font-weight: 900;
+    }
+    .fxstep[open] > summary::before { content: '\2212'; }
+    .fxbody { padding: 2px 0 14px 18px; overflow-x: auto; }
+    .fxnote { margin: 0 0 10px; font-size: 12px; color: var(--muted); line-height: 1.75; }
+
+    .fxl {
+      display: grid; grid-template-columns: 56px minmax(0, 1fr);
+      padding: 9px 0; border-top: 1px dashed rgba(0, 0, 0, .07);
+    }
+    .fxl:first-of-type { border-top: 0; }
+    .fxtag {
+      grid-row: span 2; padding-top: 3px;
+      font-size: 11px; font-weight: 800; color: var(--muted);
+    }
+    .fx {
+      font-family: "Cambria Math", Cambria, "Times New Roman", Georgia, serif;
+      font-size: 15.5px; line-height: 1.9;
+    }
+    .fx-sym { font-size: 14.5px; color: var(--muted); }
+    .fx-mi { font-style: italic; }
+    .fx-mn, .fx-mo, .fx-rm, .fx-rm * { font-style: normal; }
+    .fx-thin { display: inline-block; width: .22em; }
+    .fx-space { display: inline-block; width: .6em; }
+    .fx-frac {
+      display: inline-flex; flex-direction: column;
+      text-align: center; vertical-align: middle; margin: 0 .18em;
+    }
+    .fx-num { padding: 0 .35em; border-bottom: 1px solid currentColor; }
+    .fx-den { padding: 0 .35em; }
+    .fx-delim { font-size: 1.15em; }
+    .fx-sqrt { display: inline-flex; align-items: flex-start; margin: 0 .1em; }
+    .fx-rad { transform: scaleY(1.2); transform-origin: center; }
+    .fx-radicand { border-top: 1px solid currentColor; padding: 0 .2em; }
+    .fx sup { font-size: .72em; vertical-align: .5em; line-height: 0; }
+    .fx sub { font-size: .72em; vertical-align: -.28em; line-height: 0; }
+    .fxeq { color: var(--muted); margin: 0 .2em; }
+    .fxres { color: #1a4fd6; font-weight: 700; }
+    .fxres.ok { color: var(--ok); }
+    .fxres.ng { color: var(--ng); }
+
+    @media print {
+      body { background: #fff; padding: 0; }
+      .topbar { position: static; border-bottom: 0; }
+      .topbar button, .back { display: none; }
+      .card { box-shadow: none; border-color: #ddd; break-inside: avoid; }
+      main { display: block; }
+      .colcap { display: none; }
+      .ios { display: none; }
+      .inputs, .outputs {
+        background: none; border: 0; border-radius: 0; padding: 0;
+      }
+      .inputs > .card, .outputs > .card { box-shadow: none; border-left-width: 1px; }
+      .inputs > .card > h2, .outputs > .card > h2 {
+        background: #f4f4f6; color: #333;
+      }
+      .outputs > .card.lead > .verdict { background: #fff; }
+      main > .inputs { margin-bottom: 16px; }
+      .inputs .card > .body { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0 24px; }
+      .inputs details { display: none; }
+      footer { display: none; }
+      .fx-tools, .topbar button { display: none; }
+      .fxstep { border-color: #ddd; }
+      .fxstep > summary::before { display: none; }
+      .fxbody { padding-left: 0; overflow: visible; }
+      .fx-frac { vertical-align: middle; }
+    }
+  </style>
+  <style>
+    /* ===== 本页补充样式 ===== */
+    .seg { display: flex; gap: 6px; }
+    .seg button {
+      flex: 1 1 0; padding: 7px 4px; border-radius: 8px;
+      background: #fcfdff; border: 1px solid #d5dded; color: #333;
+      font-weight: 700; font-size: 12px; line-height: 1.35;
+    }
+    .seg button small {
+      display: block; font-weight: 500; font-size: 11px;
+      color: var(--muted); margin-top: 2px;
+    }
+    .seg button.on { background: var(--in); border-color: var(--in); color: #fff; }
+    .seg button.on small { color: #d9e5ff; }
+    .seg button:disabled { opacity: .45; cursor: not-allowed; }
+
+    .big4 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 24px; padding: 16px; }
+    .big4 .k { font-size: 12px; color: var(--muted); }
+    .big4 .v { font-size: 26px; font-weight: 900; line-height: 1.25; font-variant-numeric: tabular-nums; }
+    .big4 .sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .posv { color: #1a4fd6; }
+    .negv { color: #b45309; }
+
+    .warnbar {
+      margin: 0 0 12px; padding: 9px 12px; border-radius: 9px;
+      background: #fdecec; border: 1px solid #f3c7c7; color: var(--ng);
+      font-size: 12.5px; line-height: 1.6;
+    }
+    .infobar {
+      margin: 10px 0 0; padding: 8px 12px; border-radius: 9px;
+      background: #fff8e1; border: 1px solid #f0dfae; color: #7a5c10;
+      font-size: 12.5px; line-height: 1.6;
+    }
+    .srcbar {
+      margin: 0 0 10px; padding: 7px 10px; border-radius: 8px;
+      background: var(--in-soft); border: 1px solid var(--in-line);
+      color: var(--in); font-size: 12px;
+    }
+
+    .beamprev { margin-top: 6px; }
+    .beamprev svg { width: 100%; height: auto; display: block; }
+    .dim-l input {
+      width: 46px; padding: 1px 3px; font-size: 11px; text-align: right;
+      border: 1px solid var(--in-line); border-radius: 4px;
+      background: #fff; color: var(--in); font: inherit; font-size: 11px;
+    }
+
+    /* ===== aligned / cases（在共享渲染器之上追加） ===== */
+    .fx-al {
+      display: inline-grid; grid-auto-flow: row; column-gap: .3em; row-gap: .1em;
+      align-items: baseline; vertical-align: middle;
+    }
+    .fx-al > .fx-c1 { text-align: right; }
+    .fx-al > .fx-c2 { text-align: left; }
+    .fx-cases { display: inline-flex; align-items: center; vertical-align: middle; }
+    .fx-cases > .fx-cb {
+      font-style: normal; font-size: 2.5em; line-height: .55;
+      margin-right: .12em; font-family: "Times New Roman", serif;
+    }
+    .fx-crows {
+      display: inline-grid; grid-template-columns: auto auto;
+      column-gap: .55em; row-gap: .18em; align-items: baseline;
+    }
+
+    /* ===== 查表弹窗 ===== */
+    dialog {
+      border: 1px solid var(--line); border-radius: 12px; padding: 0;
+      width: min(460px, 92vw); box-shadow: 0 18px 48px rgba(0, 0, 0, .18);
+      font-family: inherit; color: var(--text);
+    }
+    dialog::backdrop { background: rgba(17, 24, 39, .32); }
+    .dlg-head {
+      padding: 13px 16px; border-bottom: 1px solid var(--line);
+      font-weight: 800; font-size: 14px; background: #fbfbfd;
+    }
+    .dlg-body { padding: 14px 16px 4px; }
+    .dlg-body .dl { margin-bottom: 11px; }
+    .dlg-body .dl > label {
+      display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px;
+    }
+    .dlg-foot {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 16px; border-top: 1px solid var(--line); background: #fbfbfd;
+    }
+    .dlg-foot .spacer { flex: 1; }
+    .dlg-foot .pick { font-size: 12px; color: var(--muted); }
+    .tpill { font-size: 12px; color: var(--in); margin-top: 6px; min-height: 1em; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <a class="back" href="index.html">← 返回首页</a>
+    <h1>幕墙围护结构风荷载计算</h1>
+    <span class="spacer"></span>
+    <button class="ghost" id="printBtn">打印 / 存 PDF</button>
+  </div>
+
+  <main>
+    <!-- ============ 输入 ============ -->
+    <div class="inputs">
+      <div class="inhead">
+        <div class="colcap in">输入 INPUT</div>
+        <div class="ios">
+          <span class="ios-lbl on" id="lblBasic">基础</span>
+          <button type="button" class="ios-sw" id="modeSw"
+                  role="switch" aria-checked="false"
+                  title="基础：规范默认值（体型系数按分区取）　／　高级：可改体型系数、地形与风向修正系数、1.0 kPa 下限"></button>
+          <span class="ios-lbl" id="lblAdv">高级</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>计算条件</h2>
+        <div class="body">
+          <div class="row">
+            <label for="w0">基本风压 w<sub>0</sub></label>
+            <input type="number" id="w0" value="0.45" step="0.05" min="0.3" />
+            <span class="unit">kPa</span>
+          </div>
+          <div class="row" style="margin-top:-4px">
+            <button class="ghost mini" id="pickBtn" style="flex:1">按城市查表（GB 50009 表 E.5）</button>
+          </div>
+          <p class="hint" id="pickInfo" style="margin-top:-2px"></p>
+
+          <div class="row">
+            <label for="z">计算高度 z</label>
+            <input type="number" id="z" value="40" step="1" min="0" max="550" />
+            <span class="unit">m</span>
+          </div>
+          <div class="row">
+            <label for="area">从属面积 A</label>
+            <input type="number" id="area" value="4.8" step="0.1" min="0.01" />
+            <span class="unit">m²</span>
+          </div>
+          <p class="hint">从属面积用于体型系数折减：≤1 m² 时不折减，≥25 m² 时取 η₂₅，其间按对数插值。</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>地面粗糙度</h2>
+        <div class="body">
+          <div class="seg" id="terSeg">
+            <button type="button" data-t="A">A<small>开阔地</small></button>
+            <button type="button" data-t="B" class="on">B<small>乡村</small></button>
+            <button type="button" data-t="C">C<small>城市</small></button>
+            <button type="button" data-t="D">D<small>密集高楼</small></button>
+          </div>
+          <p class="hint" id="terHint"></p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>构件与分区</h2>
+        <div class="body">
+          <div class="row">
+            <label for="preset">位置</label>
+            <select id="preset" style="flex:1 1 auto"></select>
+          </div>
+          <p class="hint" id="presetHint"></p>
+        </div>
+      </div>
+
+      <div class="card" id="advCard1" hidden>
+        <h2>体型系数（局部）</h2>
+        <div class="body">
+          <div class="seam">外压 C<sub>pe</sub> · 绝对值</div>
+          <div class="grid2">
+            <div>
+              <label for="ep">正风工况外压</label>
+              <div class="row" style="margin-bottom:0"><input type="number" id="ep" value="1.0" step="0.05" min="0" /></div>
+            </div>
+            <div>
+              <label for="en">负风工况外压</label>
+              <div class="row" style="margin-bottom:0"><input type="number" id="en" value="1.4" step="0.05" min="0" /></div>
+            </div>
+          </div>
+          <div class="seam" style="color:#9a7b14">内压 C<sub>pi</sub> · 绝对值</div>
+          <div class="grid2">
+            <div>
+              <label for="ip">正风工况内压（吸力）</label>
+              <div class="row" style="margin-bottom:0"><input type="number" id="ip" value="0.2" step="0.05" min="0" /></div>
+            </div>
+            <div>
+              <label for="inn">负风工况内压（压力）</label>
+              <div class="row" style="margin-bottom:0"><input type="number" id="inn" value="0.2" step="0.05" min="0" /></div>
+            </div>
+          </div>
+          <p class="hint">墙面·边角区按 GB 50009 表 8.3.3 取 +1.0 / −1.4；封闭建筑内压按第 8.3.5 条取 ±0.2。输入框填写绝对值，工况组合由程序按不利方向装配。</p>
+          <p class="hint" id="custTag" hidden style="color:var(--in);font-weight:700">当前体型系数已偏离分区默认值。</p>
+        </div>
+      </div>
+
+      <div class="card" id="advCard2" hidden>
+        <h2>放大系数与下限</h2>
+        <div class="body">
+          <div class="row">
+            <label for="kt">地形修正 k<sub>t</sub></label>
+            <input type="number" id="kt" value="1.0" step="0.05" min="0" />
+            <span class="unit">—</span>
+          </div>
+          <div class="row">
+            <label for="kd">风向影响 k<sub>d</sub></label>
+            <input type="number" id="kd" value="1.0" step="0.05" min="0" />
+            <span class="unit">—</span>
+          </div>
+          <div class="row">
+            <label for="floorMode">1.0 kPa 下限</label>
+            <select id="floorMode" style="flex:1 1 auto">
+              <option value="auto" selected>按构件自动（玻璃幕墙套、采光顶不套）</option>
+              <option value="on">强制套用 JGJ 102 第 5.3.2 条</option>
+              <option value="off">不套用</option>
+            </select>
+          </div>
+          <p class="hint">特殊地形（山间、谷口、海岸等）与分风向统计需另行确定，默认均取 1.0。</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 输出 ============ -->
+    <div class="outputs">
+      <div class="colcap out">输出 OUTPUT</div>
+
+      <div class="card lead">
+        <h2>风荷载标准值 w<sub>k</sub></h2>
+        <div id="errBox"></div>
+        <div class="big4" id="resBox">
+          <div class="item">
+            <div class="k">未折减 · 正风压（向内）</div>
+            <div class="v posv" id="outPP">—</div>
+            <div class="sub">直接承受风荷载的面板</div>
+          </div>
+          <div class="item">
+            <div class="k">未折减 · 负风压（向外）</div>
+            <div class="v negv" id="outPN">—</div>
+            <div class="sub">直接承受风荷载的面板</div>
+          </div>
+          <div class="item">
+            <div class="k">面积折减后 · 正风压</div>
+            <div class="v posv" id="outRP">—</div>
+            <div class="sub">符合折减条件的支承构件</div>
+          </div>
+          <div class="item">
+            <div class="k">面积折减后 · 负风压</div>
+            <div class="v negv" id="outRN">—</div>
+            <div class="sub">符合折减条件的支承构件</div>
+          </div>
+        </div>
+        <p class="hint" style="padding:0 16px 14px;margin:0" id="floorHint"></p>
+      </div>
+
+      <div class="card">
+        <h2>示意</h2>
+        <div class="body">
+          <div class="beamprev" id="prevHost"></div>
+          <p class="hint">高度标注可直接改；箭头按风的方向（正压向内、负压向外）绘制。</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>中间参数</h2>
+        <div class="body">
+          <div class="kv">
+            <div><div class="k">有效高度 Z</div><div class="v" id="kZ">—</div></div>
+            <div><div class="k">风压高度变化 μ<sub>z</sub></div><div class="v" id="kMu">—</div></div>
+            <div><div class="k">参考风压 q<sub>z</sub></div><div class="v" id="kQ">—</div></div>
+            <div><div class="k">放大系数 β<sub>gz</sub></div><div class="v" id="kBeta">—</div></div>
+            <div><div class="k">β 下限 1+0.7/√μ<sub>z</sub></div><div class="v" id="kBL">—</div></div>
+            <div><div class="k">η<sub>+</sub> / η<sub>−</sub></div><div class="v" id="kEta">—</div></div>
+            <div><div class="k">η₂₅（本工况）</div><div class="v" id="kLim">—</div></div>
+            <div><div class="k">1.0 kPa 下限</div><div class="v" id="kDep">—</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="fxhead">
+          计算过程
+          <span class="spacer"></span>
+          <button class="mini" id="fxOpen">全部展开</button>
+          <button class="mini ghost" id="fxClose">全部收起</button>
+        </h2>
+        <div class="body" id="fxHost"></div>
+      </div>
+
+      <div class="card">
+        <h2>规范依据</h2>
+        <div class="body">
+          <table>
+            <thead><tr><th>规范</th><th>条文</th><th>内容（摘录）</th></tr></thead>
+            <tbody id="srcBody"></tbody>
+          </table>
+          <p class="hint">说明：μz 本页采用连续幂律表达式与各类地面的高度上下限；规范表格经过舍入，两者可能有微小差别。</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    基本风压：可按城市查 GB 50009—2012 表 E.5（10 / 50 / 100 年重现期），填入时执行 0.30 kPa 下限；低于 50 年的取值需另有适用依据。
+    μ<sub>z</sub> 按幂律式 c(Z/10)^(2α) 连续计算，Z 为各类地面粗糙度的有效高度范围夹持值。
+    β<sub>gz</sub> 取原阵风系数表达式与 GB 55001—2021 第 4.6.5 条第 2 款下限 1+0.7/√μz 的较大值。
+    面积折减只折减外压 μ<sub>sl</sub>，内压保持不变；墙面 η₂₅ = 0.8，屋面（含采光顶）|μ| > 1 时取 0.6、其余取 1.0。
+    玻璃幕墙另执行 JGJ 102—2003 第 5.3.2 条的 1.0 kPa 绝对值下限；采光顶、雨篷不套用。
+    结果为风荷载标准值，未乘荷载分项系数；正值向内、负值向外，1 kPa = 1 kN/m²。
+    <span class="ver" id="verLine"></span>
+  </footer>
+
+  <dialog id="dlg">
+    <div class="dlg-head">基本风压查表 · GB 50009—2012 表 E.5</div>
+    <div class="dlg-body">
+      <div class="dl">
+        <label for="pvSel">省 / 自治区 / 直辖市</label>
+        <select id="pvSel"></select>
+      </div>
+      <div class="dl">
+        <label for="ctSel">城市 / 台站</label>
+        <select id="ctSel"></select>
+      </div>
+      <div class="dl">
+        <label>重现期 R</label>
+        <div class="seg" id="rpSeg"></div>
+      </div>
+      <p class="hint" id="stNote"></p>
+    </div>
+    <div class="dlg-foot">
+      <span class="pick" id="stPick">—</span>
+      <span class="spacer"></span>
+      <button class="ghost" id="dlgCancel">取消</button>
+      <button id="dlgOk">采用</button>
+    </div>
+  </dialog>
+
+<script>
+/*  GB 50009—2012 表 E.5 全国台站基本风压（10 / 50 / 100 年）
+    数据压成 {省:[[城市, w10, w50, w100], ...]}，null 表示原表无该项。 */
+
+var STATIONS={"北京":[["北京市",0.3,0.45,0.5]],"天津":[["天津市",0.3,0.5,0.6],["塘沽",0.4,0.55,0.65]],"上海":[["上海市",0.4,0.55,0.6]],"重庆":[["重庆市",0.25,0.4,0.45],["奉节",0.25,0.35,0.45],["梁平",0.2,0.3,0.35],["万州",0.2,0.35,0.45],["涪陵",0.2,0.3,0.35],["金佛山",null,null,null]],"河北":[["石家庄市",0.25,0.35,0.4],["蔚县",0.2,0.3,0.35],["邢台市",0.2,0.3,0.35],["丰宁",0.3,0.4,0.45],["围场",0.35,0.45,0.5],["张家口市",0.35,0.55,0.6],["怀来",0.25,0.35,0.4],["承德市",0.3,0.4,0.45],["遵化",0.3,0.4,0.45],["青龙",0.25,0.3,0.35],["秦皇岛市",0.35,0.45,0.5],["霸县",0.25,0.4,0.45],["唐山市",0.3,0.4,0.45],["乐亭",0.3,0.4,0.45],["保定市",0.3,0.4,0.45],["饶阳",0.3,0.35,0.4],["沧州市",0.3,0.4,0.45],["黄骅",0.3,0.4,0.45],["南宫市",0.25,0.35,0.4]],"山西":[["太原市",0.3,0.4,0.45],["右玉",null,null,null],["大同市",0.35,0.55,0.65],["河曲",0.3,0.5,0.6],["五寨",0.3,0.4,0.45],["兴县",0.25,0.45,0.55],["原平",0.3,0.5,0.6],["离石",0.3,0.45,0.5],["阳泉市",0.3,0.4,0.45],["榆社",0.2,0.3,0.35],["隰县",0.25,0.35,0.4],["介休",0.25,0.4,0.45],["临汾市",0.25,0.4,0.45],["长治县",0.3,0.5,0.6],["运城市",0.3,0.45,0.5],["阳城",0.3,0.45,0.5]],"内蒙古":[["呼和浩特市",0.35,0.55,0.6],["额右旗拉布达林",0.35,0.5,0.6],["牙克石市图里河",0.3,0.4,0.45],["满洲里市",0.5,0.65,0.7],["海拉尔市",0.45,0.65,0.75],["鄂伦春小二沟",0.3,0.4,0.45],["新巴尔虎右旗",0.45,0.6,0.65],["新巴尔虎左旗阿木古朗",0.4,0.55,0.6],["牙克石市博克图",0.4,0.55,0.6],["扎兰屯市",0.3,0.4,0.45],["科右翼前旗阿尔山",0.35,0.5,0.55],["科右翼前旗索伦",0.45,0.55,0.6],["乌兰浩特市",0.4,0.55,0.6],["东乌珠穆沁旗",0.35,0.55,0.65],["额济纳旗",0.4,0.6,0.7],["额济纳旗拐子湖",0.45,0.55,0.6],["阿左旗巴彦毛道",0.4,0.55,0.6],["阿拉善右旗",0.45,0.55,0.6],["二连浩特市",0.55,0.65,0.7],["那仁宝力格",0.4,0.55,0.6],["达茂旗满都拉",0.5,0.75,0.85],["阿巴嘎旗",0.35,0.5,0.55],["苏尼特左旗",0.4,0.5,0.55],["乌拉特后旗海力素",0.45,0.5,0.55],["苏尼特右旗朱日和",0.5,0.65,0.75],["乌拉特中旗海流图",0.45,0.6,0.65],["百灵庙",0.5,0.75,0.85],["四子王旗",0.4,0.6,0.7],["化德",0.45,0.75,0.85],["杭锦后旗陕坝",0.3,0.45,0.5],["包头市",0.35,0.55,0.6],["集宁市",0.4,0.6,0.7],["阿拉善左旗吉兰泰",0.35,0.5,0.55],["临河市",0.3,0.5,0.6],["鄂托克旗",0.35,0.55,0.65],["东胜市",0.3,0.5,0.6],["阿腾席连",0.4,0.5,0.55],["巴彦浩特",0.4,0.6,0.7],["西乌珠穆沁旗",0.45,0.55,0.6],["扎鲁特鲁北",0.4,0.55,0.6],["巴林左旗林东",0.4,0.55,0.6],["锡林浩特市",0.4,0.55,0.6],["林西",0.45,0.6,0.7],["开鲁",0.4,0.55,0.6],["通辽",0.4,0.55,0.6],["多伦",0.4,0.55,0.6],["翁牛特旗乌丹",null,null,null],["赤峰市",0.3,0.55,0.65],["敖汉旗宝国图",0.4,0.5,0.55]],"辽宁":[["沈阳市",0.4,0.55,0.6],["彰武",0.35,0.45,0.5],["阜新市",0.4,0.6,0.7],["开原",0.3,0.45,0.5],["清原",0.25,0.4,0.45],["朝阳市",0.4,0.55,0.6],["建平县叶柏寿",0.3,0.35,0.4],["黑山",0.45,0.65,0.75],["锦州市",0.4,0.6,0.7],["鞍山市",0.3,0.5,0.6],["本溪市",0.35,0.45,0.5],["抚顺市章党",0.3,0.45,0.5],["桓仁",0.25,0.3,0.35],["绥中",0.25,0.4,0.45],["兴城市",0.35,0.45,0.5],["营口市",0.4,0.65,0.75],["盖县熊岳",0.3,0.4,0.45],["本溪县草河口",0.25,0.45,0.55],["岫岩",0.3,0.45,0.5],["宽甸",0.3,0.5,0.6],["丹东市",0.35,0.55,0.65],["瓦房店市",0.35,0.5,0.55],["新金县皮口",0.35,0.5,0.55],["庄河",0.35,0.5,0.55],["大连市",0.4,0.65,0.75]],"吉林":[["长春市",0.45,0.65,0.75],["白城市",0.45,0.65,0.75],["乾安",0.35,0.45,0.55],["前郭尔罗斯",0.3,0.45,0.5],["通榆",0.35,0.5,0.55],["长岭",0.3,0.45,0.5],["扶余市三岔河",0.4,0.6,0.7],["双辽",0.35,0.5,0.55],["四平市",0.4,0.55,0.6],["磐石县烟筒山",0.3,0.4,0.45],["吉林市",0.4,0.5,0.55],["蛟河",0.3,0.45,0.5],["敦化市",0.3,0.45,0.5],["梅河口市",0.3,0.4,0.45],["桦甸",0.3,0.4,0.45],["靖宇",0.25,0.35,0.4],["抚松县东岗",0.3,0.45,0.55],["延吉市",0.35,0.5,0.55],["通化市",0.3,0.5,0.6],["浑江市临江",0.2,0.3,0.3],["集安市",0.2,0.3,0.35],["长白",0.35,0.45,0.5]],"黑龙江":[["哈尔滨市",0.35,0.55,0.7],["漠河",0.25,0.35,0.4],["塔河",0.25,0.3,0.35],["新林",0.25,0.35,0.4],["呼玛",0.3,0.5,0.6],["加格达奇",0.25,0.35,0.4],["黑河市",0.35,0.5,0.55],["嫩江",0.4,0.55,0.6],["孙吴",0.4,0.6,0.7],["北安市",0.3,0.5,0.6],["克山",0.3,0.45,0.5],["富裕",0.3,0.4,0.45],["齐齐哈尔市",0.35,0.45,0.5],["海伦",0.35,0.55,0.65],["明水",0.35,0.45,0.5],["伊春市",0.25,0.35,0.4],["鹤岗市",0.3,0.4,0.45],["富锦",0.3,0.45,0.5],["泰来",0.3,0.45,0.5],["绥化市",0.35,0.55,0.65],["安达市",0.35,0.55,0.65],["铁力",0.25,0.35,0.4],["佳木斯市",0.4,0.65,0.75],["依兰",0.45,0.65,0.75],["宝清",0.3,0.4,0.45],["通河",0.35,0.5,0.55],["尚志",0.35,0.55,0.6],["鸡西市",0.4,0.55,0.65],["虎林",0.35,0.45,0.5],["牡丹江市",0.35,0.5,0.55],["绥芬河市",0.4,0.6,0.7]],"山东":[["济南市",0.3,0.45,0.5],["德州市",0.3,0.45,0.5],["惠民",0.4,0.5,0.55],["寿光县羊角沟",0.3,0.45,0.5],["龙口市",0.45,0.6,0.65],["烟台市",0.4,0.55,0.6],["威海市",0.45,0.65,0.75],["荣成市成山头",0.6,0.7,0.75],["莘县朝城",0.35,0.45,0.5],["泰安市泰山",0.65,0.85,0.95],["泰安市",0.3,0.4,0.45],["淄博市张店",0.3,0.4,0.45],["沂源",0.3,0.35,0.4],["潍坊市",0.3,0.4,0.45],["莱阳市",0.3,0.4,0.45],["青岛市",0.45,0.6,0.7],["海阳",0.4,0.55,0.6],["荣成市石岛",0.4,0.55,0.65],["菏泽市",0.25,0.4,0.45],["兖州",0.25,0.4,0.45],["莒县",0.25,0.35,0.4],["临沂",0.3,0.4,0.45],["日照市",0.3,0.4,0.45]],"江苏":[["南京市",0.25,0.4,0.45],["徐州市",0.25,0.35,0.4],["赣榆",0.3,0.45,0.5],["盱眙",0.25,0.35,0.4],["淮阴市",0.25,0.4,0.45],["射阳",0.3,0.4,0.45],["镇江",0.3,0.4,0.45],["无锡",0.3,0.45,0.5],["泰州",0.25,0.4,0.45],["连云港",0.35,0.55,0.65],["盐城",0.25,0.45,0.55],["高邮",0.25,0.4,0.45],["东台市",0.3,0.4,0.45],["南通市",0.3,0.45,0.5],["启东县吕泗",0.35,0.5,0.55],["常州市",0.25,0.4,0.45],["溧阳",0.25,0.4,0.45],["吴县东山",0.3,0.45,0.5]],"浙江":[["杭州市",0.3,0.45,0.5],["临安县天目山",0.55,0.75,0.85],["平湖县乍浦",0.35,0.45,0.5],["慈溪市",0.3,0.45,0.5],["嵊泗",0.85,1.3,1.55],["嵊泗县嵊山",1,1.65,1.95],["舟山市",0.5,0.85,1],["金华市",0.25,0.35,0.4],["嵊县",0.25,0.4,0.5],["宁波市",0.3,0.5,0.6],["象山县石浦",0.75,1.2,1.45],["衢州市",0.25,0.35,0.4],["丽水市",0.2,0.3,0.35],["龙泉",0.2,0.3,0.35],["临海市括苍山",0.6,0.9,1.05],["温州市",0.35,0.6,0.7],["椒江市洪家",0.35,0.55,0.65],["椒江市下大陈",0.95,1.45,1.75],["玉环县坎门",0.7,1.2,1.45],["瑞安市北麂",1,1.8,2.2]],"安徽":[["合肥市",0.25,0.35,0.4],["砀山",0.25,0.35,0.4],["亳州市",0.25,0.45,0.55],["宿县",0.25,0.4,0.5],["寿县",0.25,0.35,0.4],["蚌埠市",0.25,0.35,0.4],["滁县",0.25,0.35,0.4],["六安市",0.2,0.35,0.4],["霍山",0.2,0.35,0.4],["巢湖",0.25,0.35,0.4],["安庆市",0.25,0.4,0.45],["宁国",0.25,0.35,0.4],["黄山",0.5,0.7,0.8],["黄山市",0.25,0.35,0.4],["阜阳市",null,null,null]],"江西":[["南昌市",0.3,0.45,0.55],["修水",0.2,0.3,0.35],["宜春市",0.2,0.3,0.35],["吉安",0.25,0.3,0.35],["宁冈",0.2,0.3,0.35],["遂川",0.2,0.3,0.35],["赣州市",0.2,0.3,0.35],["九江",0.25,0.35,0.4],["庐山",0.4,0.55,0.6],["波阳",0.25,0.4,0.45],["景德镇市",0.25,0.35,0.4],["樟树市",0.2,0.3,0.35],["贵溪",0.2,0.3,0.35],["玉山",0.2,0.3,0.35],["南城",0.25,0.3,0.35],["广昌",0.2,0.3,0.35],["寻乌",0.25,0.3,0.35]],"福建":[["福州市",0.4,0.7,0.85],["邵武市",0.2,0.3,0.35],["崇安县七仙山",0.55,0.7,0.8],["浦城",0.2,0.3,0.35],["建阳",0.25,0.35,0.4],["建瓯",0.25,0.35,0.4],["福鼎",0.35,0.7,0.9],["泰宁",0.2,0.3,0.35],["南平市",0.2,0.35,0.45],["福鼎县台山",0.75,1,1.1],["长汀",0.2,0.35,0.4],["上杭",0.25,0.3,0.35],["永安市",0.25,0.4,0.45],["龙岩市",0.2,0.35,0.45],["德化县九仙山",0.6,0.8,0.9],["屏南",0.2,0.3,0.35],["平潭",0.75,1.3,1.6],["崇武",0.55,0.85,1.05],["厦门市",0.5,0.8,0.95],["东山",0.8,1.25,1.45]],"陕西":[["西安市",0.25,0.35,0.4],["榆林市",0.25,0.4,0.45],["吴旗",0.25,0.4,0.5],["横山",0.3,0.4,0.45],["绥德",0.3,0.4,0.45],["延安市",0.25,0.35,0.4],["长武",0.2,0.3,0.35],["洛川",0.25,0.35,0.4],["铜川市",0.2,0.35,0.4],["宝鸡市",0.2,0.35,0.4],["武功",0.2,0.35,0.4],["华阴县华山",0.4,0.5,0.55],["略阳",0.25,0.35,0.4],["汉中市",0.2,0.3,0.35],["佛坪",0.25,0.35,0.45],["商州市",0.25,0.3,0.35],["镇安",0.2,0.35,0.4],["石泉",0.2,0.3,0.35],["安康市",0.3,0.45,0.5]],"甘肃":[["兰州",0.2,0.3,0.35],["吉诃德",0.45,0.55,0.6],["安西",0.4,0.55,0.6],["酒泉市",0.4,0.55,0.6],["张掖市",0.3,0.5,0.6],["武威市",0.35,0.55,0.65],["民勤",0.4,0.5,0.55],["乌鞘岭",0.35,0.4,0.45],["景泰",0.25,0.4,0.45],["靖远",0.2,0.3,0.35],["临夏市",0.2,0.3,0.35],["临洮",0.2,0.3,0.35],["华家岭",0.3,0.4,0.45],["环县",0.2,0.3,0.35],["平凉市",0.25,0.3,0.35],["西峰镇",0.2,0.3,0.35],["玛曲",0.25,0.3,0.35],["夏河县合作",0.25,0.3,0.35],["武都",0.25,0.35,0.4],["天水市",0.2,0.35,0.4],["马宗山",null,null,null],["敦煌",null,null,null],["玉门市",null,null,null],["金塔县鼎新",null,null,null],["高台",null,null,null],["山丹",null,null,null],["永昌",null,null,null],["榆中",null,null,null],["会宁",null,null,null],["岷县",null,null,null]],"宁夏":[["银川",0.4,0.65,0.75],["惠农",0.45,0.65,0.7],["陶乐",null,null,null],["中卫",0.3,0.45,0.5],["中宁",0.3,0.35,0.4],["盐池",0.3,0.4,0.45],["海源",0.25,0.35,0.4],["同心",0.2,0.3,0.35],["固原",0.25,0.35,0.4],["西吉",0.2,0.3,0.35]],"青海":[["西宁",0.25,0.35,0.4],["茫崖",0.3,0.4,0.45],["冷湖",0.4,0.55,0.6],["祁连县托勒",0.3,0.4,0.45],["祁连县野牛沟",0.3,0.4,0.45],["祁连县",0.3,0.35,0.4],["格尔木市小灶火",0.3,0.4,0.45],["大柴旦",0.3,0.4,0.45],["德令哈市",0.25,0.35,0.4],["刚察",0.25,0.35,0.4],["门源",0.25,0.35,0.4],["格尔木市",0.3,0.4,0.45],["都兰县诺木洪",0.35,0.5,0.6],["都兰",0.3,0.45,0.55],["乌兰县茶卡",0.25,0.35,0.4],["共和县恰卜恰",0.25,0.35,0.4],["贵德",0.25,0.3,0.35],["民和",0.2,0.3,0.35],["唐古拉山五道梁",0.35,0.45,0.5],["兴海",0.25,0.35,0.4],["同德",0.25,0.35,0.4],["泽库",0.25,0.3,0.35],["格尔木市托托河",0.4,0.5,0.55],["治多",0.25,0.3,0.35],["杂多",0.25,0.35,0.4],["曲麻莱",0.25,0.35,0.4],["玉树",0.2,0.3,0.35],["玛多",0.3,0.4,0.45],["称多县清水河",0.25,0.3,0.35],["玛沁县仁岐姆",0.3,0.35,0.4],["达日县吉迈",0.25,0.35,0.4],["河南",0.25,0.4,0.45],["久治",0.2,0.3,0.35],["昂欠",0.25,0.3,0.35],["班玛",0.2,0.3,0.35]],"新疆":[["乌鲁木齐市",0.4,0.6,0.7],["阿勒泰市",0.4,0.7,0.85],["阿拉山口",0.95,1.35,1.55],["克拉玛依市",0.65,0.9,1],["伊宁市",0.4,0.6,0.7],["昭苏",0.25,0.4,0.45],["达坂城",0.55,0.8,0.9],["巴音布鲁克",0.25,0.35,0.4],["吐鲁番市",0.5,0.85,1],["阿克苏市",0.3,0.45,0.5],["库车",0.35,0.5,0.6],["库尔勒",0.3,0.45,0.5],["乌恰",0.25,0.35,0.4],["喀什",0.35,0.55,0.65],["阿合奇",0.25,0.35,0.4],["皮山",0.2,0.3,0.35],["和田",0.25,0.4,0.45],["民丰",0.2,0.3,0.35],["安德河",0.2,0.3,0.35],["于田",0.2,0.3,0.35],["哈密",0.4,0.6,0.7],["哈巴河",null,null,null],["吉木乃",null,null,null],["福海",null,null,null],["富蕴",null,null,null],["塔城",null,null,null],["和布克塞尔",null,null,null],["青河",null,null,null],["托里",null,null,null],["北塔山",null,null,null],["温泉",null,null,null],["精河",null,null,null],["乌苏",null,null,null],["石河子",null,null,null],["蔡家湖",null,null,null],["奇台",null,null,null],["巴仑台",null,null,null],["七角井",null,null,null],["库米什",null,null,null],["焉耆",null,null,null],["拜城",null,null,null],["轮台",null,null,null],["吐尔格特",null,null,null],["巴楚",null,null,null],["柯坪",null,null,null],["阿拉尔",null,null,null],["铁干里克",null,null,null],["若羌",null,null,null],["塔吉克",null,null,null],["莎车",null,null,null],["且末",null,null,null],["红柳河",null,null,null]],"河南":[["郑州市",0.3,0.45,0.5],["安阳市",0.25,0.45,0.55],["新乡市",0.3,0.4,0.45],["三门峡市",0.25,0.4,0.45],["卢氏",0.2,0.3,0.35],["孟津",0.3,0.45,0.5],["洛阳市",0.25,0.4,0.45],["栾川",0.2,0.3,0.35],["许昌市",0.3,0.4,0.45],["开封市",0.3,0.45,0.5],["西峡",0.25,0.35,0.4],["南阳市",0.25,0.35,0.4],["宝丰",0.25,0.35,0.4],["西华",0.25,0.45,0.55],["驻马店市",0.25,0.4,0.45],["信阳市",0.25,0.35,0.4],["商丘市",0.2,0.35,0.45],["固始",0.2,0.35,0.4]],"湖北":[["武汉市",0.25,0.35,0.4],["郧县",0.2,0.3,0.35],["房县",0.2,0.3,0.35],["老河口市",0.2,0.3,0.35],["枣阳",0.25,0.4,0.45],["巴东",0.15,0.3,0.35],["钟祥",0.2,0.3,0.35],["麻城市",0.2,0.35,0.45],["恩施市",0.2,0.3,0.35],["巴东县绿葱坡",0.3,0.35,0.4],["五峰县",0.2,0.3,0.35],["宜昌市",0.2,0.3,0.35],["荆州",0.2,0.3,0.35],["天门市",0.2,0.3,0.35],["来凤",0.2,0.3,0.35],["嘉鱼",0.2,0.35,0.45],["英山",0.2,0.3,0.35],["黄石市",0.25,0.35,0.4]],"湖南":[["长沙市",0.25,0.35,0.4],["桑植",0.2,0.3,0.35],["石门",0.25,0.3,0.35],["南县",0.25,0.4,0.5],["岳阳市",0.25,0.4,0.45],["吉首市",0.2,0.3,0.35],["沅陵",0.2,0.3,0.35],["常德市",0.25,0.4,0.5],["安化",0.2,0.3,0.35],["沅江市",0.25,0.4,0.45],["平江",0.2,0.3,0.35],["芷江",0.2,0.3,0.35],["雪峰山",null,null,null],["邵阳市",0.2,0.3,0.35],["双峰",0.2,0.3,0.35],["南岳",0.6,0.75,0.85],["通道",0.25,0.3,0.35],["武冈",0.2,0.3,0.35],["零陵",0.25,0.4,0.45],["衡阳市",0.25,0.4,0.45],["道县",0.25,0.35,0.4],["郴州市",0.2,0.3,0.35]],"广东":[["广州市",0.3,0.5,0.6],["南雄",0.2,0.3,0.35],["连县",0.2,0.3,0.35],["韶关",0.2,0.35,0.45],["佛岗",0.2,0.3,0.35],["连平",0.2,0.3,0.35],["梅县",0.2,0.3,0.35],["广宁",0.2,0.3,0.35],["高要",0.3,0.5,0.6],["河源",0.2,0.3,0.35],["惠阳",0.35,0.55,0.6],["五华",0.2,0.3,0.35],["汕头市",0.5,0.8,0.95],["惠来",0.45,0.75,0.9],["南澳",0.5,0.8,0.95],["信宜",0.35,0.6,0.7],["罗定",0.2,0.3,0.35],["台山",0.35,0.55,0.65],["深圳市",0.45,0.75,0.9],["汕尾",0.5,0.85,1],["湛江市",0.5,0.8,0.95],["阳江",0.45,0.75,0.9],["电白",0.45,0.7,0.8],["台山县上川岛",0.75,1.05,1.2],["徐闻",0.45,0.75,0.9]],"广西":[["南宁市",0.25,0.35,0.4],["桂林市",0.2,0.3,0.35],["柳州市",0.2,0.3,0.35],["蒙山",0.2,0.3,0.35],["贺山",0.2,0.3,0.35],["百色市",0.25,0.45,0.55],["靖西",0.2,0.3,0.35],["桂平",0.2,0.3,0.35],["梧州市",0.2,0.3,0.35],["龙舟",0.2,0.3,0.35],["灵山",0.2,0.3,0.35],["玉林",0.2,0.3,0.35],["东兴",0.45,0.75,0.9],["北海市",0.45,0.75,0.9],["涠洲岛",0.7,1.1,1.3]],"海南":[["海口市",0.45,0.75,0.9],["东方",0.55,0.85,1],["儋县",0.4,0.7,0.85],["琼中",0.3,0.45,0.55],["琼海",0.5,0.85,1.05],["三亚市",0.5,0.85,1.05],["陵水",0.5,0.85,1.05],["西沙岛",1.05,1.8,2.2],["珊瑚岛",0.7,1.1,1.3]],"四川":[["成都市",0.2,0.3,0.35],["石渠",0.25,0.3,0.35],["若尔盖",0.25,0.3,0.35],["甘孜",0.35,0.45,0.5],["都江堰市",0.2,0.3,0.35],["绵阳市",0.2,0.3,0.35],["雅安市",0.2,0.3,0.35],["资阳",0.2,0.3,0.35],["康定",0.3,0.35,0.4],["汉源",0.2,0.3,0.35],["九龙",0.2,0.3,0.35],["越西",0.25,0.3,0.35],["昭觉",0.25,0.3,0.35],["雷波",0.2,0.3,0.4],["宜宾市",0.2,0.3,0.35],["盐源",0.2,0.3,0.35],["西昌市",0.2,0.3,0.35],["会理",0.2,0.3,0.35],["万源",0.2,0.3,0.35],["阆中",0.2,0.3,0.35],["巴中",0.2,0.3,0.35],["达县市",0.2,0.35,0.45],["遂宁市",0.2,0.3,0.35],["南充市",0.2,0.3,0.35],["内江市",0.25,0.4,0.5],["泸州市",0.2,0.3,0.35],["叙永",0.2,0.3,0.35],["德格",null,null,null],["色达",null,null,null],["道孚",null,null,null],["阿坝",null,null,null],["马尔康",null,null,null],["红原",null,null,null],["小金",null,null,null],["松潘",null,null,null],["新龙",null,null,null],["理唐",null,null,null],["稻城",null,null,null],["峨眉山",null,null,null]],"贵州":[["贵阳市",0.2,0.3,0.35],["威宁",0.25,0.35,0.4],["盘县",0.25,0.35,0.4],["桐梓",0.2,0.3,0.35],["习水",0.2,0.3,0.35],["毕节",0.2,0.3,0.35],["遵义市",0.2,0.3,0.35],["湄潭",null,null,null],["思南",0.2,0.3,0.35],["铜仁",0.2,0.3,0.35],["黔西",null,null,null],["安顺市",0.2,0.3,0.35],["凯里市",0.2,0.3,0.35],["三穗",null,null,null],["兴仁",0.2,0.3,0.35],["罗甸",0.2,0.3,0.35],["独山",null,null,null],["榕江",null,null,null]],"云南":[["昆明市",0.2,0.3,0.35],["德钦",0.25,0.35,0.4],["贡山",0.2,0.3,0.35],["中甸",0.2,0.3,0.35],["维西",0.2,0.3,0.35],["昭通市",0.25,0.35,0.4],["丽江",0.25,0.3,0.35],["华坪",0.3,0.45,0.55],["会泽",0.25,0.35,0.4],["腾冲",0.2,0.3,0.35],["泸水",0.2,0.3,0.35],["保山市",0.2,0.3,0.35],["大理市",0.45,0.65,0.75],["元谋",0.25,0.35,0.4],["楚雄市",0.2,0.35,0.4],["曲靖市沾益",0.25,0.3,0.35],["瑞丽",0.2,0.3,0.35],["景东",0.2,0.3,0.35],["玉溪",0.2,0.3,0.35],["宜良",0.25,0.45,0.55],["泸西",0.25,0.3,0.35],["孟定",0.25,0.4,0.45],["临沧",0.2,0.3,0.35],["澜沧",0.2,0.3,0.35],["景洪",0.2,0.4,0.5],["思茅",0.25,0.45,0.5],["元江",0.25,0.3,0.35],["勐腊",0.2,0.3,0.35],["江城",0.2,0.4,0.5],["蒙自",0.25,0.35,0.45],["屏边",0.2,0.4,0.35],["文山",0.2,0.3,0.35],["广南",0.25,0.35,0.4]],"西藏":[["拉萨市",0.2,0.3,0.35],["班戈",0.35,0.55,0.65],["安多",0.45,0.75,0.9],["那曲",0.3,0.45,0.5],["日喀则市",0.2,0.3,0.35],["乃东县泽当",0.2,0.3,0.35],["隆子",0.3,0.45,0.5],["索县",0.3,0.4,0.5],["昌都",0.2,0.3,0.35],["林芝",0.25,0.35,0.45],["葛尔",null,null,null],["改则",null,null,null],["普兰",null,null,null],["申扎",null,null,null],["当雄",null,null,null],["尼木",null,null,null],["聂拉木",null,null,null],["定日",null,null,null],["江孜",null,null,null],["错那",null,null,null],["帕里",null,null,null],["丁青",null,null,null],["波密",null,null,null],["察隅",null,null,null]],"台湾":[["台北",0.4,0.7,0.85],["新竹",0.5,0.8,0.95],["宜兰",1.1,1.85,2.3],["台中",0.5,0.8,0.9],["花莲",0.4,0.7,0.85],["嘉义",0.5,0.8,0.95],["马公",0.85,1.3,1.55],["台东",0.65,0.9,1.05],["冈山",0.55,0.8,0.95],["恒春",0.7,1.05,1.2],["阿里山",0.25,0.35,0.4],["台南",0.6,0.85,1]],"香港":[["香港",0.8,0.9,0.95],["横澜岛",0.95,1.25,1.4]],"澳门":[["澳门",0.75,0.85,0.9]]};
+var STATION_NOTES={"云南|屏边": "原表风压 R=50 为 0.40、R=100 为 0.35 kN/m²，随重现期非递增；保留原值，采用前需核实。"};
+var STATION_META={total:667,provinces:34,withWind:589};
+</script>
+
+<script>
+/* ===== 极简 LaTeX 渲染器（自包含，不依赖 MathJax / KaTeX） ===== */
+var TEX_GREEK = {
+  alpha: 'α', beta: 'β', gamma: 'γ', delta: 'δ', epsilon: 'ε', varepsilon: 'ε',
+  zeta: 'ζ', eta: 'η', theta: 'θ', vartheta: 'θ', iota: 'ι', kappa: 'κ',
+  lambda: 'λ', mu: 'μ', nu: 'ν', xi: 'ξ', pi: 'π', rho: 'ρ', sigma: 'σ',
+  tau: 'τ', upsilon: 'υ', phi: 'φ', varphi: 'φ', chi: 'χ', psi: 'ψ', omega: 'ω',
+  Gamma: 'Γ', Delta: 'Δ', Theta: 'Θ', Lambda: 'Λ', Xi: 'Ξ', Pi: 'Π',
+  Sigma: 'Σ', Phi: 'Φ', Psi: 'Ψ', Omega: 'Ω'
+};
+
+var TEX_SYM = {
+  cdot: '·', times: '×', div: '÷', pm: '±',
+  leqslant: '≤', geqslant: '≥', leq: '≤', geq: '≥', le: '≤', ge: '≥',
+  neq: '≠', approx: '≈', infty: '∞', ldots: '…', dots: '…', cdots: '⋯'
+};
+
+var TEX_FN = { max: 'max', min: 'min', sin: 'sin', cos: 'cos', tan: 'tan', ln: 'ln' };
+
+function texEsc(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function tex2html(src) {
+  var s = String(src), i = 0;
+
+  function readArg() {
+    if (s[i] === '{') {
+      var depth = 0, st = i;
+      do {
+        if (s[i] === '{') depth++;
+        else if (s[i] === '}') depth--;
+        i++;
+      } while (i < s.length && depth > 0);
+      return s.slice(st + 1, i - 1);
+    }
+    if (s[i] === '\\') {
+      var m = /\\([a-zA-Z]+|.)/.exec(s.slice(i));
+      if (m) { i += m[0].length; return m[0]; }
+    }
+    var c = s[i];
+    i++;
+    return c || '';
+  }
+
+  function parse(top) {
+    var out = '';
+    while (i < s.length) {
+      var c = s[i];
+
+      if (c === '}') {
+        if (!top) i++;
+        break;
+      } else if (c === '{') {
+        i++;
+        out += parse(false);
+      } else if (c === '^') {
+        i++;
+        out += '<sup>' + tex2html(readArg()) + '</sup>';
+      } else if (c === '_') {
+        i++;
+        out += '<sub>' + tex2html(readArg()) + '</sub>';
+      } else if (c === '\\') {
+        var m = /\\([a-zA-Z]+|.)/.exec(s.slice(i));
+        var cmd = m ? m[1] : '';
+        i += m ? m[0].length : 1;
+
+        if (cmd === 'frac') {
+          var a = readArg(), b = readArg();
+          out += '<span class="fx-frac"><span class="fx-num">' + tex2html(a) +
+                 '</span><span class="fx-den">' + tex2html(b) + '</span></span>';
+        } else if (cmd === 'sqrt') {
+          var idx = '';
+          if (s[i] === '[') {
+            i++;
+            var st2 = i;
+            while (i < s.length && s[i] !== ']') i++;
+            idx = s.slice(st2, i);
+            i++;
+          }
+          out += '<span class="fx-sqrt">' +
+                 (idx ? '<sup class="fx-radidx">' + tex2html(idx) + '</sup>' : '') +
+                 '<span class="fx-rad">√</span>' +
+                 '<span class="fx-radicand">' + tex2html(readArg()) + '</span></span>';
+        } else if (cmd === 'left' || cmd === 'right') {
+          var d = s[i] || (cmd === 'left' ? '(' : ')');
+          i++;
+          out += '<span class="fx-delim">' + texEsc(d) + '</span>';
+        } else if (cmd === 'mathrm' || cmd === 'text' || cmd === 'textrm' ||
+                   cmd === 'operatorname' || cmd === 'mbox') {
+          out += '<span class="fx-rm">' + tex2html(readArg()) + '</span>';
+        } else if (TEX_GREEK[cmd] !== undefined) {
+          out += '<span class="fx-mi">' + TEX_GREEK[cmd] + '</span>';
+        } else if (TEX_SYM[cmd] !== undefined) {
+          out += '<span class="fx-mo">' + TEX_SYM[cmd] + '</span>';
+        } else if (TEX_FN[cmd] !== undefined) {
+          out += '<span class="fx-rm">' + TEX_FN[cmd] + '</span>';
+        } else if (cmd === 'quad' || cmd === 'qquad') {
+          out += '<span class="fx-space"></span>';
+        } else if (cmd === ',' || cmd === ';' || cmd === ':' || cmd === '!' ||
+                   cmd === ' ') {
+          out += '<span class="fx-thin"></span>';
+        } else {
+          out += '<span class="fx-mi">' + texEsc(cmd) + '</span>';
+        }
+      } else if (c === '^') {
+        i++;
+        out += '<sup>' + tex2html(readArg()) + '</sup>';
+      } else if (c === '_') {
+        i++;
+        out += '<sub>' + tex2html(readArg()) + '</sub>';
+      } else {
+        i++;
+        out += c === '<' ? '&lt;' : (c === '>' ? '&gt;' : c);
+      }
+    }
+    return out;
+  }
+
+  return parse(true);
+}
+
+
+/* =================================================================
+   本页补充：aligned / cases / dfrac / log 等 TeX 环境
+   共享渲染器（极简 LaTeX 渲染器）只认单行公式，这里在外面套一层预处理，
+   把多行环境与间距命令先拆成 HTML，其余仍交给同一个渲染器画，不引入 KaTeX。
+================================================================= */
+/* 多行环境先换成占位符 @@SLOTn@@，等渲染器跑完再把整段 HTML 换回去，
+   否则生成的标签会被渲染器当成普通字符转义成 &lt;span&gt;。 */
+function preTex(s, slot) {
+  s = String(s);
+  s = s.replace(/\\begin\{(aligned|cases)\}([\s\S]*?)\\end\{\1\}/g, function (m, env, body) {
+    var rows = body.split(/\\\\(?:\[[^\]]*\])?/).map(function (r) { return r.split('&'); });
+    var ncol = rows.reduce(function (a, r) { return Math.max(a, r.length); }, 1);
+    var h;
+    if (env === 'aligned') {
+      var inner = '';
+      rows.forEach(function (r) {
+        while (r.length < ncol) r.push('');
+        r.forEach(function (c, i) {
+          inner += '<span class="fx-c' + ((i % 2) + 1) + '">' + cellML(c, slot) + '</span>';
+        });
+      });
+      h = '<span class="fx-al" style="grid-template-columns:repeat(' + ncol + ',auto)">' + inner + '</span>';
+    } else {
+      var rb = '';
+      rows.forEach(function (r) {
+        rb += '<span class="fx-cc">' + cellML(r[0], slot) + '</span>' +
+              '<span class="fx-cd">' + (r.length > 1 ? cellML(r[1], slot) : '') + '</span>';
+      });
+      h = '<span class="fx-cases"><i class="fx-cb">{</i><span class="fx-crows">' + rb + '</span></span>';
+    }
+    slot.push(h);
+    return '@@SLOT' + (slot.length - 1) + '@@';
+  });
+
+  s = s.replace(/\\dfrac/g, '\\frac');
+  s = s.replace(/\\,|\\;|\\:|\\!|\\ /g, '');
+  s = s.replace(/\\log(?![a-zA-Z])/g, '\\mathrm{log}');
+  s = s.replace(/\\exp(?![a-zA-Z])/g, '\\mathrm{exp}');
+  return s;
+}
+function putBack(html, slot) {
+  for (var k = 0; k < slot.length; k++) {
+    html = html.replace('@@SLOT' + k + '@@', function () { return slot[k]; });
+  }
+  return html;
+}
+function cellML(c, outer) {
+  var local = [];
+  return putBack(tex2html(preTex(c, local)), local);
+}
+function texML(s) {
+  var slot = [];
+  return putBack(tex2html(preTex(s, slot)), slot);
+}
+</script>
+
+<script>
+/* =================================================================
+   主逻辑
+================================================================= */
+var TERR = {
+  A: { s: '开阔地', d: '近海海面、海岸、湖岸及沙漠地区', c: 1.284, a: 0.12, i: 0.12, zmin: 5,  zmax: 300 },
+  B: { s: '乡村',   d: '田野、乡村、丘陵及房屋较稀疏的乡镇', c: 1,     a: 0.15, i: 0.14, zmin: 10, zmax: 350 },
+  C: { s: '城市',   d: '有密集建筑群的城市市区',             c: 0.544, a: 0.22, i: 0.23, zmin: 15, zmax: 450 },
+  D: { s: '密集高楼', d: '有密集建筑群且房屋较高的城市市区', c: 0.262, a: 0.30, i: 0.39, zmin: 30, zmax: 550 }
+};
+var PRESET = {
+  'wall-edge': { label: '墙面 · 边角区',   kind: 'wall', ep: 1.0,   en: 1.4, ip: 0.2, inn: 0.2 },
+  'wall-main': { label: '墙面 · 大面区',   kind: 'wall', ep: 1.0,   en: 1.0, ip: 0.2, inn: 0.2 },
+  'roof-edge': { label: '采光顶 · 边缘区', kind: 'roof', ep: 0.125, en: 2.0, ip: 0.2, inn: 0.2 },
+  'roof-main': { label: '采光顶 · 大面区', kind: 'roof', ep: 0.125, en: 1.2, ip: 0.2, inn: 0.2 }
+};
+var PRESET_KEYS = ['wall-edge', 'wall-main', 'roof-edge', 'roof-main'];
+
+var IDS = ['fxHost', 'fxOpen', 'fxClose', 'printBtn', 'verLine',
+           'w0', 'z', 'area', 'ep', 'en', 'ip', 'inn', 'kt', 'kd', 'floorMode',
+           'preset', 'resBox', 'errBox', 'floorHint', 'pickInfo', 'terHint', 'presetHint', 'terSeg',
+           'outPP', 'outPN', 'outRP', 'outRN',
+           'kZ', 'kMu', 'kQ', 'kBeta', 'kBL', 'kEta', 'kLim', 'kDep',
+           'prevHost', 'srcBody', 'advCard1', 'advCard2', 'custTag',
+           'modeSw', 'lblBasic', 'lblAdv',
+           'dlg', 'pvSel', 'ctSel', 'rpSeg', 'stNote', 'stPick', 'dlgCancel', 'dlgOk', 'pickBtn'];
+
+var E = {};
+IDS.forEach(function (id) { E[id] = document.getElementById(id); });
+
+var advanced = false;
+var pick = null;                       /* 查表选择：{prov, city, period, table} */
+
+/* ---------- 数字格式 ---------- */
+function n6(v) {
+  if (!isFinite(v)) return '—';
+  if (v !== 0 && Math.abs(v) < 1e-6) return v.toExponential(3);
+  return String(Number(v.toFixed(6)));
+}
+function f3(v) { return isFinite(v) ? v.toFixed(3) : '—'; }
+function sgn(v) { return (v < 0 ? '−' : '+') + Math.abs(v).toFixed(3); }
+
+/* ---------- 读输入 ---------- */
+function readInput() {
+  return {
+    w0:   document.getElementById('w0').value,
+    z:    document.getElementById('z').value,
+    area: document.getElementById('area').value,
+    ep:   document.getElementById('ep').value,
+    en:   document.getElementById('en').value,
+    ip:   document.getElementById('ip').value,
+    inn:  document.getElementById('inn').value,
+    kt:   document.getElementById('kt').value,
+    kd:   document.getElementById('kd').value,
+    terr: terrKey,
+    preset: document.getElementById('preset').value,
+    floorMode: document.getElementById('floorMode').value
+  };
+}
+
+function validate(a) {
+  var errs = [];
+  var lst = [['w0', '基本风压', true], ['z', '计算高度', true], ['area', '从属面积', true],
+             ['ep', '正风外压系数', true], ['en', '负风外压系数', true],
+             ['ip', '正风工况内压', true], ['inn', '负风工况内压', true],
+             ['kt', '地形修正系数', true], ['kd', '风向影响系数', true]];
+  lst.forEach(function (it) {
+    var v = Number(a[it[0]]);
+    if (String(a[it[0]]).trim() === '' || !isFinite(v)) errs.push('请填写有效的' + it[1]);
+  });
+  if (errs.length) return errs;
+  if (Number(a.w0) < 0.3) errs.push('基本风压不得小于 0.30 kPa（GB 50009—2012 第 8.1.2 条）');
+  if (Number(a.z) < 0 || Number(a.z) > 550) errs.push('本页计算高度范围为 0～550 m');
+  if (Number(a.area) <= 0) errs.push('从属面积必须大于 0 m²');
+  ['ep', 'en', 'ip', 'inn', 'kt', 'kd'].forEach(function (k) {
+    if (Number(a[k]) < 0) errs.push('系数请输入不小于 0 的绝对值');
+  });
+  if (Number(a.ep) + Number(a.ip) === 0) errs.push('正风工况内、外压系数不能同时为 0');
+  if (Number(a.en) + Number(a.inn) === 0) errs.push('负风工况内、外压系数不能同时为 0');
+  return errs;
+}
+
+function areaReduction(a, at25) {
+  if (a <= 1) return 1;
+  if (a >= 25) return at25;
+  return 1 + (at25 - 1) * Math.log10(a) / 1.4;
+}
+
+function compute(a) {
+  var t = TERR[a.terr], p = PRESET[a.preset];
+  var z = Number(a.z), A = Number(a.area), w0 = Number(a.w0);
+  var ep = Number(a.ep), en = Number(a.en), ip = Number(a.ip), inn = Number(a.inn);
+  var kt = Number(a.kt), kd = Number(a.kd);
+
+  var Z = Math.min(Math.max(z, t.zmin), t.zmax);
+  var mu = t.c * Math.pow(Z / 10, 2 * t.a);
+  var betaBase = 1 + 5 * t.i * Math.pow(Z / 10, -t.a);
+  var betaLower = 1 + 0.7 / Math.sqrt(mu);
+  var beta = Math.max(betaBase, betaLower);
+  var q = beta * mu * w0 * kt * kd;
+
+  var limP = p.kind === 'wall' ? 0.8 : (ep > 1 ? 0.6 : 1);
+  var limN = p.kind === 'wall' ? 0.8 : (en > 1 ? 0.6 : 1);
+  var etaP = areaReduction(A, limP), etaN = areaReduction(A, limN);
+
+  var rawP = q * (ep + ip), rawN = q * (en + inn);
+  var redP = q * (etaP * ep + ip), redN = q * (etaN * en + inn);
+
+  /* 1.0 kPa 下限：auto 时按构件判断，玻璃幕墙套用、采光顶不套用 */
+  var useFloor = a.floorMode === 'on' || (a.floorMode === 'auto' && p.kind === 'wall');
+  var fl = useFloor ? function (v) { return Math.max(1, v); } : function (v) { return v; };
+
+  var PP = fl(rawP), PN = fl(rawN), RP = fl(redP), RN = fl(redN);
+  var hitGusset = useFloor && [rawP, rawN, redP, redN].some(function (v) { return v < 1; });
+
+  return {
+    Z: Z, clipped: Math.abs(Z - z) > 1e-9, mu: mu, betaBase: betaBase,
+    betaLower: betaLower, beta: beta, betaBy: betaBase >= betaLower ? 'base' : 'lower',
+    q: q, limP: limP, limN: limN, etaP: etaP, etaN: etaN,
+    rawP: rawP, rawN: rawN, redP: redP, redN: redN,
+    PP: PP, PN: PN, RP: RP, RN: RN, useFloor: useFloor, floorHit: hitGusset,
+    t: t, p: p, A: A, z: z, w0: w0, ep: ep, en: en, ip: ip, inn: inn, kt: kt, kd: kd
+  };
+}
+
+/* =================================================================
+   示意图
+================================================================= */
+function drawPrev(a, r, errs) {
+  var W = 340, H = 210, y0 = 178;
+  var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg">';
+  s += '<line x1="8" y1="' + y0 + '" x2="' + (W - 8) + '" y2="' + y0 + '" stroke="#333" stroke-width="1.4"/>';
+
+  /* 地面粗糙度：左侧口袋默小示意 */
+  var rough = { A: [], B: [[24, 16]], C: [[20, 22], [46, 30], [72, 18]], D: [[20, 34], [46, 46], [72, 30], [96, 38]] }[a.terr];
+  rough.forEach(function (b) {
+    s += '<rect x="' + b[0] + '" y="' + (y0 - b[1]) + '" width="16" height="' + b[1] +
+         '" fill="none" stroke="#9aa7bd" stroke-width="1.1"/>';
+  });
+  if (a.terr === 'B') {
+    s += '<path d="M30 ' + y0 + ' L38 ' + (y0 - 20) + ' L46 ' + y0 + ' Z" fill="none" stroke="#9aa7bd" stroke-width="1.1"/>';
+  }
+
+  /* 主体房屋 */
+  var bx = 150, bw = 132, top = 46;
+  s += '<rect x="' + bx + '" y="' + top + '" width="' + bw + '" height="' + (y0 - top) +
+       '" fill="#f4f7fd" stroke="#333" stroke-width="1.4"/>';
+  /* 楼层线 */
+  var floors = 4;
+  for (var f = 1; f < floors; f++) {
+    var yy = top + (y0 - top) * f / floors;
+    s += '<line x1="' + bx + '" y1="' + yy + '" x2="' + (bx + bw) + '" y2="' + yy +
+         '" stroke="#cfd8ea" stroke-width="1"/>';
+  }
+
+  /* 分区：边角区阴影 / 大面区实线框 */
+  if (r && r.p.kind === 'wall') {
+    if (a.preset === 'wall-edge') {
+      s += '<rect x="' + bx + '" y="' + top + '" width="' + (bw * 0.28) + '" height="' + (y0 - top) +
+           '" fill="#2f6feb" fill-opacity="0.10" stroke="none"/>';
+    } else {
+      s += '<rect x="' + (bx + bw * 0.28) + '" y="' + (top + 16) + '" width="' + (bw * 0.44) +
+           '" height="' + (y0 - top - 32) + '" fill="#0e7c66" fill-opacity="0.10" stroke="none"/>';
+    }
+  } else {
+    /* 采光顶：屋面上方箭头 */
+    s += '<line x1="' + (bx - 10) + '" y1="' + top + '" x2="' + (bx + bw + 10) + '" y2="' + top +
+         '" stroke="#b45309" stroke-width="2.2"/>';
+  }
+
+  /* 高度标注（可编辑） */
+  var zMaxPx = 128;
+  var zpx = Math.max(14, Math.min(zMaxPx, Number(a.z) / 120 * zMaxPx));
+  var zTop = y0 - zpx;
+  var xd = 128;
+  s += '<line x1="' + xd + '" y1="' + y0 + '" x2="' + xd + '" y2="' + zTop + '" stroke="#333" stroke-width="1"/>';
+  s += '<line x1="' + xd + '" y1="' + y0 + '" x2="' + (xd + 5) + '" y2="' + (y0 + 5) + '" stroke="#333" stroke-width="1"/>';
+  s += '<line x1="' + xd + '" y1="' + y0 + '" x2="' + (xd - 5) + '" y2="' + (y0 + 5) + '" stroke="#333" stroke-width="1"/>';
+  s += '<line x1="' + (xd - 5) + '" y1="' + zTop + '" x2="' + (xd + 5) + '" y2="' + zTop + '" stroke="#333" stroke-width="1"/>';
+  s += '<line x1="' + (xd - 5) + '" y1="' + y0 + '" x2="' + (xd + 5) + '" y2="' + y0 + '" stroke="#333" stroke-width="1"/>';
+  s += '<foreignObject x="' + (xd - 62) + '" y="' + ((zTop + y0) / 2 - 11) + '" width="60" height="22" overflow="visible">' +
+       '<span class="dim-l" xmlns="http://www.w3.org/1999/xhtml">z=' +
+       '<input type="number" data-dim="z" value="' + a.z + '" style="width:42px"/></span></foreignObject>';
+
+  /* 有效高度提示（被夹持时） */
+  if (r && r.clipped) {
+    s += '<text x="' + (xd - 8) + '" y="' + (zTop - 6) + '" text-anchor="end" font-size="9.5" fill="#c62828">Z=' +
+         n6(r.Z) + ' m（夹持）</text>';
+  }
+
+  /* 风箭头：正压向内（指向墙面），负压向外（背离墙面） */
+  var ax = bx - 14, ay = [66, 100, 134];
+  if (!errs.length && r) {
+    ay.forEach(function (y) {
+      s += '<line x1="' + (ax - 34) + '" y1="' + y + '" x2="' + ax + '" y2="' + y +
+           '" stroke="#2f6feb" stroke-width="1.6"/>';
+      s += '<path d="M' + ax + ' ' + y + ' L' + (ax - 8) + ' ' + (y - 4) + ' L' + (ax - 8) + ' ' + (y + 4) + ' Z" fill="#2f6feb"/>';
+    });
+    s += '<text x="' + (ax - 36) + '" y="' + (ay[0] - 8) + '" text-anchor="end" font-size="9.5" fill="#2f6feb">+' +
+         f3(r.PP) + '</text>';
+    ay.forEach(function (y) {
+      s += '<line x1="' + (bx + bw + 14) + '" y1="' + y + '" x2="' + (bx + bw + 48) + '" y2="' + y +
+           '" stroke="#b45309" stroke-width="1.6"/>';
+      s += '<path d="M' + (bx + bw + 48) + ' ' + y + ' L' + (bx + bw + 40) + ' ' + (y - 4) + ' L' + (bx + bw + 40) + ' ' + (y + 4) + ' Z" fill="#b45309"/>';
+    });
+    s += '<text x="' + (bx + bw + 50) + '" y="' + (ay[0] - 8) + '" font-size="9.5" fill="#b45309">−' +
+         f3(r.PN) + '</text>';
+  }
+  s += '<text x="10" y="' + (H - 6) + '" font-size="9.5" fill="#6b7280">' + a.terr + ' 类 · ' +
+       TERR[a.terr].s + '</text>';
+  s += '</svg>';
+  E.prevHost.innerHTML = s;
+}
+
+/* =================================================================
+   分步公式
+================================================================= */
+function steps(a, r) {
+  var t = r.t, p = r.p, T = [];
+  var ep = n6(r.ep), en = n6(r.en), ip = n6(r.ip), inn = n6(r.inn), A = n6(r.A);
+
+  function redRow(sg, lim, eta) {
+    var subst = r.A <= 1 ? '1' : (r.A >= 25 ? n6(lim) :
+      '1+(' + n6(lim) + '-1)\\frac{\\mathrm{log}_{10}' + A + '}{1.4}');
+    return '\\eta_{25' + sg + '}=' + n6(lim) + ',\\qquad \\eta_{' + sg + '}=' + subst + '=' + n6(eta);
+  }
+
+  /* 01 基本风压与有效高度 */
+  var f1 = [];
+  if (pick) {
+    f1.push('w_{R=' + pick.period + '}=' + n6(pick.table) + '\\quad\\mathrm{kPa},\\qquad w_0=\\max\\!\\left(w_{R=' +
+            pick.period + '},0.30\\right)=' + n6(Math.max(0.3, pick.table)) + '\\quad\\mathrm{kPa}');
+  }
+  f1.push('w_0=' + n6(r.w0) + '\\quad\\mathrm{kPa},\\quad z=' + n6(r.z) + '\\quad\\mathrm{m},\\quad A=' + A + '\\quad\\mathrm{m^2}');
+  f1.push('w_0=' + n6(r.w0) + '\\quad\\mathrm{kPa}\\geq 0.30\\quad\\mathrm{kPa}');
+  f1.push('\\begin{aligned}Z&=\\min\\!\\left(\\max(z,z_{\\min}),z_{\\max}\\right)\\\\&=\\min\\!\\left(\\max(' +
+          n6(r.z) + ',' + t.zmin + '),' + t.zmax + ')\\right)=' + n6(r.Z) + '\\quad\\mathrm{m}\\end{aligned}');
+  T.push({
+    t: '计算条件与有效高度', d: (pick ? pick.prov + ' · ' + pick.city + ' · ' + pick.period + ' 年重现期' : '基本风压手动输入') +
+       ' · ' + a.terr + ' 类地面 · ' + p.label,
+    f: f1,
+    note: '系数计算采用 ' + t.zmin + '～' + t.zmax + ' m 的有效高度范围；构件实际高度不变。' +
+          (pick && Number(pick.period) < 50 ? '当前重现期低于 50 年，采用前请确认适用依据。' : '')
+  });
+
+  /* 02 μz */
+  T.push({
+    t: '风压高度变化系数 μz', d: '按 GB 50009 表 8.2.1 的连续幂律表达式计算，规范表值经过舍入。',
+    f: ['c=' + t.c + ',\\qquad \\alpha=' + t.a,
+        '\\begin{aligned}\\mu_z&=c\\left(\\frac{Z}{10}\\right)^{2\\alpha}\\\\&=' + t.c +
+        '\\left(\\frac{' + n6(r.Z) + '}{10}\\right)^{' + n6(2 * t.a) + '}=' + n6(r.mu) + '\\end{aligned}'],
+    note: '高度以 m 代入，保留完整精度。'
+  });
+
+  /* 03 βgz 与 qz */
+  T.push({
+    t: '风荷载放大系数与参考风压', d: '按 GB 50009 计算阵风系数，并执行 GB 55001 第 4.6.5 条第 2 款的围护结构最低取值要求。',
+    f: ['\\begin{aligned}\\beta_{gz0}&=1+5I_{10}\\left(\\frac{Z}{10}\\right)^{-\\alpha}\\\\&=1+5\\times' + t.i +
+        '\\left(\\frac{' + n6(r.Z) + '}{10}\\right)^{-' + t.a + '}=' + n6(r.betaBase) + '\\end{aligned}',
+        '\\begin{aligned}\\beta_{\\min}&=1+\\frac{0.7}{\\sqrt{\\mu_z}}\\\\&=1+\\frac{0.7}{\\sqrt{' + n6(r.mu) +
+        '}}=' + n6(r.betaLower) + '\\end{aligned}',
+        '\\begin{aligned}\\beta_{gz}&=\\max\\!\\left(\\beta_{gz0},\\beta_{\\min}\\right)\\\\&=\\max\\!\\left(' +
+        n6(r.betaBase) + ',' + n6(r.betaLower) + '\\right)=' + n6(r.beta) + '\\end{aligned}',
+        'k_t=' + n6(r.kt) + ',\\qquad k_d=' + n6(r.kd),
+        '\\begin{aligned}q_z&=\\beta_{gz}\\,\\mu_z\\,w_0\\,k_t\\,k_d\\\\&=' + n6(r.beta) + '\\times' + n6(r.mu) +
+        '\\times' + n6(r.w0) + '\\times' + n6(r.kt) + '\\times' + n6(r.kd) + '\\\\&=' + n6(r.q) +
+        '\\quad\\mathrm{kPa}\\end{aligned}'],
+    note: 'β 由 ' + (r.betaBy === 'base' ? '阵风系数表达式' : 'GB 55001 下限') + '控制。kₜ 为地形修正系数，k_d 为风向影响系数；本版按普通地形且不采用风向折减，两者取 1.0。'
+  });
+
+  /* 04 外压、内压与未折减净风压 */
+  T.push({
+    t: '外压、内压与未折减净风压', d: 'Cₚₑ 为外压系数，Cₚᵢ 为内压系数，均带方向符号；每个工况采用不利内压组合。',
+    f: ['w_{k,\\mathrm{raw}}=\\beta_{gz}\\,\\mu_z\\,w_0\\,k_t\\,k_d\\left(C_{pe}-C_{pi}\\right)=q_z\\left(C_{pe}-C_{pi}\\right)',
+        '\\begin{aligned}w_{k+}^{(0)}&=q_z\\left(C_{pe+}-C_{pi+}\\right)\\\\&=' + n6(r.q) + '\\left[+' + ep +
+        '-(-' + ip + ')\\right]=+' + n6(r.rawP) + '\\quad\\mathrm{kPa}\\end{aligned}',
+        '\\begin{aligned}w_{k-}^{(0)}&=q_z\\left(C_{pe-}-C_{pi-}\\right)\\\\&=' + n6(r.q) + '\\left[-' + en +
+        '-(+' + inn + ')\\right]=-' + n6(r.rawN) + '\\quad\\mathrm{kPa}\\end{aligned}'],
+    note: '上标 (0) 表示未折减，(A) 表示折减后。'
+  });
+
+  /* 05 面积折减 */
+  T.push({
+    t: '面积折减（只折减外压）',
+    d: p.kind === 'roof'
+       ? '采光顶按屋面规则：外压系数绝对值大于 1 时 η₂₅ 取 0.6，其余取 1；正、负工况分别判断。'
+       : '墙面正、负工况均采用 η₂₅ = 0.8，按从属面积确定各自的折减系数。',
+    f: ['a=\\frac{A}{1\\quad\\mathrm{m^2}}=' + A + ',\\qquad \\eta(a)=\\begin{cases}1,&a\\leq 1\\\\1+(\\eta_{25}-1)\\dfrac{\\log_{10}a}{1.4},&1<a<25\\\\\\eta_{25},&a\\geq 25\\end{cases}',
+        redRow('+', r.limP, r.etaP),
+        redRow('-', r.limN, r.etaN),
+        'w_{k,\\mathrm{raw}}^{(A)}=q_z\\left(\\eta C_{pe}-C_{pi}\\right)',
+        '\\begin{aligned}w_{k+}^{(A)}&=' + n6(r.q) + '\\left[' + n6(r.etaP) + '\\times' + ep + '-(-' + ip +
+        ')\\right]\\\\&=+' + n6(r.redP) + '\\quad\\mathrm{kPa}\\end{aligned}',
+        '\\begin{aligned}w_{k-}^{(A)}&=' + n6(r.q) + '\\left[' + n6(r.etaN) + '\\times(-' + en + ')-(+' + inn +
+        ')\\right]\\\\&=-' + n6(r.redN) + '\\quad\\mathrm{kPa}\\end{aligned}'],
+    note: '内压不参与面积折减。折减结果用于符合规范折减条件的支承构件（非直接承受风荷载的构件）。'
+  });
+
+  /* 06 最终值 */
+  if (r.useFloor) {
+    T.push({
+      t: '1.0 kPa 下限与最终标准值', d: '各工况独立执行 JGJ 102—2003 第 5.3.2 条的绝对值下限，保留正负方向；结果未乘荷载分项系数。',
+      f: ['\\begin{aligned}w_{k+}&=+\\max\\!\\left(1.0,\\left|w_{k+}^{(0)}\\right|\\right)\\\\&=+\\max\\!\\left(1.0,' +
+          n6(r.rawP) + '\\right)=+' + f3(r.PP) + '\\quad\\mathrm{kPa}\\end{aligned}',
+          '\\begin{aligned}w_{k-}&=-\\max\\!\\left(1.0,\\left|w_{k-}^{(0)}\\right|\\right)\\\\&=-\\max\\!\\left(1.0,' +
+          n6(r.rawN) + '\\right)=-' + f3(r.PN) + '\\quad\\mathrm{kPa}\\end{aligned}',
+          '\\begin{aligned}w_{k+A}&=+\\max\\!\\left(1.0,\\left|w_{k+}^{(A)}\\right|\\right)\\\\&=+\\max\\!\\left(1.0,' +
+          n6(r.redP) + '\\right)=+' + f3(r.RP) + '\\quad\\mathrm{kPa}\\end{aligned}',
+          '\\begin{aligned}w_{k-A}&=-\\max\\!\\left(1.0,\\left|w_{k-}^{(A)}\\right|\\right)\\\\&=-\\max\\!\\left(1.0,' +
+          n6(r.redN) + '\\right)=-' + f3(r.RN) + '\\quad\\mathrm{kPa}\\end{aligned}'],
+      note: r.floorHit ? '本次有工况的计算绝对值低于 1.0 kPa，已取下限；各式中的压力数值均以 kPa 代入。'
+                       : '本次各工况的计算绝对值均不小于 1.0 kPa，保留计算值；各式中的压力数值均以 kPa 代入。'
+    });
+  } else {
+    T.push({
+      t: '最终标准值', d: '采光顶不套用 JGJ 102—2003 第 5.3.2 条的玻璃幕墙 1.0 kPa 下限，直接采用各工况计算值。',
+      f: ['w_{k+}=w_{k+}^{(0)}=+' + f3(r.PP) + '\\quad\\mathrm{kPa}',
+          'w_{k-}=w_{k-}^{(0)}=-' + f3(r.PN) + '\\quad\\mathrm{kPa}',
+          'w_{k+A}=w_{k+}^{(A)}=+' + f3(r.RP) + '\\quad\\mathrm{kPa}',
+          'w_{k-A}=w_{k-}^{(A)}=-' + f3(r.RN) + '\\quad\\mathrm{kPa}'],
+      note: '计算保留完整精度，结果显示三位小数；未乘荷载分项系数。'
+    });
+  }
+  return T;
+}
+
+/* =================================================================
+   规范依据（固定表）
+================================================================= */
+var SOURCES = [
+  ['GB 50009—2012', '第 8.1.2 条', '基本风压应采用按本规范规定的方法确定的 50 年重现期的风压，但不得小于 0.3 kN/m²。'],
+  ['GB 50009—2012', '第 8.1.1 条第 2 款', '计算围护结构时：w_k = βgz·μsl·μz·w₀（本页将局部体型系数拆为外压与内压，按外压减内压计算净风压）。'],
+  ['GB 50009—2012', '第 8.2.1 条、表 8.2.1', '对于平地或稍有起伏的地形，风压高度变化系数应根据地面粗糙度类别按表 8.2.1 确定。'],
+  ['GB 55001—2021', '第 4.6.3 条', '地面粗糙度应以结构上风向一定距离范围内的地面植被特征和房屋高度、密集程度等因素确定，需考虑的最远距离不应小于建筑高度的 20 倍且不应小于 2000 m。'],
+  ['GB 50009—2012', '第 8.6.1 条、表 8.6.1', '计算围护结构（包括门窗）风荷载时的阵风系数应按表 8.6.1 确定。'],
+  ['GB 55001—2021', '第 4.6.5 条第 2 款', '围护结构的风荷载放大系数……且不应小于 1 + 0.7/√μz，其中 μz 为风压高度变化系数。'],
+  ['GB 55001—2021', '第 4.6.6 条第 4 款', '地形修正系数在其他情况应取 1.0。'],
+  ['GB 55001—2021', '第 4.6.7 条第 2 款', '风向影响系数在其他情况应取 1.0。'],
+  ['GB 50009—2012', '第 8.3.3 条第 1 款、表 8.3.3', '封闭式矩形平面房屋的墙面及屋面可按表 8.3.3 的规定采用（墙面预设按该表分区取值）。'],
+  ['GB 50009—2012', '第 8.3.5 条第 1 款', '封闭式建筑物，按其外表面风压的正负情况取 −0.2 或 0.2。'],
+  ['GB 50009—2012', '第 8.3.4 条', '当从属面积不大于 1 m² 时折减系数取 1.0；大于或等于 25 m² 时，墙面取 0.8，局部体型系数绝对值大于 1.0 的屋面区域取 0.6；其间采用对数插值。'],
+  ['JGJ 102—2003', '第 5.3.2 条', '玻璃幕墙的风荷载标准值应按下式计算，并且不应小于 1.0 kN/m²：w_k = βgz·μs·μz·w₀。']
+];
+function drawSources() {
+  E.srcBody.innerHTML = SOURCES.map(function (r) {
+    return '<tr><td>' + r[0] + '</td><td>' + r[1] + '</td><td style="text-align:left">' + r[2] + '</td></tr>';
+  }).join('');
+}
+
+/* =================================================================
+   渲染
+================================================================= */
+function renderFx(a, r, errs) {
+  if (errs.length) {
+    E.fxHost.innerHTML = '<p class="fxnote">输入有误，修正后即可查看分步公式。</p>';
+    return;
+  }
+  E.fxHost.innerHTML = steps(a, r).map(function (st, i) {
+    var h = '<details class="fxstep"><summary>' + (i + 1 < 10 ? '0' : '') + (i + 1) + '　' + st.t + '</summary><div class="fxbody">';
+    if (st.d) h += '<p class="fxnote">' + st.d + '</p>';
+    st.f.forEach(function (fx, j) {
+      h += '<div class="fxl"><div class="fxtag">(' + (j + 1) + ')</div><div class="fx">' + texML(fx) + '</div></div>';
+    });
+    if (st.note) h += '<p class="fxnote">' + st.note + '</p>';
+    return h + '</div></details>';
+  }).join('');
+}
+
+var terrKey = 'B';
+
+function refresh() {
+  var a = readInput();
+  var errs = validate(a);
+
+  E.advCard1.hidden = !advanced;
+  E.advCard2.hidden = !advanced;
+  E.lblBasic.className = 'ios-lbl' + (advanced ? '' : ' on');
+  E.lblAdv.className = 'ios-lbl' + (advanced ? ' on' : '');
+  E.modeSw.className = 'ios-sw' + (advanced ? ' on' : '');
+  E.modeSw.setAttribute('aria-checked', advanced ? 'true' : 'false');
+
+  E.terHint.textContent = TERR[a.terr].d + '；c=' + TERR[a.terr].c + '，α=' + TERR[a.terr].a +
+                          '，I₁₀=' + TERR[a.terr].i + '，有效高度 ' + TERR[a.terr].zmin + '～' + TERR[a.terr].zmax + ' m';
+  E.presetHint.textContent = PRESET[a.preset].kind === 'roof'
+    ? '采光顶沿用 ≤5° 平缓屋面示例，坡度与分区需按项目确认；不套用玻璃幕墙 1.0 kPa 下限。'
+    : '墙面分区按 GB 50009—2012 表 8.3.3；套用 JGJ 102—2003 第 5.3.2 条的 1.0 kPa 绝对值下限。';
+  var p0 = PRESET[a.preset];
+  var isCus = ['ep', 'en', 'ip', 'inn'].some(function (k, i) {
+    return Number(a[k]) !== [p0.ep, p0.en, p0.ip, p0.inn][i];
+  });
+  E.custTag.hidden = !isCus;
+
+  if (errs.length) {
+    E.errBox.innerHTML = '<div class="warnbar">' + errs.join('<br />') + '</div>';
+    ['kZ', 'kMu', 'kQ', 'kBeta', 'kBL', 'kEta', 'kLim', 'kDep'].forEach(function (id) { E[id].textContent = '—'; });
+    ['outPP', 'outPN', 'outRP', 'outRN'].forEach(function (id) { E[id].textContent = '—'; });
+    E.floorHint.textContent = '';
+    drawPrev(a, null, errs);
+    renderFx(a, null, errs);
+    return;
+  }
+
+  E.errBox.innerHTML = '';
+  var r = compute(a);
+
+  E.outPP.textContent = sgn(r.PP);
+  E.outPN.textContent = sgn(-r.PN);
+  E.outRP.textContent = sgn(r.RP);
+  E.outRN.textContent = sgn(-r.RN);
+
+  E.kZ.textContent = Number(r.Z.toFixed(2)) + ' m';
+  E.kMu.textContent = Number(r.mu.toFixed(4));
+  E.kQ.textContent = Number(r.q.toFixed(4)) + ' kPa';
+  E.kBeta.textContent = Number(r.beta.toFixed(4));
+  E.kBL.textContent = Number(r.betaLower.toFixed(4));
+  E.kEta.textContent = Number(r.etaP.toFixed(4)) + ' / ' + Number(r.etaN.toFixed(4));
+  E.kLim.textContent = Number(r.limP.toFixed(2)) + ' / ' + Number(r.limN.toFixed(2));
+  E.kDep.textContent = r.useFloor ? '套用' : '不套用';
+
+  var fh = r.useFloor
+    ? (r.floorHit ? '有工况计算值低于 1.0 kPa，已按下限取值（JGJ 102—2003 第 5.3.2 条）。'
+                  : '各工况均不低于 1.0 kPa 下限，取计算值。')
+    : '采光顶不套用玻璃幕墙的 1.0 kPa 下限，直接取计算值。';
+  if (r.clipped) {
+    fh += ' 注意：计算高度 ' + n6(r.z) + ' m 已按 ' + a.terr + ' 类地面夹持到 ' + n6(r.Z) + ' m。';
+  }
+  E.floorHint.textContent = fh;
+
+  drawPrev(a, r, errs);
+  renderFx(a, r, errs);
+}
+
+/* ---------- 事件 ---------- */
+['w0', 'z', 'area', 'ep', 'en', 'ip', 'inn', 'kt', 'kd'].forEach(function (id) {
+  document.getElementById(id).addEventListener('input', function () {
+    if (id === 'w0') { pick = null; E.pickInfo.textContent = ''; }
+    refresh();
+  });
+});
+document.getElementById('floorMode').addEventListener('change', refresh);
+document.getElementById('preset').addEventListener('change', function () {
+  var p = PRESET[this.value];
+  document.getElementById('ep').value = p.ep;
+  document.getElementById('en').value = p.en;
+  document.getElementById('ip').value = p.ip;
+  document.getElementById('inn').value = p.inn;
+  refresh();
+});
+
+Array.prototype.forEach.call(E.terSeg.querySelectorAll('button'), function (b) {
+  b.addEventListener('click', function () {
+    terrKey = b.getAttribute('data-t');
+    Array.prototype.forEach.call(E.terSeg.querySelectorAll('button'), function (x) {
+      x.className = (x === b ? 'on' : '');
+    });
+    refresh();
+  });
+});
+
+E.modeSw.addEventListener('click', function () {
+  advanced = !advanced;
+  refresh();
+});
+E.lblBasic.addEventListener('click', function () { if (advanced) { advanced = false; refresh(); } });
+E.lblAdv.addEventListener('click', function () { if (!advanced) { advanced = true; refresh(); } });
+
+E.fxOpen.addEventListener('click', function () {
+  Array.prototype.forEach.call(E.fxHost.querySelectorAll('details'), function (d) { d.open = true; });
+});
+E.fxClose.addEventListener('click', function () {
+  Array.prototype.forEach.call(E.fxHost.querySelectorAll('details'), function (d) { d.open = false; });
+});
+E.printBtn.addEventListener('click', function () { window.print(); });
+
+/* 图上标注：高度的就地编辑 */
+E.prevHost.addEventListener('change', function (ev) {
+  var el = ev.target;
+  if (!el.getAttribute) return;
+  var k = el.getAttribute('data-dim');
+  if (!k) return;
+  var v = Number(el.value);
+  if (k === 'z' && isFinite(v)) document.getElementById('z').value = el.value;
+  refresh();
+});
+
+/* ---------- 初始化：下拉 / 分段控件 ---------- */
+document.getElementById('preset').innerHTML = PRESET_KEYS.map(function (k) {
+  return '<option value="' + k + '"' + (k === 'wall-edge' ? ' selected' : '') + '>' + PRESET[k].label + '</option>';
+}).join('');
+
+var PROVS = Object.keys(STATIONS);
+document.getElementById('pvSel').innerHTML = PROVS.map(function (p) {
+  return '<option value="' + p + '">' + p + '</option>';
+}).join('');
+
+var rp = 50;
+function fillCities() {
+  var pv = document.getElementById('pvSel').value;
+  var rows = STATIONS[pv];
+  document.getElementById('ctSel').innerHTML = rows.map(function (r, i) {
+    return '<option value="' + i + '">' + r[0] + '</option>';
+  }).join('');
+  fillPeriods();
+}
+function curRow() {
+  var pv = document.getElementById('pvSel').value;
+  return STATIONS[pv][Number(document.getElementById('ctSel').value)];
+}
+function fillPeriods() {
+  var row = curRow();
+  var html = '';
+  [10, 50, 100].forEach(function (R, idx) {
+    var v = row[idx + 1];
+    html += '<button type="button" data-r="' + R + '"' + (v === null ? ' disabled' : '') +
+            (R === rp && v !== null ? ' class="on"' : '') + '>' + R + ' 年<small>' +
+            (v === null ? '原表无' : v.toFixed(2) + ' kPa') + '</small></button>';
+  });
+  document.getElementById('rpSeg').innerHTML = html;
+  Array.prototype.forEach.call(document.getElementById('rpSeg').querySelectorAll('button'), function (b) {
+    b.addEventListener('click', function () {
+      if (b.disabled) return;
+      rp = Number(b.getAttribute('data-r'));
+      fillPeriods();
+      showNote();
+    });
+  });
+  showNote();
+}
+function showNote() {
+  var row = curRow(), pv = document.getElementById('pvSel').value;
+  var v = row[{ 10: 1, 50: 2, 100: 3 }[rp]];
+  var key = pv + '|' + row[0];
+  E.stNote.textContent = (STATION_NOTES[key] || '') +
+    (v === null ? '该台站原表无 ' + rp + ' 年风压。' : '');
+  E.stPick.textContent = v === null ? '原表无该项'
+    : pv + ' · ' + row[0] + '，R=' + rp + ' 表列 ' + v.toFixed(2) + ' kPa，采用 max(' + v.toFixed(2) + ', 0.30) = ' +
+      Math.max(0.3, v).toFixed(2) + ' kPa';
+  E.dlgOk.disabled = v === null;
+}
+document.getElementById('pvSel').addEventListener('change', fillCities);
+document.getElementById('ctSel').addEventListener('change', function () { fillPeriods(); });
+E.dlgCancel.addEventListener('click', function () { E.dlg.close(); });
+E.dlgOk.addEventListener('click', function () {
+  var row = curRow(), pv = document.getElementById('pvSel').value;
+  var v = row[{ 10: 1, 50: 2, 100: 3 }[rp]];
+  if (v === null) return;
+  pick = { prov: pv, city: row[0], period: rp, table: v };
+  document.getElementById('w0').value = Math.max(0.3, v).toFixed(2);
+  E.pickInfo.textContent = '已采用：' + pv + ' · ' + row[0] + '，' + rp + ' 年重现期，表列 ' +
+                           v.toFixed(2) + ' kPa' + (v < 0.3 ? '（低于 0.30，已取 0.30）' : '');
+  E.dlg.close();
+  refresh();
+});
+E.pickBtn.addEventListener('click', function () {
+  E.dlgOk.disabled = false;
+  fillCities();
+  E.dlg.showModal();
+});
+fillCities();
+
+drawSources();
+refresh();
+document.getElementById('verLine').textContent = '版本 2026-10-21 17:31';
+</script>
+</body>
+</html>
