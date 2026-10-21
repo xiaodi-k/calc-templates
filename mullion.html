@@ -1626,12 +1626,12 @@ function tex2html(src) {
       return h;
     }
     if (inp.form === 'simple') {
-      /* 简支：上端 PIN、下端滑动（竖向可伸缩，符合立柱实际受力） */
-      s += pin(xm, Y(L)); s += roll(xm, Y(0));
+      /* 简支：下端 PIN（立柱坐落在底层支座上，定位并传竖向力）、上端滑动（竖向可伸缩） */
+      s += roll(xm, Y(L)); s += pin(xm, Y(0));
     } else if (inp.form === 'two') {
-      /* 双跨：1 个 PIN（定水平位置）+ 2 个滑动支座（中支座、下端） */
+      /* 双跨：最下方 1 个 PIN + 上端、中支座 2 个滑动支座 */
       const yMid = Y(Math.max(L - a, 0.01));
-      s += pin(xm, Y(L)); s += roll(xm, yMid); s += roll(xm, Y(0));
+      s += roll(xm, Y(L)); s += roll(xm, yMid); s += pin(xm, Y(0));
     } else {
       s += fix(xm, Y(0) - 12);
     }
@@ -2208,7 +2208,7 @@ function tex2html(src) {
   });
 
   /* 启动（默认基础模式） */
-  document.getElementById('verLine').textContent = '版本 2026-10-21 15:13';
+  document.getElementById('verLine').textContent = '版本 2026-10-21 15:25';
   applyMode();
 })();
 </script>
