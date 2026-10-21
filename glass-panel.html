@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>四边支承玻璃面板计算（通用配置）</title>
+  <title>玻璃面板计算</title>
   <style>
     :root {
       --bg: #f2f4f9;
@@ -349,7 +349,7 @@
 <body>
   <div class="topbar">
     <a class="back" href="index.html">← 返回首页</a>
-    <h1>四边支承玻璃面板承载力计算（通用配置）</h1>
+    <h1>玻璃面板计算</h1>
     <span class="spacer"></span>
     <button class="ghost" id="printBtn">打印 / 存 PDF</button>
   </div>
@@ -363,7 +363,7 @@
           <span class="ios-lbl on" id="lblBasic">基础</span>
           <button type="button" class="ios-sw" id="modeSw"
                   role="switch" aria-checked="false"
-                  title="基础：5 种常用构造、PVB 夹胶、四边简支　／　高级：9 种构造、可选 SGP 与对边支承"></button>
+                  title="基础：5 种常用构造、PVB 夹胶、四边简支　／　高级：9 种构造、可选 SGP、对边支承与四点支承（点支承）"></button>
           <span class="ios-lbl" id="lblAdv">高级</span>
         </div>
       </div>
@@ -411,6 +411,7 @@
             <select id="support">
               <option value="four" selected>四边简支</option>
               <option value="two">对边简支</option>
+              <option value="pt4">四点支承（点支承）</option>
             </select>
           </div>
           <div class="row" id="spanRow" hidden>
@@ -428,6 +429,11 @@
           <div class="row">
             <label for="b">长边 b</label>
             <input type="number" id="b" value="3000" step="10" />
+            <span class="unit">mm</span>
+          </div>
+          <div class="row" id="holeRow" hidden>
+            <label for="hole" title="点支承玻璃支承孔边至板边的距离，JGJ 102-2003 第 8.1.1 条不宜小于 70 mm">孔边至板边距离</label>
+            <input type="number" id="hole" value="100" step="10" />
             <span class="unit">mm</span>
           </div>
           <p class="hint" id="spanHint"></p>
@@ -544,10 +550,12 @@
 
   <footer>
     统一为「分组 → 组内」两级分配模型：<code>.</code> 为夹胶（同组），<code>+</code> 为中空腔（分组）。
-    弯矩系数 m、挠度系数 μ 按宽长比 a/b 插值，折减系数 η 按 θ = w·a⁴/(E·t⁴) 插值，均取规范附录表线性插值。
+    弯矩系数 m、挠度系数 μ 按宽长比 a/b 插值，折减系数 η 按 θ = w·L⁴/(E·t⁴) 插值，均取规范附录表线性插值。
     四边简支取中部强度、对边简支取边缘强度；PVB 层不计剪切传递（不计入等效厚度），
     SGP 夹层等效厚度按 DG/TJ 08-56-2019 上海地标 第 11.2.8 条计算。单位制 mm / N / MPa。
-    <span class="ver">版本 1.1 · 2026-10-18 23:28</span>
+    四点支承（点支承）按 JGJ 102-2003 第 8.1.5 条：跨度取支承点之间长边 b，
+    m 查表 8.1.5-1、μ 查表 8.1.5-3、η 查表 6.1.2-2，挠度限值 b/60，f<sub>g</sub> 取玻璃大面强度。
+    <span class="ver">版本 1.2 · 2026-10-21 18:30</span>
   </footer>
 
 <script>
@@ -560,6 +568,18 @@ const MUY  = [0.01302, 0.01297, 0.01282, 0.01223, 0.01137, 0.01013, 0.00940, 0.0
 const TH   = [0, 5, 10, 20, 40, 60, 80, 100, 120, 150, 200, 250, 300, 350, 400, 1000];
 const ETAY = [1.00, 1.00, 0.96, 0.92, 0.84, 0.78, 0.73, 0.68, 0.65, 0.61, 0.57, 0.54,
               0.52, 0.51, 0.50, 0.50];
+
+/* 四点支承（点支承）系数 —— JGJ 102-2003 第 8.1.5 条
+     m  按表 8.1.5-1、μ 按表 8.1.5-3，均以「支承点之间短边 a / 支承点之间长边 b」插值
+     η  仍按表 6.1.2-2 插值（与四边简支同一张表），挠度限值取 b/60
+   注：a / b 为支承点之间的边长，即板边边长减去两侧孔边至板边距离。 */
+const PT4_AR = [0, 0.20, 0.30, 0.40, 0.50, 0.55, 0.60, 0.65, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95, 1.00];
+const PT4_BM = [0.1250, 0.1260, 0.1270, 0.1290, 0.1300, 0.1320, 0.1340, 0.1360, 0.1380, 0.1400,
+                0.1420, 0.1450, 0.1480, 0.1510, 0.1540];
+const PT4_MU = [0.01302, 0.01317, 0.01335, 0.01367, 0.01417, 0.01451, 0.01496, 0.01555, 0.01630,
+                0.01725, 0.01842, 0.01984, 0.02157, 0.02363, 0.02603];
+/* 点支承的面板计算参照（本页只实现四点支承这一种） */
+const PT4_REF = 'JGJ 102-2003 第 8.1.5 条';
 
 /* 玻璃强度设计值 f_g (MPa)：种类 + 厚度档 ≤12 / ≤19 / >19
    四边支承取中部强度；对边简支时玻璃边缘受力，按边缘强度取值（2.3 系列模板） */
@@ -664,7 +684,7 @@ function buildGroups(struct, ts, types) {
 
 /* p: { a, b, groups, wk(kPa), alpha, E(MPa), nu, gammaG(kN/m3),
         gG, gw, gE, psE, psw, defDiv,
-        support('four'|'two'), span(mm), interlayer('PVB'|'SGP'), tv(mm) }
+        support('four'|'two'|'pt4'), span(mm), hole(mm), interlayer('PVB'|'SGP'), tv(mm) }
    内部单位：mm / N / MPa，面荷载 N/mm² */
 function calcGlass(p) {
   const a = p.a, b = p.b, E = p.E, nu = p.nu;
@@ -672,16 +692,22 @@ function calcGlass(p) {
   const wk = p.wk / 1000;              // kPa  → N/mm²
   const alpha = p.alpha;
   const two = p.support === 'two';     // 对边简支
+  const pt4 = p.support === 'pt4';     // 四点支承（点支承）
   const sgp = p.interlayer === 'SGP';
 
-  /* 计算跨度：四边取短边；对边取选定跨度（受弯方向两支承边的间距） */
-  const L = two ? p.span : Math.min(a, b);
+  /* 点支承的支承点间边长：板边边长减去两侧孔边至板边距离 */
+  const hole = pt4 ? (isFinite(p.hole) ? p.hole : 0) : 0;
+  const aPt = pt4 ? Math.max(Math.min(a, b) - 2 * hole, 1) : 0;   // 支承点之间短边
+  const bPt = pt4 ? Math.max(Math.max(a, b) - 2 * hole, 1) : 0;   // 支承点之间长边
+
+  /* 计算跨度：四边取短边；对边取选定跨度；四点支承取支承点之间长边 b */
+  const L = two ? p.span : (pt4 ? bPt : Math.min(a, b));
   const L2 = L * L, L4 = Math.pow(L, 4);
 
-  /* 附录系数：四边按宽长比查表；对边为单向板，μ = 0.013、m = 0.125 */
-  const ab = a / b;
-  const mu = two ? 0.013 : linterp(AR, MUY, ab);
-  const bm = two ? 0.125 : linterp(AR, BMY, ab);
+  /* 附录系数：四边 / 四点按宽长比查表；对边为单向板，μ = 0.013、m = 0.125 */
+  const ab = pt4 ? aPt / bPt : a / b;
+  const mu = two ? 0.013 : (pt4 ? linterp(PT4_AR, PT4_MU, ab) : linterp(AR, MUY, ab));
+  const bm = two ? 0.125 : (pt4 ? linterp(PT4_AR, PT4_BM, ab) : linterp(AR, BMY, ab));
   const useEta = !two;                 // 对边支承不做大挠度折减（2.3 系列模板）
   const defLim = L / p.defDiv;
 
@@ -771,6 +797,7 @@ function calcGlass(p) {
   return { groups: groups, flat: flat, nG: nG, Gk: Gk, Ek: Ek,
            mu: mu, bm: bm, ab: ab, defLim: defLim, wk: wk, gN: gN, alpha: alpha,
            L: L, L2: L2, L4: L4, two: two, sgp: sgp, useEta: useEta,
+           pt4: pt4, hole: hole, aPt: aPt, bPt: bPt,
            tv: p.tv, G: G_INTER[p.interlayer] };
 }
 /* ===== 计算核心结束 ===== */
@@ -778,7 +805,8 @@ function calcGlass(p) {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { calcGlass: calcGlass, buildGroups: buildGroups,
                      CONFIGS: CONFIGS, linterp: linterp, fgOf: fgOf,
-                     AR: AR, BMY: BMY, MUY: MUY, TH: TH, ETAY: ETAY, FG: FG };
+                     AR: AR, BMY: BMY, MUY: MUY, TH: TH, ETAY: ETAY, FG: FG,
+                     PT4_AR: PT4_AR, PT4_BM: PT4_BM, PT4_MU: PT4_MU };
 }
 </script>
 <script>
@@ -919,7 +947,7 @@ function tex2html(src) {
   const el = {};
   ['cfg', 'cfgHint', 'plyHost', 'a', 'b', 'wk', 'ig', 'E', 'nu', 'gg',
    'defdiv', 'gG', 'gw', 'gE', 'psE', 'psw', 'printBtn', 'fxOpen', 'fxClose',
-   'support', 'spanSide', 'spanRow', 'spanHint', 'inter', 'tv',
+   'support', 'spanSide', 'spanRow', 'spanHint', 'inter', 'tv', 'hole', 'holeRow',
    'modeSw', 'lblBasic', 'lblAdv', 'interRow', 'supportRow', 'matBox']
     .forEach(id => { el[id] = document.getElementById(id); });
 
@@ -1056,10 +1084,12 @@ function tex2html(src) {
   /* 联动显示：胶片厚度只对 SGP 起作用（PVB 时置灰）、支承边（仅对边），并给出取值口径提示 */
   function syncOptions() {
     const two = el.support.value === 'two';
+    const pt4 = el.support.value === 'pt4';
     const sgp = el.inter.value === 'SGP';
     el.tv.disabled = !sgp;
     el.tv.title = sgp ? '' : 'PVB 不计胶片剪切传递，厚度不参与计算';
     el.spanRow.hidden = !two;
+    el.holeRow.hidden = !pt4;
 
     const cfg = getCurrentConfig();
     const n = totalPlies(cfg.struct);
@@ -1071,9 +1101,21 @@ function tex2html(src) {
           '荷载按单片厚度立方比分配，各片单独校核。');
 
     const A = num('a'), B = num('b');
+    const d0 = num('hole');
+    /* 四点支承：支承点之间边长 = 板边边长 − 两侧孔边至板边距离 */
+    const Ap = Math.min(A, B) - 2 * d0, Bp = Math.max(A, B) - 2 * d0;
     const L = two ? (el.spanSide.value === 'a' ? Math.min(A, B) : Math.max(A, B))
-                  : Math.min(A, B);
-    el.spanHint.innerHTML = two
+             : pt4 ? Math.max(Bp, 0)
+             : Math.min(A, B);
+    el.spanHint.innerHTML = pt4
+      ? '四点支承（点支承，' + PT4_REF + '）：计算跨度取<b>支承点之间长边 b = ' + N(L) +
+        ' mm</b>，宽长比 a/b = ' + f3(Ap / L) + '；m 按表 8.1.5-1、μ 按表 8.1.5-3 插值，' +
+        'η 按表 6.1.2-2 插值，挠度限值 b/' + N(num('defdiv')) +
+        '，f<sub>g</sub> 取玻璃<b>大面（中部）强度</b>。' +
+        (d0 < 70 ? '<br><b>注意：孔边至板边距离 ' + N(d0) +
+          ' mm 小于 70 mm，不满足 ' + PT4_REF + ' 第 8.1.1 条。</b>' : '') +
+        (Ap <= 0 ? '<br><b>注意：孔边至板边距离过大，支承点之间短边 ≤ 0。</b>' : '')
+      : two
       ? '对边简支：跨度 L = <b>' + L + ' mm</b>，μ = 0.013、m = 0.125，' +
         '<b>不做大挠度折减</b>，f<sub>g</sub> 按<b>边缘强度</b>取值。'
       : '四边简支：跨度取短边 <b>' + L + ' mm</b>，μ / m 按宽长比查附录表，' +
@@ -1091,9 +1133,10 @@ function tex2html(src) {
     }
     const A = num('a'), B = num('b');
     const two = el.support.value === 'two';
+    const pt4 = el.support.value === 'pt4';
     /* 对边简支的跨度：支承两条短边则跨度取长边，反之取短边 */
-    const span = !two ? Math.min(A, B)
-               : (el.spanSide.value === 'a' ? Math.min(A, B) : Math.max(A, B));
+    const span = two ? (el.spanSide.value === 'a' ? Math.min(A, B) : Math.max(A, B))
+               : Math.min(A, B);
     return {
       a: A, b: B,
       groups: buildGroups(struct, ts, types),
@@ -1101,7 +1144,7 @@ function tex2html(src) {
       alpha: parseFloat(el.ig.value),
       E: num('E'), nu: num('nu'), gammaG: num('gg'), defDiv: num('defdiv'),
       gG: num('gG'), gw: num('gw'), gE: num('gE'), psE: num('psE'), psw: num('psw'),
-      support: el.support.value, span: span,
+      support: el.support.value, span: span, hole: num('hole'),
       interlayer: el.inter.value, tv: num('tv')
     };
   }
@@ -1112,9 +1155,15 @@ function tex2html(src) {
                       p.gG, p.gw, p.gE].concat(ts);
     if (p.interlayer === 'SGP') positive.push(p.tv);
     const nonNegative = [p.psE, p.psw];
-    return positive.every(v => isFinite(v) && v > 0) &&
-           nonNegative.every(v => isFinite(v) && v >= 0) &&
-           isFinite(p.alpha);
+    const ok = positive.every(v => isFinite(v) && v > 0) &&
+               nonNegative.every(v => isFinite(v) && v >= 0) &&
+               isFinite(p.alpha);
+    /* 四点支承：孔边距必须给出且为正，且两侧扣减后支承点之间短边仍为正 */
+    if (ok && p.support === 'pt4') {
+      return isFinite(p.hole) && p.hole >= 0 &&
+             Math.min(p.a, p.b) - 2 * p.hole > 0;
+    }
+    return ok;
   }
 
   const badge = r => '<span class="badge' + (r > 1 ? ' ng' : '') + '">' +
@@ -1179,6 +1228,12 @@ function tex2html(src) {
       n: r.two
         ? '对边简支为单向板：弯矩系数 m = 0.125、挠度系数 μ = 0.013 为定值，' +
           '不随宽长比变化，也不做大挠度折减；计算跨度 L = ' + L + ' mm。'
+        : r.pt4
+        ? '四点支承（' + PT4_REF + '）：计算跨度取支承点之间长边 b = ' + L + ' mm' +
+          '（板边长边 ' + f0(p.b) + ' − 2 × 孔边距 ' + f0(r.hole) + '），' +
+          '宽长比 a/b = ' + f3(r.aPt) + ' / ' + f0(r.bPt) + '；' +
+          'm 按表 8.1.5-1、μ 按表 8.1.5-3 插值，η 仍按表 6.1.2-2 插值。' +
+          (sgp ? '等效厚度见下一步。' : '')
         : '四边简支：弯矩系数 m、挠度系数 μ 由宽长比 a/b 在规范附录表中线性插值取得；' +
           '计算跨度取短边 ' + L + ' mm' +
           (sgp ? '。等效厚度见下一步。' : '。'),
@@ -1362,6 +1417,10 @@ function tex2html(src) {
       n: r.two
         ? '对边简支：单向板，d = μ·W_ke·L⁴/D，μ = 0.013 为定值，' +
           '模板不做大挠度折减（η = 1）；限值取跨度 L/' + N(p.defDiv) + '。'
+        : r.pt4
+        ? '四点支承：d = μ·W_ke·b⁴/D × η，μ 按表 8.1.5-3 插值，' +
+          'η 按表 6.1.2-2 由 θ 插值（与四边简支同一张表）；' +
+          '限值取支承点之间长边 b/' + N(p.defDiv) + '（' + PT4_REF + ' 第 8.1.5 条）。'
         : '四边简支板：先由等效厚度得弯曲刚度 D，再由 θ 在附录表中插值取折减系数 η，' +
           '最后得到大挠度折减后的挠度 d；限值取短边 1/' + N(p.defDiv) + '。',
       L: L5
@@ -1405,14 +1464,15 @@ function tex2html(src) {
       t: '强度校核（控制片）',
       n: '以应力比最大的第 ' + (ctrl + 1) + ' 片为控制片逐步代入；其余各片算法完全相同，' +
          '数值见上方《强度校核（按片）》表。弯矩系数 m = ' + f4(r.bm) + '，计算跨度 L = ' +
-         L + ' mm' +
+         L + ' mm' + (r.pt4 ? '（即支承点之间长边 b）' : '') +
          (r.useEta ? '，θ 与 η 同挠度一节按附录表插值'
                    : '，对边简支不做大挠度折减，η = 1') +
          '。' + (c.q.sgFlag
            ? 'SGP 组合截面：整组共同工作，应力按组等效厚度 t_e = ' + f2(c.q.tEff) +
              ' mm 计算，再与组内各片的 f_g 分别比较。'
            : 'PVB：应力按该片自身厚度 t = ' + f2(c.q.tEff) + ' mm 计算。') +
-         ' f_g 取' + (r.two ? '边缘' : '中部') + '强度。',
+         ' f_g 取' + (r.two ? '边缘' : '中部') + '强度' +
+         (r.pt4 ? '（点支承面板按 ' + PT4_REF + ' 取玻璃大面强度设计值）' : '') + '。',
       L: L6
     });
 
@@ -1439,7 +1499,8 @@ function tex2html(src) {
       '<div class="item"><div class="k">构造型式</div>' +
         '<div class="v">' + getCurrentConfig().key + '</div>' +
         '<div class="sub">' + r.flat.length + ' 片玻璃 / ' + r.nG + ' 个构造组 · ' +
-          (r.two ? '对边简支' : '四边简支') + ' · ' + p.interlayer + '</div></div>' +
+          (r.two ? '对边简支' : (r.pt4 ? '四点支承' : '四边简支')) +
+          ' · ' + p.interlayer + '</div></div>' +
       '<div class="item"><div class="k">挠度（最不利组）</div>' +
         '<div class="v">' + f3(maxF) + '</div>' +
         '<div class="sub">' + badge(maxF) + ' &nbsp;限值 ' + f0(r.defLim) + ' mm</div></div>' +
@@ -1551,7 +1612,7 @@ function tex2html(src) {
   el.printBtn.addEventListener('click', () => window.print());
 
   ['a', 'b', 'wk', 'ig', 'E', 'nu', 'gg', 'defdiv', 'gG', 'gw', 'gE', 'psE', 'psw',
-   'tv', 'support', 'spanSide']
+   'tv', 'support', 'spanSide', 'hole']
     .forEach(id => {
       const e = document.getElementById(id);
       const fn = () => { syncOptions(); render(); };
