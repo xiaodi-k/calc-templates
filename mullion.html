@@ -1601,6 +1601,31 @@ function tex2html(src) {
            '" text-anchor="middle" font-size="11.5" fill="#8aa4cc">面板</text>';
     }
 
+    /* ---------- 支座（先画，让立柱线压在三角形上方） ---------- */
+    /* 铰支座：三角形尖朝左（绕顶点逆时针转 90°），尖端落在立柱轴线上，右侧竖线为支承面 */
+    function tri(x, y) {
+      return '<path d="M' + x + ',' + y.toFixed(1) + ' l12,-7 l0,14 Z" fill="#fff" fill-opacity="0.85" stroke="#333" stroke-width="1.2"/>' +
+             '<line x1="' + (x + 12) + '" y1="' + (y - 9).toFixed(1) + '" x2="' + (x + 12) +
+             '" y2="' + (y + 9).toFixed(1) + '" stroke="#333" stroke-width="1.2"/>';
+    }
+    function fix(x, y) {
+      let h = '<line x1="' + x + '" y1="' + y.toFixed(1) + '" x2="' + x + '" y2="' + (y + 12).toFixed(1) +
+              '" stroke="#333" stroke-width="1.4"/>';
+      for (let i = 0; i < 5; i++) {
+        h += '<line x1="' + (x - 10 + i * 5) + '" y1="' + (y + 12).toFixed(1) + '" x2="' + (x - 5 + i * 5) +
+             '" y2="' + (y + 20).toFixed(1) + '" stroke="#333" stroke-width="1"/>';
+      }
+      return h;
+    }
+    if (inp.form === 'simple') {
+      s += tri(xm, Y(L)); s += tri(xm, Y(0));
+    } else if (inp.form === 'two') {
+      const yMid = Y(Math.max(L - a, 0.01));
+      s += tri(xm, Y(L)); s += tri(xm, yMid); s += tri(xm, Y(0));
+    } else {
+      s += fix(xm, Y(0) - 12);
+    }
+
     /* ---------- 立柱 ---------- */
     s += '<line x1="' + xm + '" y1="' + Y(0).toFixed(1) + '" x2="' + xm + '" y2="' + Y(L).toFixed(1) +
          '" stroke="#2f6feb" stroke-width="4" stroke-linecap="round"/>';
@@ -1621,30 +1646,6 @@ function tex2html(src) {
            '" stroke="#c98a2b" stroke-width="1.4" marker-end="url(#ar2)"/>';
       s += '<text x="' + (xm - 62) + '" y="' + (yA + 4).toFixed(1) +
            '" text-anchor="end" font-size="13" fill="#b07a24">F<tspan font-size="10" dy="3">a</tspan></text>';
-    }
-
-    /* ---------- 支座 ---------- */
-    function tri(x, y) {
-      return '<path d="M' + x + ',' + y.toFixed(1) + ' l-7,12 l14,0 Z" fill="#fff" stroke="#333" stroke-width="1.2"/>' +
-             '<line x1="' + (x - 9) + '" y1="' + (y + 12).toFixed(1) + '" x2="' + (x + 9) +
-             '" y2="' + (y + 12).toFixed(1) + '" stroke="#333" stroke-width="1.2"/>';
-    }
-    function fix(x, y) {
-      let h = '<line x1="' + x + '" y1="' + y.toFixed(1) + '" x2="' + x + '" y2="' + (y + 12).toFixed(1) +
-              '" stroke="#333" stroke-width="1.4"/>';
-      for (let i = 0; i < 5; i++) {
-        h += '<line x1="' + (x - 10 + i * 5) + '" y1="' + (y + 12).toFixed(1) + '" x2="' + (x - 5 + i * 5) +
-             '" y2="' + (y + 20).toFixed(1) + '" stroke="#333" stroke-width="1"/>';
-      }
-      return h;
-    }
-    if (inp.form === 'simple') {
-      s += tri(xm, Y(L)); s += tri(xm, Y(0) - 12);
-    } else if (inp.form === 'two') {
-      const yMid = Y(Math.max(L - a, 0.01));
-      s += tri(xm, Y(L)); s += tri(xm, yMid); s += tri(xm, Y(0) - 12);
-    } else {
-      s += fix(xm, Y(0) - 12);
     }
 
     /* ---------- 跨度 L（右侧，可编辑） ---------- */
@@ -2197,7 +2198,7 @@ function tex2html(src) {
   });
 
   /* 启动（默认基础模式） */
-  document.getElementById('verLine').textContent = '版本 2026-10-21 03:34';
+  document.getElementById('verLine').textContent = '版本 2026-10-21 14:48';
   applyMode();
 })();
 </script>
