@@ -11,6 +11,7 @@
       --text: #111111;
       --muted: #6b7280;
       --line: rgba(0, 0, 0, .10);
+      --accent: #2f6feb;
     }
     * { box-sizing: border-box; }
     body {
@@ -36,8 +37,23 @@
     .card:hover { box-shadow: 0 12px 28px rgba(0, 0, 0, .09); }
     .card:active { transform: scale(.995); }
     .card a { display: block; padding: 16px 18px; text-decoration: none; color: inherit; }
-    .name { font-size: 16px; font-weight: 700; }
-    .note { margin-top: 4px; font-size: 13px; color: var(--muted); }
+
+    /* 标题行：序号 + 名称 …… 版本号 */
+    .top { display: flex; align-items: center; gap: 10px; }
+    .idx {
+      flex: none; width: 22px; height: 22px; border-radius: 6px;
+      background: #eef2fb; color: var(--accent);
+      font-size: 12px; font-weight: 800; line-height: 22px; text-align: center;
+    }
+    .name { font-size: 16px; font-weight: 700; flex: 1 1 auto; min-width: 0; }
+    .ver {
+      flex: none; padding: 3px 9px; border-radius: 999px;
+      background: #0f172a; color: #fff;
+      font-size: 12px; font-weight: 700; letter-spacing: .3px;
+      font-variant-numeric: tabular-nums; cursor: help;
+    }
+    .note { margin-top: 6px; font-size: 13px; color: var(--muted); line-height: 1.65; }
+    .meta { margin-top: 8px; font-size: 12px; color: #9aa3b2; }
 
     .empty {
       background: var(--card);
@@ -49,6 +65,11 @@
       font-size: 14px;
       line-height: 1.8;
     }
+    .rule {
+      margin-top: 26px; padding-top: 16px; border-top: 1px solid var(--line);
+      font-size: 12px; color: #9aa3b2; line-height: 1.9;
+    }
+    .rule b { color: var(--muted); font-weight: 700; }
     code {
       background: #eef0f5;
       padding: 2px 6px;
@@ -68,18 +89,33 @@
       还没有模板。<br />
       在本文件的 <code>calcs</code> 数组里加一条，这里就会出现。
     </div>
+
+    <div class="rule">
+      <b>版本号怎么来的</b><br />
+      <code>1.&lt;累计版本次数&gt;</code> —— 建立那一次算第 1 版，之后每改动一次 +1；<br />
+      <code>1.&lt;累计版本次数&gt;.&lt;图示改动次数&gt;</code> —— 累计版本里属于图示类（图样、支座符号、示意图…）的次数；<br />
+      只改版本号、时间戳这类元信息不计次数。数字由 <code>version.py</code> 读 git 历史算出，不靠人工计数。
+    </div>
   </div>
 
 <script>
 /* =================================================================
    使用约定
-   —— 每做一份计算模板，把 .html 放进本目录，然后在下面加一条记录：
+—— 每做一份计算模板，把 .html 放进本目录，然后在下面加一条记录：
 
-     { name: "玻璃面板验算", file: "glass-panel.html", note: "" }
+     {
+       name: "玻璃面板验算",
+       file: "glass-panel.html",
+       note: "一行备注，可留空",
+       ver:  "1.1",          // 首页卡片右上角显示的版本号
+       date: "2026-10-21"     // 最后更新日期
+     }
 
    name：首页显示的名字
    file：文件名，用相对路径，和 index.html 放同一个目录
    note：一行备注，可留空
+   ver ：版本号，规则见页面下方，由 version.py 按 git 历史算出
+   date：最后更新日期，同上
 
    —— 数组为空时不显示提示以外的任何东西。
 ================================================================= */
@@ -87,17 +123,23 @@ const calcs = [
   {
     name: "幕墙围护结构风荷载计算",
     file: "wind-load.html",
-    note: "GB 50009—2012 + GB 55001—2021 · 全国 667 个台站基本风压查表（10/50/100 年）· 四类地面粗糙度 · 墙面/采光顶四分区 · μz、βgz 连续计算并取规范下限 · 从属面积折减（只折外压）· 玻璃幕墙 1.0 kPa 下限 · 高级模式可改体型系数与修正系数 · 示意简图 · 分步公式与规范条文"
+    note: "GB 50009—2012 + GB 55001—2021 · 全国 667 个台站基本风压查表（10/50/100 年）· 四类地面粗糙度 · 墙面/采光顶四分区 · μz、βgz 连续计算并取规范下限 · 从属面积折减（只折外压）· 玻璃幕墙 1.0 kPa 下限 · 高级模式可改体型系数与修正系数 · 示意简图 · 分步公式与规范条文",
+    ver: "1.1",
+    date: "2026-10-21"
   },
   {
     name: "四边支承玻璃面板（通用配置）",
     file: "glass-panel.html",
-    note: "9 种玻璃构造 · 四边/对边简支 · PVB/SGP 夹胶（SGP 等效厚度按 DG/TJ 08-56-2019 上海地标第 11.2.8 条）· 强度与挠度校核 · 分步公式可展开"
+    note: "9 种玻璃构造 · 四边/对边简支 · PVB/SGP 夹胶（SGP 等效厚度按 DG/TJ 08-56-2019 上海地标第 11.2.8 条）· 强度与挠度校核 · 分步公式可展开",
+    ver: "1.1",
+    date: "2026-10-21"
   },
   {
     name: "立柱（竖梃）承载力计算",
     file: "mullion.html",
-    note: "13 种截面（含对称工字形、C 形）· 单跨/双跨/悬臂/飞边悬臂 · 全国·广东·海外分项系数 · 碳钢按壁厚取强度（GB 50017-2017）· 高级模式可调立柱倾角 α（图随角度倾斜，计入自重与面板重力分量；α<75° 按采光顶龙骨加活荷载）· 尺寸与荷载直接改图上的标注 · 基础/高级双模式 · 分步公式"
+    note: "13 种截面（含对称工字形、C 形）· 单跨/双跨/悬臂/飞边悬臂 · 全国·广东·海外分项系数 · 碳钢按壁厚取强度（GB 50017-2017）· 高级模式可调立柱倾角 α（图随角度倾斜，计入自重与面板重力分量；α<75° 按采光顶龙骨加活荷载）· 尺寸与荷载直接改图上的标注 · 基础/高级双模式 · 分步公式",
+    ver: "1.5.4",
+    date: "2026-10-21"
   }
 ];
 
@@ -108,23 +150,50 @@ const countEl = document.getElementById("count");
 function render() {
   listEl.innerHTML = "";
 
-  calcs.forEach(calc => {
+  calcs.forEach((calc, i) => {
     const li = document.createElement("li");
     li.className = "card";
 
     const a = document.createElement("a");
     a.href = calc.file;
 
+    /* 标题行：序号 + 名称 …… 版本号 */
+    const top = document.createElement("div");
+    top.className = "top";
+
+    const idx = document.createElement("span");
+    idx.className = "idx";
+    idx.textContent = String(i + 1);
+    top.appendChild(idx);
+
     const name = document.createElement("div");
     name.className = "name";
     name.textContent = calc.name;
-    a.appendChild(name);
+    top.appendChild(name);
+
+    if (calc.ver) {
+      const ver = document.createElement("span");
+      ver.className = "ver";
+      ver.textContent = "v" + calc.ver;
+      ver.title = calc.ver.split(".").length > 2
+        ? "版本 1.累计版本次数.图示改动次数"
+        : "版本 1.累计版本次数";
+      top.appendChild(ver);
+    }
+    a.appendChild(top);
 
     if (calc.note) {
       const note = document.createElement("div");
       note.className = "note";
       note.textContent = calc.note;
       a.appendChild(note);
+    }
+
+    if (calc.date) {
+      const meta = document.createElement("div");
+      meta.className = "meta";
+      meta.textContent = "最后更新 " + calc.date;
+      a.appendChild(meta);
     }
 
     li.appendChild(a);
