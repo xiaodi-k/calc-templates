@@ -345,6 +345,66 @@
       .fx-frac { vertical-align: middle; }
     }
   </style>
+  <style>
+    /* ===== 本页新增：图示（平面图 / 断面图 / 受力简图） ===== */
+    .figbox {
+      margin: 10px 0 6px; border: 1px solid var(--in-line);
+      border-radius: 10px; background: #fff; padding: 6px 4px 2px;
+    }
+    .figbox svg { display: block; width: 100%; height: auto; }
+    .figcap {
+      font-size: 11.5px; color: var(--muted); line-height: 1.6;
+      margin: 6px 2px 0;
+    }
+
+    /* 图上标注内嵌的输入框：尺寸直接改图上的数字 */
+    .dbox {
+      display: flex; align-items: center; justify-content: center;
+      gap: 3px; width: 100%; height: 100%; box-sizing: border-box;
+    }
+    .dbox i {
+      font-style: normal; font-size: 12.5px; color: var(--muted);
+      font-weight: 600; letter-spacing: .2px; flex: 0 0 auto;
+    }
+    .dbox input {
+      width: 100%; min-width: 0; margin: 0; padding: 1px 2px;
+      font: 700 12px/1.25 ui-monospace, "SFMono-Regular", Consolas, monospace;
+      font-variant-numeric: tabular-nums;
+      color: #16325c; text-align: center;
+      background: #fff; border: 1px solid #c2d2ee; border-radius: 5px;
+      box-sizing: border-box; outline: none;
+    }
+    .dbox input:focus {
+      border-color: #2f6feb; box-shadow: 0 0 0 2px rgba(47,111,235,.15);
+    }
+    .dbox input.warn { border-color: #e0a400; background: #fff9ec; }
+    .dbox input.dim-w { max-width: 52px; }
+    .dbox input.dim-s { max-width: 40px; }
+    @media print {
+      .dbox input { border-color: transparent; background: transparent; }
+    }
+
+    /* 断面图下方：每片玻璃的种类选择 */
+    .chiprow { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 4px 3px 8px; border-radius: 999px;
+      border: 1px solid var(--in-line); background: #fff; font-size: 12px;
+    }
+    .chip .n {
+      font-weight: 800; color: var(--in);
+      font-variant-numeric: tabular-nums;
+    }
+    .chip select {
+      width: auto; padding: 2px 4px; font-size: 12px;
+      border-radius: 6px; border-color: #c2d2ee;
+    }
+
+    @media print {
+      .figbox { max-width: 340px; }
+      .figbox svg { max-height: 220px; }
+    }
+  </style>
 </head>
 <body>
   <div class="topbar">
@@ -375,33 +435,26 @@
             <label for="cfg">玻璃配置</label>
             <select id="cfg" style="flex:1 1 auto"></select>
           </div>
-          <div class="grid2" id="interRow">
-            <div>
-              <label for="inter">夹胶片</label>
-              <select id="inter">
-                <option value="PVB" selected>PVB</option>
-                <option value="SGP">SGP</option>
-              </select>
-            </div>
-            <div>
-              <label for="tv">胶片厚 t<sub>v</sub></label>
-              <div class="row" style="margin-bottom:0;gap:6px">
-                <select id="tv">
-                  <option value="0.76">0.76</option>
-                  <option value="1.52">1.52</option>
-                  <option value="2.28" selected>2.28</option>
-                  <option value="3.04">3.04</option>
-                </select>
-                <span class="unit">mm</span>
-              </div>
-            </div>
+          <div class="row" id="interRow">
+            <label for="inter">夹胶片</label>
+            <select id="inter">
+              <option value="PVB" selected>PVB</option>
+              <option value="SGP">SGP</option>
+            </select>
           </div>
           <p class="hint" id="cfgHint"></p>
         </div>
       </div>
 
-      <!-- 各组玻璃厚度 / 种类，按配置动态生成 -->
-      <div id="plyHost"></div>
+      <!-- 构造断面：玻璃片、胶片 ts、空气层 A、各片厚度都在图上直接改 -->
+      <div class="card">
+        <h2>构造断面（室外 → 室内）</h2>
+        <div class="body">
+          <div class="figbox" id="sectionFig"></div>
+          <div class="chiprow" id="plyChips"></div>
+          <p class="hint" id="sectionHint"></p>
+        </div>
+      </div>
 
       <div class="card">
         <h2>面板尺寸与支承</h2>
@@ -421,16 +474,8 @@
               <option value="a">两条长边 → 跨度 = 短边</option>
             </select>
           </div>
-          <div class="row">
-            <label for="a">短边 a</label>
-            <input type="number" id="a" value="1500" step="10" />
-            <span class="unit">mm</span>
-          </div>
-          <div class="row">
-            <label for="b">长边 b</label>
-            <input type="number" id="b" value="3000" step="10" />
-            <span class="unit">mm</span>
-          </div>
+          <div class="figbox" id="planFig"></div>
+          <p class="figcap" id="planCap"></p>
           <div class="row" id="holeRow" hidden>
             <label for="hole" title="点支承玻璃支承孔边至板边的距离，JGJ 102-2003 第 8.1.1 条不宜小于 70 mm">孔边至板边距离</label>
             <input type="number" id="hole" value="100" step="10" />
@@ -501,6 +546,10 @@
               </div>
             </div>
           </details>
+
+          <!-- 受力简图：随荷载值变化 -->
+          <div class="figbox" id="loadFig"></div>
+          <p class="figcap" id="loadCap"></p>
         </div>
       </div>
     </div>
@@ -555,7 +604,10 @@
     SGP 夹层等效厚度按 DG/TJ 08-56-2019 上海地标 第 11.2.8 条计算。单位制 mm / N / MPa。
     四点支承（点支承）按 JGJ 102-2003 第 8.1.5 条：跨度取支承点之间长边 b，
     m 查表 8.1.5-1、μ 查表 8.1.5-3、η 查表 6.1.2-2，挠度限值 b/60，f<sub>g</sub> 取玻璃大面强度。
-    <span class="ver">版本 1.2 · 2026-10-21 18:30</span>
+    <br>图示：面板尺寸与支承平面图（红色虚线为支承边）、玻璃构造断面图（自室外至室内，标 te 等效厚度、
+    t 各片玻璃厚、ts 胶片厚、空气层 A，均可在图上直接改）、荷载受力简图（自重 Dead Load 与
+    风荷载 Wind Load，地震与冲击荷载不在图中表示）。
+    <span class="ver">版本 1.3.1 · 2026-10-22 14:55</span>
   </footer>
 
 <script>
@@ -945,10 +997,11 @@ function tex2html(src) {
   let mode = 'basic';
 
   const el = {};
-  ['cfg', 'cfgHint', 'plyHost', 'a', 'b', 'wk', 'ig', 'E', 'nu', 'gg',
+  ['cfg', 'cfgHint', 'wk', 'ig', 'E', 'nu', 'gg',
    'defdiv', 'gG', 'gw', 'gE', 'psE', 'psw', 'printBtn', 'fxOpen', 'fxClose',
-   'support', 'spanSide', 'spanRow', 'spanHint', 'inter', 'tv', 'hole', 'holeRow',
-   'modeSw', 'lblBasic', 'lblAdv', 'interRow', 'supportRow', 'matBox']
+   'support', 'spanSide', 'spanRow', 'spanHint', 'inter', 'hole', 'holeRow',
+   'modeSw', 'lblBasic', 'lblAdv', 'interRow', 'supportRow', 'matBox',
+   'planFig', 'planCap', 'sectionFig', 'sectionHint', 'loadFig', 'loadCap', 'plyChips']
     .forEach(id => { el[id] = document.getElementById(id); });
 
   const f0 = x => x.toFixed(0);
@@ -970,9 +1023,11 @@ function tex2html(src) {
 
   /* 各片玻璃的当前状态，切换配置时尽量沿用 */
   let plyState = [];
+  /* 面板尺寸与胶片厚：现在直接在图上改，值存在这里 */
+  const GS = { a: 1500, b: 3000, ts: 2.28 };
 
   function ensureState(n) {
-    while (plyState.length < n) plyState.push({ t: 8, type: 'HS' });
+    while (plyState.length < n) plyState.push({ t: 8, type: 'HS', raw: '8' });
     return plyState.slice(0, n);
   }
 
@@ -1018,67 +1073,325 @@ function tex2html(src) {
     fillCfg();
   }
 
-  /* 生成各组玻璃输入卡 */
-  function buildPlyCards() {
+  /* ===== 图示：平面图 / 断面图 / 受力简图 ===== */
+  /* 图上输入框的原始文本（保留用户敲的样子，如 1.50 不变成 1.5） */
+  const GSRAW = { a: '1.500', b: '3.000', ts: '2.28' };
+  const f1 = x => (Math.round(x * 10) / 10).toFixed(1);
+  const esc2 = s => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+
+  function foBox(x, y, w, h, inner) {
+    return '<foreignObject x="' + f1(x) + '" y="' + f1(y) + '" width="' + f1(w) +
+           '" height="' + f1(h) + '">' +
+           '<div xmlns="http://www.w3.org/1999/xhtml" class="dbox">' + inner + '</div></foreignObject>';
+  }
+  function foInp(key, raw, w) {
+    const ww = w || 44;
+    return '<input type="text" inputmode="decimal" autocomplete="off" spellcheck="false" ' +
+           'data-fg="' + key + '" class="dim-w" style="width:' + ww + 'px;max-width:' + ww + 'px" ' +
+           'value="' + esc2(raw) + '" title="改完按回车（或点其他地方）生效"/>';
+  }
+
+  /* ---------- 平面图：面板尺寸 + 支承方式 ---------- */
+  function drawPlan() {
+    const W = 340, Hh = 250;
+    const aM = GS.a / 1000, bM = GS.b / 1000;
+    const ax0 = 100, ax1 = 326, ay0 = 52, ay1 = 214;
+    const sc = Math.min((ax1 - ax0) / aM, (ay1 - ay0) / bM);
+    const gw = aM * sc, gh = bM * sc;
+    const gx = ax0 + ((ax1 - ax0) - gw) / 2;
+    const gy = ay0 + ((ay1 - ay0) - gh) / 2;
+    const x1 = gx + gw, y1 = gy + gh;
+    const RED = '#c62828';
+    let o = '<svg viewBox="0 0 ' + W + ' ' + Hh + '" role="img">';
+
+    /* 玻璃板 */
+    o += '<rect x="' + f1(gx) + '" y="' + f1(gy) + '" width="' + f1(gw) + '" height="' + f1(gh) +
+         '" fill="#cfe6f0" stroke="#14505f" stroke-width="1.6"/>';
+    /* 玻璃纹理 */
+    const cxm = (gx + x1) / 2, cym = (gy + y1) / 2;
+    for (let i = -1; i <= 1; i++) {
+      o += '<line x1="' + f1(cxm - 9 + i * 9) + '" y1="' + f1(cym + 9) +
+           '" x2="' + f1(cxm + 1 + i * 9) + '" y2="' + f1(cym - 9) +
+           '" stroke="#ffffff" stroke-width="2" stroke-linecap="round" opacity="0.9"/>';
+    }
+
+    /* 支承：红虚线 */
+    const ins = Math.min(8, gw / 6, gh / 6);
+    const sup = el.support.value;
+    const dash = ' stroke="' + RED + '" stroke-width="1.8" stroke-dasharray="7 5" fill="none"';
+    if (sup === 'four') {
+      o += '<rect x="' + f1(gx + ins) + '" y="' + f1(gy + ins) + '" width="' + f1(gw - 2 * ins) +
+           '" height="' + f1(gh - 2 * ins) + '"' + dash + '/>';
+    } else if (sup === 'two') {
+      if (el.spanSide.value === 'b') {
+        /* 支承两条短边（上下横边）→ 跨度 = 长边 */
+        o += '<line x1="' + f1(gx + ins) + '" y1="' + f1(gy + ins) + '" x2="' + f1(x1 - ins) +
+             '" y2="' + f1(gy + ins) + '"' + dash + '/>';
+        o += '<line x1="' + f1(gx + ins) + '" y1="' + f1(y1 - ins) + '" x2="' + f1(x1 - ins) +
+             '" y2="' + f1(y1 - ins) + '"' + dash + '/>';
+      } else {
+        /* 支承两条长边（左右竖边）→ 跨度 = 短边 */
+        o += '<line x1="' + f1(gx + ins) + '" y1="' + f1(gy + ins) + '" x2="' + f1(gx + ins) +
+             '" y2="' + f1(y1 - ins) + '"' + dash + '/>';
+        o += '<line x1="' + f1(x1 - ins) + '" y1="' + f1(gy + ins) + '" x2="' + f1(x1 - ins) +
+             '" y2="' + f1(y1 - ins) + '"' + dash + '/>';
+      }
+    } else {
+      /* 四点支承：四角向内 hole 处的支承点 + 支承线 */
+      const d = Math.min((el.hole ? parseFloat(el.hole.value) : 0) / 1000 * sc,
+                         Math.min(gw, gh) / 2.2);
+      const pts = [[gx + d, gy + d], [x1 - d, gy + d], [x1 - d, y1 - d], [gx + d, y1 - d]];
+      o += '<path d="M' + f1(pts[0][0]) + ',' + f1(pts[0][1]) +
+           ' L' + f1(pts[1][0]) + ',' + f1(pts[1][1]) +
+           ' L' + f1(pts[2][0]) + ',' + f1(pts[2][1]) +
+           ' L' + f1(pts[3][0]) + ',' + f1(pts[3][1]) + ' Z"' + dash + '/>';
+      pts.forEach(p => {
+        o += '<rect x="' + f1(p[0] - 3.5) + '" y="' + f1(p[1] - 3.5) +
+             '" width="7" height="7" fill="' + RED + '"/>';
+      });
+    }
+
+    /* 上方尺寸：短边 a（水平） */
+    const dy = gy - 15;
+    o += '<line x1="' + f1(gx) + '" y1="' + f1(dy) + '" x2="' + f1(x1) + '" y2="' + f1(dy) +
+         '" stroke="#9aa3b2" stroke-width="1"/>';
+    o += '<circle cx="' + f1(gx) + '" cy="' + f1(dy) + '" r="2.6" fill="#9aa3b2"/>';
+    o += '<circle cx="' + f1(x1) + '" cy="' + f1(dy) + '" r="2.6" fill="#9aa3b2"/>';
+    o += foBox((gx + x1) / 2 - 36, dy - 30, 72, 22,
+               '<i>a</i>' + foInp('a', GSRAW.a, 48) + '<i>m</i>');
+
+    /* 左侧尺寸：长边 b（竖向） */
+    const dx = gx - 16;
+    o += '<line x1="' + f1(dx) + '" y1="' + f1(gy) + '" x2="' + f1(dx) + '" y2="' + f1(y1) +
+         '" stroke="#9aa3b2" stroke-width="1"/>';
+    o += '<circle cx="' + f1(dx) + '" cy="' + f1(gy) + '" r="2.6" fill="#9aa3b2"/>';
+    o += '<circle cx="' + f1(dx) + '" cy="' + f1(y1) + '" r="2.6" fill="#9aa3b2"/>';
+    o += foBox(dx - 88, (gy + y1) / 2 - 11, 72, 22,
+               '<i>b</i>' + foInp('b', GSRAW.b, 48) + '<i>m</i>');
+
+    o += '</svg>';
+    return o;
+  }
+
+  /* ---------- 断面图：玻璃配置与厚度 ---------- */
+  /* 布局（viewBox 0 0 340 H）：
+       上部  玻璃片 / 胶片 / 空气层 的断面示意，te 括号在上
+       下部  一排等宽「参数格」：每片玻璃的 t_i、每道胶片的 ts，
+             用引线连回对应的图元（图元与格子左右顺序一致，不会交叉） */
+  function drawSection(r) {
+    const W = 340;
     const cfg = getCurrentConfig();
     const struct = cfg.struct;
-    const nG = struct.length;
-    const n = totalPlies(struct);
-    ensureState(n);
-    const st = plyState;
-    const il = el.inter ? el.inter.value : 'PVB';
-
-    let h = '', k = 0;
+    const il = el.inter.value;
+    const AIR = 12;                       /* 空气层厚度，仅作示意，不参与计算 */
+    const flat = [];
+    let k = 0;
     struct.forEach((counts, gi) => {
-      if (gi > 0) h += '<div class="seam ig">中 空 腔</div>';
-
-      let title;
-      if (nG === 1) title = counts.length > 1 ? '玻璃（' + il + ' 夹胶）' : '玻璃（单片）';
-      else {
-        const pos = gi === 0 ? '室外侧' : (gi === nG - 1 ? '室内侧' : '中间');
-        title = '第 ' + (gi + 1) + ' 组 · ' + pos;
-      }
-      h += '<div class="card"><h2>' + title + '</h2><div class="body">';
-
+      if (gi > 0) flat.push({ kind: 'air', gi: gi });
       counts.forEach((c, ji) => {
-        if (ji > 0) h += '<div class="seam pvb">' + il + '</div>';
-        const idx = k++;
-        const s = st[idx];
-        /* 种类放左列（宽列，保证 “HS 半钢化” 不被截断），厚度放右列 */
-        h += '<div class="grid2">' +
-               '<div><label for="plyG' + idx + '">玻璃 ' + (idx + 1) + ' 种类</label>' +
-                 '<select id="plyG' + idx + '">' +
-                   GL_TYPES.map(o => '<option value="' + o[0] + '"' +
-                     (o[0] === s.type ? ' selected' : '') + '>' + o[1] + '</option>').join('') +
-                 '</select></div>' +
-               '<div><label for="plyT' + idx + '">玻璃 ' + (idx + 1) + ' 厚度</label>' +
-                 '<div class="row" style="margin-bottom:0"><select id="plyT' + idx + '">' +
-                   T_OPTS.map(v => '<option value="' + v + '"' +
-                     (snapT(s.t) === v ? ' selected' : '') + '>' + v + '</option>').join('') +
-                 '</select><span class="unit">mm</span></div></div>' +
-             '</div>';
+        if (ji > 0) flat.push({ kind: 'il', gi: gi });
+        flat.push({ kind: 'g', gi: gi, idx: k });
+        k++;
       });
-
-      h += counts.length > 1
-        ? (il === 'SGP'
-            ? '<p class="hint">SGP：等效厚度按 ' + SGP_REF +
-              ' 计算，刚度用 t<sub>e,w</sub>、' +
-              '强度用 t<sub>e</sub>，计算书见第 ② 步。</p>'
-            : '<p class="hint">等效厚度 t<sub>e</sub> = (Σ t<sub>i</sub>³)<sup>1/3</sup>，' +
-              'PVB 不计入刚度。</p>')
-        : '<p class="hint">单片，等效厚度即为自身厚度。</p>';
-      h += '</div></div>';
+    });
+    let tot = 0;
+    flat.forEach(e => {
+      if (e.kind === 'g') e.t = plyState[e.idx] ? plyState[e.idx].t : 8;
+      else if (e.kind === 'il') e.t = GS.ts;
+      else e.t = AIR;
+      tot += e.t;
     });
 
-    el.plyHost.innerHTML = h;
-    syncOptions();
+    /* 参数格：玻璃片 + 胶片（空气层只标注，不占格） */
+    const cells = flat.filter(e => e.kind !== 'air');
+    const ax0 = 30, ax1 = 310;
+    const sc = (ax1 - ax0) / Math.max(tot, 1);
+    const yTop = 52, yBot = 138;
+    let x = ax0;
+    flat.forEach(e => {
+      e.w = Math.max(e.t * sc, e.kind === 'air' ? 10 : 3);
+      e.x = x; e.x1 = x + e.w;
+      x += e.w;
+    });
 
+    /* 参数格宽度：玻璃 26、胶片 34 起，总宽不够时按比例收紧 */
+    const nG = cells.filter(e => e.kind === 'g').length;
+    const nI = cells.filter(e => e.kind === 'il').length;
+    const ILW = 46;
+    const cellW = nI > 0 && nG > 0
+      ? (ax1 - ax0 - nI * ILW) / nG
+      : (ax1 - ax0) / Math.max(nG, 1);
+    let cx0 = ax0;
+    cells.forEach(e => {
+      e.cw = e.kind === 'il' ? ILW : Math.max(cellW, 22);
+      e.cx = cx0 + e.cw / 2;
+      cx0 += e.cw;
+    });
+
+    let o = '<svg viewBox="0 0 ' + W + ' 200" role="img">';
+    /* 各组等效厚度 te：括号横跨该组 */
+    const gs = {};
+    flat.forEach(e => {
+      if (e.gi === undefined) return;
+      if (!gs[e.gi]) gs[e.gi] = { x0: 1e9, x1: -1e9 };
+      gs[e.gi].x0 = Math.min(gs[e.gi].x0, e.x);
+      gs[e.gi].x1 = Math.max(gs[e.gi].x1, e.x1);
+    });
+    Object.keys(gs).forEach(gi => {
+      const g = gs[gi];
+      const te = r && r.groups[+gi] ? r.groups[+gi].teS : null;
+      o += '<line x1="' + f1(g.x0) + '" y1="40" x2="' + f1(g.x1) + '" y2="40" ' +
+           'stroke="#8aa4cc" stroke-width="1"/>';
+      o += '<line x1="' + f1(g.x0) + '" y1="36" x2="' + f1(g.x0) + '" y2="44" ' +
+           'stroke="#8aa4cc" stroke-width="1"/>';
+      o += '<line x1="' + f1(g.x1) + '" y1="36" x2="' + f1(g.x1) + '" y2="44" ' +
+           'stroke="#8aa4cc" stroke-width="1"/>';
+      o += '<text x="' + f1((g.x0 + g.x1) / 2) + '" y="30" text-anchor="middle" font-size="11.5" ' +
+           'fill="#1c6b8c">te' + (+gi + 1) + (te ? ' = ' + f2(te) + ' mm' : '') + '</text>';
+    });
+
+    /* 玻璃片 / 胶片 / 空气层 */
+    flat.forEach(e => {
+      if (e.kind === 'g') {
+        o += '<rect x="' + f1(e.x) + '" y="' + yTop + '" width="' + f1(e.w) + '" height="' + (yBot - yTop) +
+             '" fill="#cfe6f0" stroke="#14505f" stroke-width="1.2"/>';
+        if (e.w > 13) {
+          o += '<text x="' + f1(e.x + e.w / 2) + '" y="' + ((yTop + yBot) / 2 + 4) +
+               '" text-anchor="middle" font-size="12" fill="#14505f">' + (e.idx + 1) + '</text>';
+        }
+      } else if (e.kind === 'il') {
+        o += '<rect x="' + f1(e.x) + '" y="' + yTop + '" width="' + f1(e.w) + '" height="' + (yBot - yTop) +
+             '" fill="#2f6feb" stroke="#1c4fa8" stroke-width="1"/>';
+      } else {
+        /* 空气层：两侧虚线 + 标 A */
+        o += '<line x1="' + f1(e.x) + '" y1="' + yTop + '" x2="' + f1(e.x) + '" y2="' + yBot +
+             '" stroke="#c9d2e0" stroke-width="1" stroke-dasharray="3 3"/>';
+        o += '<line x1="' + f1(e.x1) + '" y1="' + yTop + '" x2="' + f1(e.x1) + '" y2="' + yBot +
+             '" stroke="#c9d2e0" stroke-width="1" stroke-dasharray="3 3"/>';
+        o += '<line x1="' + f1(e.x + 3) + '" y1="' + ((yTop + yBot) / 2) + '" x2="' + f1(e.x1 - 3) +
+             '" y2="' + ((yTop + yBot) / 2) + '" stroke="#8aa4cc" stroke-width="1"/>';
+        o += '<text x="' + f1((e.x + e.x1) / 2) + '" y="' + ((yTop + yBot) / 2 - 6) +
+             '" text-anchor="middle" font-size="11" fill="#5b7bb5">A</text>';
+      }
+    });
+
+    /* 建筑外表面 / 内表面 */
+    o += '<text transform="rotate(-90 14 96)" x="14" y="96" text-anchor="middle" font-size="10.5" ' +
+         'fill="#6b7280">建筑外表面 Outside</text>';
+    o += '<text transform="rotate(-90 326 96)" x="326" y="96" text-anchor="middle" font-size="10.5" ' +
+         'fill="#6b7280">建筑内表面 Inside</text>';
+
+    /* 参数格：引线 + 名称 + 输入框 */
+    cells.forEach(e => {
+      const isIl = e.kind === 'il';
+      const c = e.cx;
+      o += '<line x1="' + f1((e.x + e.x1) / 2) + '" y1="' + yBot + '" x2="' + f1(c) + '" y2="158" ' +
+           'stroke="#c9d2e0" stroke-width="1" stroke-dasharray="2 2"/>';
+      const lbl = isIl ? 'ts' : 't' + (e.idx + 1);
+      o += '<text x="' + f1(c) + '" y="152" text-anchor="middle" font-size="10.5" fill="#6b7280">' +
+           lbl + '</text>';
+      const bw = Math.min(e.cw - 4, isIl ? 42 : 26);
+      o += foBox(c - bw / 2, 160, bw, 20,
+                 isIl ? foInp('ts', GSRAW.ts, bw - 4)
+                      : foInp('t' + e.idx,
+                              plyState[e.idx] && plyState[e.idx].raw !== undefined
+                                ? plyState[e.idx].raw
+                                : String(plyState[e.idx] ? plyState[e.idx].t : 8),
+                              bw - 4));
+    });
+    o += '<text x="' + (W / 2) + '" y="192" text-anchor="middle" font-size="10.5" fill="#8aa4cc">' +
+         '单位 mm' + (nI > 0 ? '　·　ts = ' + (il === 'SGP' ? 'SGP 结构胶' : 'PVB 夹层胶片') : '') +
+         '</text>';
+
+    o += '</svg>';
+    return o;
+  }
+
+  /* ---------- 受力简图：自重 + 风荷载 ---------- */
+  function drawLoad(r) {
+    const W = 340, Hh = 250;
+    const aM = GS.a / 1000, bM = GS.b / 1000;
+    const sc = Math.min(110 / aM, 140 / bM);
+    const pw = Math.max(10, aM * sc), ph = Math.max(40, bM * sc);
+    const px0 = 64, py0 = 66;
+    const px1 = px0 + pw, py1 = py0 + ph;
+    const wk = el.wk ? parseFloat(el.wk.value) : 1.5;
+    const gk = r ? r.Gk * 1000 : 0;
+    let o = '<svg viewBox="0 0 ' + W + ' ' + Hh + '" role="img">';
+    o += '<defs>' +
+      '<marker id="mkD" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">' +
+      '<path d="M0,0 L7,3.5 L0,7 z" fill="#111"/></marker>' +
+      '<marker id="mkW" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">' +
+      '<path d="M0,0 L7,3.5 L0,7 z" fill="#1f9ae0"/></marker></defs>';
+
+    /* 玻璃板 */
+    o += '<rect x="' + f1(px0) + '" y="' + py0 + '" width="' + f1(pw) + '" height="' + f1(ph) +
+         '" fill="#cfe6f0" stroke="#14505f" stroke-width="1.6"/>';
+
+    /* 支座：上端滑动（Roller），下端固定（PIN） */
+    o += '<path d="M' + f1(px0) + ',' + f1(py0 + 1) + ' L' + f1(px0 - 16) + ',' + f1(py0 - 7) +
+         ' L' + f1(px0 - 16) + ',' + f1(py0 + 9) + ' Z" fill="#fff" fill-opacity="0.9" ' +
+         'stroke="#c62828" stroke-width="1.3"/>';
+    o += '<text x="' + f1(px0 - 20) + '" y="' + f1(py0 + 4) + '" text-anchor="end" font-size="12" ' +
+         'fill="#c62828">Roller</text>';
+    o += '<path d="M' + f1(px0) + ',' + f1(py1 - 1) + ' L' + f1(px0 - 16) + ',' + f1(py1 - 9) +
+         ' L' + f1(px0 - 16) + ',' + f1(py1 + 7) + ' Z" fill="#c62828"/>';
+    o += '<text x="' + f1(px0 - 20) + '" y="' + f1(py1 - 1) + '" text-anchor="end" font-size="12" ' +
+         'fill="#c62828">PIN</text>';
+
+    /* 自重：顶部向下 */
+    const dlLen = 26 + Math.min(14, gk * 40);
+    const dcx = (px0 + px1) / 2;
+    o += '<line x1="' + f1(dcx) + '" y1="' + f1(py0 - 8 - dlLen) + '" x2="' + f1(dcx) + '" y2="' + f1(py0 - 10) +
+         '" stroke="#111" stroke-width="2" marker-end="url(#mkD)"/>';
+    o += '<text x="' + f1(dcx + 8) + '" y="' + f1(py0 - 8 - dlLen) + '" font-size="12" fill="#111">' +
+         'Dead Load 自重</text>';
+    o += '<text x="' + f1(dcx + 8) + '" y="' + f1(py0 - 8 - dlLen + 14) + '" font-size="10.5" ' +
+         'fill="#6b7280">Gk = ' + f3(gk) + ' kPa</text>';
+
+    /* 风荷载：右侧水平分布 */
+    const n = Math.max(3, Math.min(7, Math.round(wk) + 2));
+    const tail = 300;
+    const y0 = py0 + 16, y1 = py1 - 16;
     for (let i = 0; i < n; i++) {
-      const ti = document.getElementById('plyT' + i);
-      const gi = document.getElementById('plyG' + i);
-      ti.addEventListener('change', () => { plyState[i].t = snapT(parseFloat(ti.value)); render(); });
-      gi.addEventListener('change', () => { plyState[i].type = gi.value; render(); });
+      const yy = y0 + (y1 - y0) * (n === 1 ? 0.5 : i / (n - 1));
+      o += '<line x1="' + tail + '" y1="' + f1(yy) + '" x2="' + f1(px1 + 6) + '" y2="' + f1(yy) +
+           '" stroke="#1f9ae0" stroke-width="1.3" marker-end="url(#mkW)"/>';
     }
+    o += '<line x1="' + tail + '" y1="' + f1(y0) + '" x2="' + tail + '" y2="' + f1(y1) +
+         '" stroke="#1f9ae0" stroke-width="1.3"/>';
+    o += '<text x="' + tail + '" y="' + f1(y1 + 20) + '" text-anchor="end" font-size="12" ' +
+         'fill="#1f9ae0">Wind Load 风荷载</text>';
+    o += '<text x="' + tail + '" y="' + f1(y1 + 34) + '" text-anchor="end" font-size="10.5" ' +
+         'fill="#6b7280">wk = ' + f3(wk) + ' kPa</text>';
+
+    o += '<text x="' + f1(px0) + '" y="' + f1(py1 + 20) + '" font-size="11" fill="#6b7280">' +
+         '面板 ' + f2(aM) + ' × ' + f2(bM) + ' m</text>';
+    o += '</svg>';
+    return o;
+  }
+
+  /* 各片玻璃的种类选择（断面图下方的芯片行） */
+  function buildChips() {
+    const cfg = getCurrentConfig();
+    const n = totalPlies(cfg.struct);
+    ensureState(n);
+    let h = '<span class="figcap" style="margin:0">玻璃种类</span>';
+    for (let i = 0; i < n; i++) {
+      const s = plyState[i];
+      h += '<span class="chip"><span class="n">' + (i + 1) + '</span>' +
+           '<select data-fg="k' + i + '">' +
+           GL_TYPES.map(o => '<option value="' + o[0] + '"' +
+             (o[0] === s.type ? ' selected' : '') + '>' + o[1] + '</option>').join('') +
+           '</select></span>';
+    }
+    el.plyChips.innerHTML = h;
+  }
+
+  /* 生成各组玻璃输入卡 —— 现在改为「断面图 + 种类芯片行」 */
+  function buildPlyCards() {
+    buildChips();
+    syncOptions();
   }
 
   /* 联动显示：胶片厚度只对 SGP 起作用（PVB 时置灰）、支承边（仅对边），并给出取值口径提示 */
@@ -1086,8 +1399,6 @@ function tex2html(src) {
     const two = el.support.value === 'two';
     const pt4 = el.support.value === 'pt4';
     const sgp = el.inter.value === 'SGP';
-    el.tv.disabled = !sgp;
-    el.tv.title = sgp ? '' : 'PVB 不计胶片剪切传递，厚度不参与计算';
     el.spanRow.hidden = !two;
     el.holeRow.hidden = !pt4;
 
@@ -1100,7 +1411,7 @@ function tex2html(src) {
         : '<br>PVB：等效厚度取 (Σ t³)<sup>1/3</sup>，不计胶片剪切传递；' +
           '荷载按单片厚度立方比分配，各片单独校核。');
 
-    const A = num('a'), B = num('b');
+    const A = GS.a, B = GS.b;
     const d0 = num('hole');
     /* 四点支承：支承点之间边长 = 板边边长 − 两侧孔边至板边距离 */
     const Ap = Math.min(A, B) - 2 * d0, Bp = Math.max(A, B) - 2 * d0;
@@ -1120,6 +1431,25 @@ function tex2html(src) {
         '<b>不做大挠度折减</b>，f<sub>g</sub> 按<b>边缘强度</b>取值。'
       : '四边简支：跨度取短边 <b>' + L + ' mm</b>，μ / m 按宽长比查附录表，' +
         '做大挠度折减，f<sub>g</sub> 取中部强度。';
+
+    el.planCap.innerHTML = el.support.value === 'four'
+      ? '红色虚线为支承边（四边均支承）。'
+      : el.support.value === 'two'
+      ? (el.spanSide.value === 'b'
+          ? '红色虚线为支承边：支承两条<b>短边</b>，计算跨度 = 长边。'
+          : '红色虚线为支承边：支承两条<b>长边</b>，计算跨度 = 短边。')
+      : '红色实心方块为点支承位置，红色虚线为支承点连线。';
+
+    el.sectionHint.innerHTML =
+      '断面自左向右为<b>室外 → 室内</b>：te 为各构造组等效厚度，' +
+      (sgp
+        ? '蓝色为 SGP 结构胶（ts），等效厚度按 ' + SGP_REF + ' 计算。'
+        : '蓝色为 PVB 夹层胶片（ts），PVB 不计剪切传递、不计入等效厚度。') +
+      ' 中间虚线空腔为空气层 A。t1、t2… 与 ts 可在图上直接改。';
+
+    el.loadCap.innerHTML =
+      '自重 Dead Load 沿板面竖向向下，风荷载 Wind Load 垂直板面水平作用；' +
+      '上端滑动（Roller）、下端固定（PIN）。地震作用与冲击荷载不在本图中表示。';
   }
 
   function readInputs() {
@@ -1128,10 +1458,10 @@ function tex2html(src) {
     const n = totalPlies(struct);
     const ts = [], types = [];
     for (let i = 0; i < n; i++) {
-      ts.push(parseFloat(document.getElementById('plyT' + i).value));
-      types.push(document.getElementById('plyG' + i).value);
+      ts.push(plyState[i].t);
+      types.push(plyState[i].type);
     }
-    const A = num('a'), B = num('b');
+    const A = GS.a, B = GS.b;
     const two = el.support.value === 'two';
     const pt4 = el.support.value === 'pt4';
     /* 对边简支的跨度：支承两条短边则跨度取长边，反之取短边 */
@@ -1145,7 +1475,7 @@ function tex2html(src) {
       E: num('E'), nu: num('nu'), gammaG: num('gg'), defDiv: num('defdiv'),
       gG: num('gG'), gw: num('gw'), gE: num('gE'), psE: num('psE'), psw: num('psw'),
       support: el.support.value, span: span, hole: num('hole'),
-      interlayer: el.inter.value, tv: num('tv')
+      interlayer: el.inter.value, tv: GS.ts
     };
   }
 
@@ -1479,15 +1809,41 @@ function tex2html(src) {
     return S;
   }
 
+  /* ===== 三张图重绘 =====
+     图上输入框在重绘时会被换掉，焦点会丢 —— 所以先记下当前聚焦的是哪个
+     data-fg，重绘后按名字找回来，并把光标位置也还原。 */
+  function renderFigures(r) {
+    const act = document.activeElement;
+    let key = null, pos = null;
+    if (act && act !== document.body && act.getAttribute) {
+      key = act.getAttribute('data-fg');
+      if (key) { try { pos = act.selectionStart; } catch (e) { pos = null; } }
+    }
+
+    el.planFig.innerHTML = drawPlan();
+    el.sectionFig.innerHTML = drawSection(r);
+    el.loadFig.innerHTML = drawLoad(r);
+
+    if (key) {
+      const n = document.querySelector('[data-fg="' + key + '"]');
+      if (n) {
+        n.focus();
+        if (pos !== null) { try { n.setSelectionRange(pos, pos); } catch (e) {} }
+      }
+    }
+  }
+
   /* ===== 输出渲染 ===== */
   function render() {
     const p = readInputs();
     if (!valid(p)) {
       ['verdict', 'basic', 'flexTable', 'strTable', 'fxSteps']
         .forEach(id => { document.getElementById(id).innerHTML = ''; });
+      renderFigures(null);
       return;
     }
     const r = calcGlass(p);
+    renderFigures(r);
 
     /* 结论：取各组挠度、各片强度的最大比值 */
     let maxF = 0, maxFg = 1;
@@ -1611,8 +1967,8 @@ function tex2html(src) {
 
   el.printBtn.addEventListener('click', () => window.print());
 
-  ['a', 'b', 'wk', 'ig', 'E', 'nu', 'gg', 'defdiv', 'gG', 'gw', 'gE', 'psE', 'psw',
-   'tv', 'support', 'spanSide', 'hole']
+  ['wk', 'ig', 'E', 'nu', 'gg', 'defdiv', 'gG', 'gw', 'gE', 'psE', 'psw',
+   'support', 'spanSide', 'hole']
     .forEach(id => {
       const e = document.getElementById(id);
       const fn = () => { syncOptions(); render(); };
@@ -1620,9 +1976,79 @@ function tex2html(src) {
       e.addEventListener('change', fn);
     });
 
-  /* 切换胶片类型要重画玻璃卡（分隔条与提示文字会跟着变） */
+  /* 切换胶片类型要重画断面图（te 标注与提示文字会跟着变） */
   ['input', 'change'].forEach(t =>
     el.inter.addEventListener(t, () => { syncOptions(); buildPlyCards(); render(); }));
+
+  /* ---------- 图上直接改尺寸 / 厚度 / 种类 ---------- */
+  /* 输入过程中只记原文、不重算 —— 让用户可以敲完整再生效；
+     等回车或失焦（change）时才落定并重画几何。 */
+  function onFigEdit(e, commit) {
+    const t = e.target;
+    if (!t || !t.getAttribute) return;
+    const k = t.getAttribute('data-fg');
+    if (!k) return;
+
+    /* 芯片行里的种类下拉 */
+    if (k.charAt(0) === 'k') {
+      const i = parseInt(k.slice(1), 10);
+      if (!isNaN(i) && plyState[i]) {
+        plyState[i].type = t.value;
+        render();
+      }
+      return;
+    }
+
+    if (k === 'a' || k === 'b') {
+      GSRAW[k] = t.value;
+      if (!commit) return;
+      const v = parseFloat(t.value);
+      if (isFinite(v) && v > 0) {
+        GS[k] = Math.round(v * 1000);
+        GSRAW[k] = t.value.trim();
+      } else {
+        GSRAW[k] = (GS[k] / 1000).toFixed(3);
+      }
+      render();
+      return;
+    }
+
+    if (k === 'ts') {
+      GSRAW.ts = t.value;
+      if (!commit) return;
+      const v = parseFloat(t.value);
+      if (isFinite(v) && v > 0) {
+        GS.ts = v;
+        GSRAW.ts = t.value.trim();
+      } else {
+        GSRAW.ts = String(GS.ts);
+      }
+      render();
+      return;
+    }
+
+    /* 玻璃片厚度 t1、t2… */
+    if (k.charAt(0) === 't') {
+      const i = parseInt(k.slice(1), 10);
+      if (isNaN(i) || !plyState[i]) return;
+      plyState[i].raw = t.value;
+      if (!commit) return;
+      const v = parseFloat(t.value);
+      if (isFinite(v) && v > 0) {
+        plyState[i].t = v;
+        plyState[i].raw = t.value.trim();
+      } else {
+        plyState[i].raw = String(plyState[i].t);
+      }
+      render();
+      return;
+    }
+  }
+
+  [el.planFig, el.sectionFig, el.loadFig, el.plyChips].forEach(host => {
+    host.addEventListener('input', e => onFigEdit(e, false));
+    host.addEventListener('change', e => onFigEdit(e, true));
+  });
 
   applyMode();
   buildPlyCards();
