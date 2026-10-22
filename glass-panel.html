@@ -52,10 +52,10 @@
 
     main {
       display: grid;
-      grid-template-columns: 380px minmax(0, 1fr);
+      grid-template-columns: 480px minmax(0, 1fr);
       gap: 20px;
       align-items: start;
-      max-width: 1280px;
+      max-width: 1440px;
       margin: 0 auto;
     }
     @media (max-width: 900px) {
@@ -72,15 +72,15 @@
     .card + .card { margin-top: 16px; }
     .card > h2 {
       margin: 0;
-      padding: 12px 16px;
-      font-size: 13px;
+      padding: 13px 18px;
+      font-size: 13.5px;
       font-weight: 800;
       letter-spacing: .5px;
       color: var(--muted);
       background: #fbfbfd;
       border-bottom: 1px solid var(--line);
     }
-    .card > .body { padding: 14px 16px 16px; }
+    .card > .body { padding: 16px 18px 18px; }
 
     /* ===== 输入行 ===== */
     .row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
@@ -348,13 +348,13 @@
   <style>
     /* ===== 本页新增：图示（平面图 / 断面图 / 受力简图） ===== */
     .figbox {
-      margin: 10px 0 6px; border: 1px solid var(--in-line);
-      border-radius: 10px; background: #fff; padding: 6px 4px 2px;
+      margin: 12px 0 8px; border: 1px solid var(--in-line);
+      border-radius: 10px; background: #fff; padding: 10px 6px 4px;
     }
     .figbox svg { display: block; width: 100%; height: auto; }
     .figcap {
-      font-size: 11.5px; color: var(--muted); line-height: 1.6;
-      margin: 6px 2px 0;
+      font-size: 12px; color: var(--muted); line-height: 1.65;
+      margin: 8px 2px 0;
     }
 
     /* 图上标注内嵌的输入框：尺寸直接改图上的数字 */
@@ -429,26 +429,26 @@
       </div>
 
       <div class="card">
-        <h2>构造型式</h2>
+        <h2>幕墙玻璃形式</h2>
         <div class="body">
           <div class="row">
-            <label for="cfg">玻璃配置</label>
+            <label for="cfg">玻璃形式代码</label>
             <select id="cfg" style="flex:1 1 auto"></select>
           </div>
           <div class="row" id="interRow">
-            <label for="inter">夹胶片</label>
+            <label for="inter">结构胶种类</label>
             <select id="inter">
-              <option value="PVB" selected>PVB</option>
-              <option value="SGP">SGP</option>
+              <option value="PVB" selected>PVB 夹层胶片</option>
+              <option value="SGP">SGP 结构胶</option>
             </select>
           </div>
           <p class="hint" id="cfgHint"></p>
         </div>
       </div>
 
-      <!-- 构造断面：玻璃片、胶片 ts、空气层 A、各片厚度都在图上直接改 -->
+      <!-- 玻璃配置：玻璃片、胶片 ts、空气层 A、各片厚度都在图上直接改 -->
       <div class="card">
-        <h2>构造断面（室外 → 室内）</h2>
+        <h2>玻璃配置</h2>
         <div class="body">
           <div class="figbox" id="sectionFig"></div>
           <div class="chiprow" id="plyChips"></div>
@@ -604,10 +604,10 @@
     SGP 夹层等效厚度按 DG/TJ 08-56-2019 上海地标 第 11.2.8 条计算。单位制 mm / N / MPa。
     四点支承（点支承）按 JGJ 102-2003 第 8.1.5 条：跨度取支承点之间长边 b，
     m 查表 8.1.5-1、μ 查表 8.1.5-3、η 查表 6.1.2-2，挠度限值 b/60，f<sub>g</sub> 取玻璃大面强度。
-    <br>图示：面板尺寸与支承平面图（红色虚线为支承边）、玻璃构造断面图（自室外至室内，标 te 等效厚度、
+    <br>图示：面板尺寸与支承平面图（红色虚线为支承边）、玻璃配置断面图（自室外至室内，标 te 等效厚度、
     t 各片玻璃厚、ts 胶片厚、空气层 A，均可在图上直接改）、荷载受力简图（自重 Dead Load 与
     风荷载 Wind Load，地震与冲击荷载不在图中表示）。
-    <span class="ver">版本 1.3.1 · 2026-10-22 14:55</span>
+    <span class="ver">版本 1.4.1 · 2026-10-22 15:25</span>
   </footer>
 
 <script>
@@ -645,7 +645,7 @@ const G_INTER = { PVB: 0.44, SGP: 11.3 };
 /* SGP 夹层等效厚度算法的规范出处（页面对外展示统一引用这一条） */
 const SGP_REF = 'DG/TJ 08-56-2019 上海地标 第 11.2.8 条';
 
-/* 构造型式：每组一个数组，元素个数 = 该组的玻璃片数
+/* 幕墙玻璃形式：每组一个数组，元素个数 = 该组的玻璃片数
    '.' 表示 PVB 夹胶（同组），'+' 表示中空腔（分组） */
 const CONFIGS = [
   { key: 'G',            struct: [[1]],                     note: '单片玻璃' },
@@ -1058,14 +1058,13 @@ function tex2html(src) {
     el.cfg.value = cur;
   }
 
-  /* 基础模式：锁死 PVB 夹胶 + 四边简支，并隐藏这三项与材料系数 */
+  /* 基础模式：四边简支固定；夹胶片（结构胶种类）两种模式都可选 */
   function applyMode() {
     const basic = mode === 'basic';
-    el.interRow.hidden = basic;
     el.supportRow.hidden = basic;
     el.matBox.hidden = basic;
-    /* 基础模式把这两项定死：PVB 夹胶 + 四边简支（隐藏后不再给用户任何入口） */
-    if (basic) { el.inter.value = 'PVB'; el.support.value = 'four'; }
+    /* 基础模式把支承方式定死为四边简支；结构胶种类仍可由用户选 */
+    if (basic) el.support.value = 'four';
     el.modeSw.className = 'ios-sw' + (basic ? '' : ' on');
     el.modeSw.setAttribute('aria-checked', basic ? 'false' : 'true');
     el.lblBasic.className = 'ios-lbl' + (basic ? ' on' : '');
@@ -1095,10 +1094,14 @@ function tex2html(src) {
   function drawPlan() {
     const W = 340, Hh = 250;
     const aM = GS.a / 1000, bM = GS.b / 1000;
-    const ax0 = 100, ax1 = 326, ay0 = 52, ay1 = 214;
-    const sc = Math.min((ax1 - ax0) / aM, (ay1 - ay0) / bM);
-    const gw = aM * sc, gh = bM * sc;
-    const gx = ax0 + ((ax1 - ax0) - gw) / 2;
+    /* 高度撑满，宽度按比例；左侧留出长边 b 的标注位 */
+    const ay0 = 56, ay1 = 222;
+    const axL = 128, axR = 322;
+    /* 宽高都受可用区限制：太宽的板按宽度反推高度 */
+    let sc = Math.min((ay1 - ay0) / Math.max(bM, 0.01), (axR - axL) / Math.max(aM, 0.01));
+    const gh = bM * sc, gw = aM * sc;
+    /* 玻璃水平居中于「右侧可用区」，左边给 b 的尺寸线 */
+    const gx = axL + ((axR - axL) - gw) / 2;
     const gy = ay0 + ((ay1 - ay0) - gh) / 2;
     const x1 = gx + gw, y1 = gy + gh;
     const RED = '#c62828';
@@ -1160,13 +1163,15 @@ function tex2html(src) {
     o += foBox((gx + x1) / 2 - 36, dy - 30, 72, 22,
                '<i>a</i>' + foInp('a', GSRAW.a, 48) + '<i>m</i>');
 
-    /* 左侧尺寸：长边 b（竖向） */
+    /* 左侧尺寸：长边 b（竖向）—— 尺寸线贴玻璃左侧，标注框靠画布左缘 */
     const dx = gx - 16;
     o += '<line x1="' + f1(dx) + '" y1="' + f1(gy) + '" x2="' + f1(dx) + '" y2="' + f1(y1) +
          '" stroke="#9aa3b2" stroke-width="1"/>';
     o += '<circle cx="' + f1(dx) + '" cy="' + f1(gy) + '" r="2.6" fill="#9aa3b2"/>';
     o += '<circle cx="' + f1(dx) + '" cy="' + f1(y1) + '" r="2.6" fill="#9aa3b2"/>';
-    o += foBox(dx - 88, (gy + y1) / 2 - 11, 72, 22,
+    o += '<line x1="' + f1(dx - 4) + '" y1="' + f1((gy + y1) / 2) + '" x2="' + f1(dx - 12) +
+         '" y2="' + f1((gy + y1) / 2) + '" stroke="#c9d2e0" stroke-width="0.9" stroke-dasharray="2 2"/>';
+    o += foBox(Math.max(4, dx - 96), (gy + y1) / 2 - 11, 74, 22,
                '<i>b</i>' + foInp('b', GSRAW.b, 48) + '<i>m</i>');
 
     o += '</svg>';
@@ -1206,7 +1211,8 @@ function tex2html(src) {
     const cells = flat.filter(e => e.kind !== 'air');
     const ax0 = 30, ax1 = 310;
     const sc = (ax1 - ax0) / Math.max(tot, 1);
-    const yTop = 52, yBot = 138;
+    /* 玻璃片画得高一些，比例上更接近真实的「细长」断面 */
+    const yTop = 56, yBot = 206;
     let x = ax0;
     flat.forEach(e => {
       e.w = Math.max(e.t * sc, e.kind === 'air' ? 10 : 3);
@@ -1228,7 +1234,7 @@ function tex2html(src) {
       cx0 += e.cw;
     });
 
-    let o = '<svg viewBox="0 0 ' + W + ' 200" role="img">';
+    let o = '<svg viewBox="0 0 ' + W + ' 268" role="img">';
     /* 各组等效厚度 te：括号横跨该组 */
     const gs = {};
     flat.forEach(e => {
@@ -1240,13 +1246,13 @@ function tex2html(src) {
     Object.keys(gs).forEach(gi => {
       const g = gs[gi];
       const te = r && r.groups[+gi] ? r.groups[+gi].teS : null;
-      o += '<line x1="' + f1(g.x0) + '" y1="40" x2="' + f1(g.x1) + '" y2="40" ' +
+      o += '<line x1="' + f1(g.x0) + '" y1="44" x2="' + f1(g.x1) + '" y2="44" ' +
            'stroke="#8aa4cc" stroke-width="1"/>';
-      o += '<line x1="' + f1(g.x0) + '" y1="36" x2="' + f1(g.x0) + '" y2="44" ' +
+      o += '<line x1="' + f1(g.x0) + '" y1="40" x2="' + f1(g.x0) + '" y2="48" ' +
            'stroke="#8aa4cc" stroke-width="1"/>';
-      o += '<line x1="' + f1(g.x1) + '" y1="36" x2="' + f1(g.x1) + '" y2="44" ' +
+      o += '<line x1="' + f1(g.x1) + '" y1="40" x2="' + f1(g.x1) + '" y2="48" ' +
            'stroke="#8aa4cc" stroke-width="1"/>';
-      o += '<text x="' + f1((g.x0 + g.x1) / 2) + '" y="30" text-anchor="middle" font-size="11.5" ' +
+      o += '<text x="' + f1((g.x0 + g.x1) / 2) + '" y="34" text-anchor="middle" font-size="11.5" ' +
            'fill="#1c6b8c">te' + (+gi + 1) + (te ? ' = ' + f2(te) + ' mm' : '') + '</text>';
     });
 
@@ -1276,22 +1282,23 @@ function tex2html(src) {
     });
 
     /* 建筑外表面 / 内表面 */
-    o += '<text transform="rotate(-90 14 96)" x="14" y="96" text-anchor="middle" font-size="10.5" ' +
-         'fill="#6b7280">建筑外表面 Outside</text>';
-    o += '<text transform="rotate(-90 326 96)" x="326" y="96" text-anchor="middle" font-size="10.5" ' +
-         'fill="#6b7280">建筑内表面 Inside</text>';
+    const midY = (yTop + yBot) / 2;
+    o += '<text transform="rotate(-90 14 ' + f1(midY) + ')" x="14" y="' + f1(midY) +
+         '" text-anchor="middle" font-size="10.5" fill="#6b7280">建筑外表面 Outside</text>';
+    o += '<text transform="rotate(-90 326 ' + f1(midY) + ')" x="326" y="' + f1(midY) +
+         '" text-anchor="middle" font-size="10.5" fill="#6b7280">建筑内表面 Inside</text>';
 
     /* 参数格：引线 + 名称 + 输入框 */
     cells.forEach(e => {
       const isIl = e.kind === 'il';
       const c = e.cx;
-      o += '<line x1="' + f1((e.x + e.x1) / 2) + '" y1="' + yBot + '" x2="' + f1(c) + '" y2="158" ' +
+      o += '<line x1="' + f1((e.x + e.x1) / 2) + '" y1="' + yBot + '" x2="' + f1(c) + '" y2="226" ' +
            'stroke="#c9d2e0" stroke-width="1" stroke-dasharray="2 2"/>';
       const lbl = isIl ? 'ts' : 't' + (e.idx + 1);
-      o += '<text x="' + f1(c) + '" y="152" text-anchor="middle" font-size="10.5" fill="#6b7280">' +
+      o += '<text x="' + f1(c) + '" y="220" text-anchor="middle" font-size="10.5" fill="#6b7280">' +
            lbl + '</text>';
       const bw = Math.min(e.cw - 4, isIl ? 42 : 26);
-      o += foBox(c - bw / 2, 160, bw, 20,
+      o += foBox(c - bw / 2, 228, bw, 20,
                  isIl ? foInp('ts', GSRAW.ts, bw - 4)
                       : foInp('t' + e.idx,
                               plyState[e.idx] && plyState[e.idx].raw !== undefined
@@ -1299,7 +1306,7 @@ function tex2html(src) {
                                 : String(plyState[e.idx] ? plyState[e.idx].t : 8),
                               bw - 4));
     });
-    o += '<text x="' + (W / 2) + '" y="192" text-anchor="middle" font-size="10.5" fill="#8aa4cc">' +
+    o += '<text x="' + (W / 2) + '" y="260" text-anchor="middle" font-size="10.5" fill="#8aa4cc">' +
          '单位 mm' + (nI > 0 ? '　·　ts = ' + (il === 'SGP' ? 'SGP 结构胶' : 'PVB 夹层胶片') : '') +
          '</text>';
 
@@ -1328,15 +1335,21 @@ function tex2html(src) {
     o += '<rect x="' + f1(px0) + '" y="' + py0 + '" width="' + f1(pw) + '" height="' + f1(ph) +
          '" fill="#cfe6f0" stroke="#14505f" stroke-width="1.6"/>';
 
-    /* 支座：上端滑动（Roller），下端固定（PIN） */
-    o += '<path d="M' + f1(px0) + ',' + f1(py0 + 1) + ' L' + f1(px0 - 16) + ',' + f1(py0 - 7) +
-         ' L' + f1(px0 - 16) + ',' + f1(py0 + 9) + ' Z" fill="#fff" fill-opacity="0.9" ' +
-         'stroke="#c62828" stroke-width="1.3"/>';
-    o += '<text x="' + f1(px0 - 20) + '" y="' + f1(py0 + 4) + '" text-anchor="end" font-size="12" ' +
+    /* 支座：上端滑动（Roller），下端固定（PIN）
+       Roller = 实心三角（与 PIN 同款）+ 底边横线（滑动面）；PIN = 实心三角（固定） */
+    const tri = function (y, dy) {
+      return '<path d="M' + f1(px0) + ',' + f1(y + dy) +
+             ' L' + f1(px0 - 15) + ',' + f1(y + dy - 8) +
+             ' L' + f1(px0 - 15) + ',' + f1(y + dy + 8) + ' Z" fill="#c62828"/>';
+    };
+    o += tri(py0, 0);
+    /* 底边横线：与三角下角齐平，稍稍伸出以示滑动面 */
+    o += '<line x1="' + f1(px0 - 18) + '" y1="' + f1(py0 + 9) + '" x2="' + f1(px0 - 1) +
+         '" y2="' + f1(py0 + 9) + '" stroke="#c62828" stroke-width="1.6"/>';
+    o += '<text x="' + f1(px0 - 22) + '" y="' + f1(py0 + 4) + '" text-anchor="end" font-size="12" ' +
          'fill="#c62828">Roller</text>';
-    o += '<path d="M' + f1(px0) + ',' + f1(py1 - 1) + ' L' + f1(px0 - 16) + ',' + f1(py1 - 9) +
-         ' L' + f1(px0 - 16) + ',' + f1(py1 + 7) + ' Z" fill="#c62828"/>';
-    o += '<text x="' + f1(px0 - 20) + '" y="' + f1(py1 - 1) + '" text-anchor="end" font-size="12" ' +
+    o += tri(py1, 0);
+    o += '<text x="' + f1(px0 - 22) + '" y="' + f1(py1 - 1) + '" text-anchor="end" font-size="12" ' +
          'fill="#c62828">PIN</text>';
 
     /* 自重：顶部向下 */
@@ -1349,20 +1362,22 @@ function tex2html(src) {
     o += '<text x="' + f1(dcx + 8) + '" y="' + f1(py0 - 8 - dlLen + 14) + '" font-size="10.5" ' +
          'fill="#6b7280">Gk = ' + f3(gk) + ' kPa</text>';
 
-    /* 风荷载：右侧水平分布 */
+    /* 风荷载：右侧水平分布；箭头上下端与玻璃板上下边对齐 */
     const n = Math.max(3, Math.min(7, Math.round(wk) + 2));
-    const tail = 300;
-    const y0 = py0 + 16, y1 = py1 - 16;
+    const tail = px1 + 58;                       /* 箭头长度固定，不再拉得过长 */
+    const y0 = py0, y1 = py1;                    /* 与玻璃板上下边对齐 */
     for (let i = 0; i < n; i++) {
       const yy = y0 + (y1 - y0) * (n === 1 ? 0.5 : i / (n - 1));
-      o += '<line x1="' + tail + '" y1="' + f1(yy) + '" x2="' + f1(px1 + 6) + '" y2="' + f1(yy) +
+      o += '<line x1="' + f1(tail) + '" y1="' + f1(yy) + '" x2="' + f1(px1 + 6) + '" y2="' + f1(yy) +
            '" stroke="#1f9ae0" stroke-width="1.3" marker-end="url(#mkW)"/>';
     }
-    o += '<line x1="' + tail + '" y1="' + f1(y0) + '" x2="' + tail + '" y2="' + f1(y1) +
+    o += '<line x1="' + f1(tail) + '" y1="' + f1(y0) + '" x2="' + tail + '" y2="' + f1(y1) +
          '" stroke="#1f9ae0" stroke-width="1.3"/>';
-    o += '<text x="' + tail + '" y="' + f1(y1 + 20) + '" text-anchor="end" font-size="12" ' +
-         'fill="#1f9ae0">Wind Load 风荷载</text>';
-    o += '<text x="' + tail + '" y="' + f1(y1 + 34) + '" text-anchor="end" font-size="10.5" ' +
+    o += '<text x="' + f1(tail + 4) + '" y="' + f1((y0 + y1) / 2 - 6) + '" font-size="12" ' +
+         'fill="#1f9ae0">Wind Load</text>';
+    o += '<text x="' + f1(tail + 4) + '" y="' + f1((y0 + y1) / 2 + 9) + '" font-size="10.5" ' +
+         'fill="#1f9ae0">风荷载</text>';
+    o += '<text x="' + f1(tail + 4) + '" y="' + f1((y0 + y1) / 2 + 23) + '" font-size="10.5" ' +
          'fill="#6b7280">wk = ' + f3(wk) + ' kPa</text>';
 
     o += '<text x="' + f1(px0) + '" y="' + f1(py1 + 20) + '" font-size="11" fill="#6b7280">' +
@@ -1852,7 +1867,7 @@ function tex2html(src) {
     r.flat.forEach((f, i) => { if (f.q.ratio > maxS) { maxS = f.q.ratio; maxSi = i; } });
 
     document.getElementById('verdict').innerHTML =
-      '<div class="item"><div class="k">构造型式</div>' +
+      '<div class="item"><div class="k">幕墙玻璃形式</div>' +
         '<div class="v">' + getCurrentConfig().key + '</div>' +
         '<div class="sub">' + r.flat.length + ' 片玻璃 / ' + r.nG + ' 个构造组 · ' +
           (r.two ? '对边简支' : (r.pt4 ? '四点支承' : '四边简支')) +
