@@ -504,6 +504,22 @@
               <option value="0.32">9 度 0.40g</option>
             </select>
           </div>
+          <div class="grid2">
+            <div>
+              <label for="supTop">上端支座</label>
+              <select id="supTop">
+                <option value="roller" selected>Roller 滑动</option>
+                <option value="pin">PIN 固定</option>
+              </select>
+            </div>
+            <div>
+              <label for="supBot">下端支座</label>
+              <select id="supBot">
+                <option value="pin" selected>PIN 固定</option>
+                <option value="roller">Roller 滑动</option>
+              </select>
+            </div>
+          </div>
 
           <details id="matBox">
             <summary>材料与系数</summary>
@@ -607,7 +623,7 @@
     <br>图示：面板尺寸与支承平面图（红色虚线为支承边）、玻璃配置断面图（自室外至室内，标 te 等效厚度、
     t 各片玻璃厚、ts 胶片厚、空气层 A，均可在图上直接改）、荷载受力简图（自重 Dead Load 与
     风荷载 Wind Load，地震与冲击荷载不在图中表示）。
-    <span class="ver">版本 1.4.2 · 2026-10-22 15:25</span>
+    <span class="ver">版本 1.5.2 · 2026-10-22 15:55</span>
   </footer>
 
 <script>
@@ -1001,6 +1017,7 @@ function tex2html(src) {
    'defdiv', 'gG', 'gw', 'gE', 'psE', 'psw', 'printBtn', 'fxOpen', 'fxClose',
    'support', 'spanSide', 'spanRow', 'spanHint', 'inter', 'hole', 'holeRow',
    'modeSw', 'lblBasic', 'lblAdv', 'interRow', 'supportRow', 'matBox',
+   'supTop', 'supBot',
    'planFig', 'planCap', 'sectionFig', 'sectionHint', 'loadFig', 'loadCap', 'plyChips']
     .forEach(id => { el[id] = document.getElementById(id); });
 
@@ -1316,11 +1333,12 @@ function tex2html(src) {
 
   /* ---------- 受力简图：自重 + 风荷载 ---------- */
   function drawLoad(r) {
-    const W = 340, Hh = 250;
+    const W = 340, Hh = 286;
     const aM = GS.a / 1000, bM = GS.b / 1000;
-    const sc = Math.min(110 / aM, 140 / bM);
-    const pw = Math.max(10, aM * sc), ph = Math.max(40, bM * sc);
-    const px0 = 64, py0 = 66;
+    /* 玻璃画成细长条：宽度按 aM 收窄，高度按 bM 撑满 */
+    const sc = Math.min(52 / aM, 172 / bM);
+    const pw = Math.max(7, aM * sc), ph = Math.max(40, bM * sc);
+    const px0 = 72, py0 = 62;
     const px1 = px0 + pw, py1 = py0 + ph;
     const wk = el.wk ? parseFloat(el.wk.value) : 1.5;
     const gk = r ? r.Gk * 1000 : 0;
@@ -1335,31 +1353,40 @@ function tex2html(src) {
     o += '<rect x="' + f1(px0) + '" y="' + py0 + '" width="' + f1(pw) + '" height="' + f1(ph) +
          '" fill="#cfe6f0" stroke="#14505f" stroke-width="1.6"/>';
 
-    /* 支座：上端滑动（Roller），下端固定（PIN）
-       Roller = 实心三角（与 PIN 同款）+ 底边横线（滑动面）；PIN = 实心三角（固定） */
-    const tri = function (y, dy) {
-      return '<path d="M' + f1(px0) + ',' + f1(y + dy) +
-             ' L' + f1(px0 - 15) + ',' + f1(y + dy - 8) +
-             ' L' + f1(px0 - 15) + ',' + f1(y + dy + 8) + ' Z" fill="#c62828"/>';
+    /* 支座：按上端 / 下端各自的选择画符号
+       PIN    = 实心三角（固定）
+       Roller = 实心三角 + 左侧横线（滑动面，可滑移） */
+    const tri = function (y) {
+      return '<path d="M' + f1(px0) + ',' + f1(y) +
+             ' L' + f1(px0 - 13) + ',' + f1(y - 8) +
+             ' L' + f1(px0 - 13) + ',' + f1(y + 8) + ' Z" fill="#c62828"/>';
     };
-    o += tri(py0, 0);
-    /* 底边横线：与三角下角齐平，稍稍伸出以示滑动面 */
-    o += '<line x1="' + f1(px0 - 18) + '" y1="' + f1(py0 + 9) + '" x2="' + f1(px0 - 1) +
-         '" y2="' + f1(py0 + 9) + '" stroke="#c62828" stroke-width="1.6"/>';
-    o += '<text x="' + f1(px0 - 22) + '" y="' + f1(py0 + 4) + '" text-anchor="end" font-size="12" ' +
-         'fill="#c62828">Roller</text>';
-    o += tri(py1, 0);
-    o += '<text x="' + f1(px0 - 22) + '" y="' + f1(py1 - 1) + '" text-anchor="end" font-size="12" ' +
-         'fill="#c62828">PIN</text>';
+    /* 左侧竖直的滑动面（横线画在三角形的左侧，贴着底边） */
+    const slide = function (y) {
+      return '<line x1="' + f1(px0 - 16) + '" y1="' + f1(y - 9) + '" x2="' + f1(px0 - 16) +
+             '" y2="' + f1(y + 9) + '" stroke="#c62828" stroke-width="1.6"/>';
+    };
+    const sup = function (y, kind) {
+      const isRoll = kind === 'roller';
+      let s = tri(y);
+      if (isRoll) s += slide(y);
+      s += '<text x="' + f1(px0 - 21) + '" y="' + f1(y + 4) + '" text-anchor="end" font-size="12" ' +
+           'fill="#c62828">' + (isRoll ? 'Roller' : 'PIN') + '</text>';
+      return s;
+    };
+    o += sup(py0, el.supTop ? el.supTop.value : 'roller');
+    o += sup(py1, el.supBot ? el.supBot.value : 'pin');
 
-    /* 自重：顶部向下 */
-    const dlLen = 26 + Math.min(14, gk * 40);
+    /* 自重：顶部向下。箭头长度随 Gk 变化，但收在一固定上限内，
+       保证顶部的文字始终留在画布里 */
+    const dlLen = 22 + Math.min(10, gk * 30);
     const dcx = (px0 + px1) / 2;
-    o += '<line x1="' + f1(dcx) + '" y1="' + f1(py0 - 8 - dlLen) + '" x2="' + f1(dcx) + '" y2="' + f1(py0 - 10) +
+    const dlTop = py0 - 10 - dlLen;
+    o += '<line x1="' + f1(dcx) + '" y1="' + f1(dlTop) + '" x2="' + f1(dcx) + '" y2="' + f1(py0 - 10) +
          '" stroke="#111" stroke-width="2" marker-end="url(#mkD)"/>';
-    o += '<text x="' + f1(dcx + 8) + '" y="' + f1(py0 - 8 - dlLen) + '" font-size="12" fill="#111">' +
+    o += '<text x="' + f1(dcx + 8) + '" y="' + f1(dlTop) + '" font-size="12" fill="#111">' +
          'Dead Load 自重</text>';
-    o += '<text x="' + f1(dcx + 8) + '" y="' + f1(py0 - 8 - dlLen + 14) + '" font-size="10.5" ' +
+    o += '<text x="' + f1(dcx + 8) + '" y="' + f1(dlTop + 14) + '" font-size="10.5" ' +
          'fill="#6b7280">Gk = ' + f3(gk) + ' kPa</text>';
 
     /* 风荷载：右侧水平分布；箭头上下端与玻璃板上下边对齐 */
@@ -1463,8 +1490,9 @@ function tex2html(src) {
       ' 中间虚线空腔为空气层 A。t1、t2… 与 ts 可在图上直接改。';
 
     el.loadCap.innerHTML =
-      '自重 Dead Load 沿板面竖向向下，风荷载 Wind Load 垂直板面水平作用；' +
-      '上端滑动（Roller）、下端固定（PIN）。地震作用与冲击荷载不在本图中表示。';
+      '自重 Dead Load 沿板面竖向向下，风荷载 Wind Load 垂直板面水平作用。' +
+      '上、下端支座可分别选 Roller（滑动，三角形左侧加横线）或 PIN（固定）；' +
+      '挂式玻璃常取上方 PIN、下方 Roller。地震作用与冲击荷载不在本图中表示。';
   }
 
   function readInputs() {
@@ -1983,7 +2011,7 @@ function tex2html(src) {
   el.printBtn.addEventListener('click', () => window.print());
 
   ['wk', 'ig', 'E', 'nu', 'gg', 'defdiv', 'gG', 'gw', 'gE', 'psE', 'psw',
-   'support', 'spanSide', 'hole']
+   'support', 'spanSide', 'hole', 'supTop', 'supBot']
     .forEach(id => {
       const e = document.getElementById(id);
       const fn = () => { syncOptions(); render(); };
