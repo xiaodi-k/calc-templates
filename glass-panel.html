@@ -384,20 +384,12 @@
       .dbox input { border-color: transparent; background: transparent; }
     }
 
-    /* 断面图下方：每片玻璃的种类选择 */
-    .chiprow { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-    .chip {
-      display: inline-flex; align-items: center; gap: 5px;
-      padding: 3px 4px 3px 8px; border-radius: 999px;
-      border: 1px solid var(--in-line); background: #fff; font-size: 12px;
-    }
-    .chip .n {
-      font-weight: 800; color: var(--in);
-      font-variant-numeric: tabular-nums;
-    }
-    .chip select {
-      width: auto; padding: 2px 4px; font-size: 12px;
-      border-radius: 6px; border-color: #c2d2ee;
+    /* 每片玻璃的种类紧跟其厚度，短代码便于多层构造对齐。 */
+    .dbox select {
+      width: 100%; min-width: 0; padding: 2px 0;
+      font-size: 11px; text-align: center; text-align-last: center;
+      appearance: none; border: 1px solid #c2d2ee; border-radius: 5px;
+      background: #fff; color: #16325c; cursor: pointer;
     }
 
     @media print {
@@ -451,7 +443,6 @@
         <h2>玻璃配置</h2>
         <div class="body">
           <div class="figbox" id="sectionFig"></div>
-          <div class="chiprow" id="plyChips"></div>
           <p class="hint" id="sectionHint"></p>
         </div>
       </div>
@@ -1002,7 +993,7 @@ function tex2html(src) {
 <script>
 /* ===== 界面 ===== */
 (function () {
-  const GL_TYPES = [['FT', 'FT 钢化'], ['HS', 'HS 半钢化'], ['AN', 'AN 浮法']];
+  const GL_TYPES = [['FT', '钢化玻璃'], ['HS', '半钢化玻璃'], ['AN', '浮法玻璃']];
   /* 玻璃厚度固定档位（mm） */
   const T_OPTS = [6, 8, 10, 12, 15, 19];
   const snapT = v => T_OPTS.reduce((best, x) =>
@@ -1018,7 +1009,7 @@ function tex2html(src) {
    'support', 'spanSide', 'spanRow', 'spanHint', 'inter', 'hole', 'holeRow',
    'modeSw', 'lblBasic', 'lblAdv', 'interRow', 'supportRow', 'matBox',
    'supTop', 'supBot',
-   'planFig', 'planCap', 'sectionFig', 'sectionHint', 'loadFig', 'loadCap', 'plyChips']
+   'planFig', 'planCap', 'sectionFig', 'sectionHint', 'loadFig', 'loadCap']
     .forEach(id => { el[id] = document.getElementById(id); });
 
   const f0 = x => x.toFixed(0);
@@ -1216,23 +1207,32 @@ function tex2html(src) {
         k++;
       });
     });
-    let tot = 0;
     flat.forEach(e => {
       if (e.kind === 'g') e.t = plyState[e.idx] ? plyState[e.idx].t : 8;
       else if (e.kind === 'il') e.t = GS.ts;
       else e.t = AIR;
-      tot += e.t;
     });
 
     /* 参数格：玻璃片 + 胶片（空气层只标注，不占格） */
     const cells = flat.filter(e => e.kind !== 'air');
     const ax0 = 30, ax1 = 310;
-    const sc = (ax1 - ax0) / Math.max(tot, 1);
-    /* 玻璃片画得高一些，比例上更接近真实的「细长」断面 */
+    /* 统一按 3 SVG 单位/mm 绘制；只在超宽时缩小，不把薄构造拉满。 */
+    const scaledWidth = scale => flat.reduce((sum, e) =>
+      sum + Math.max(e.t * scale, e.kind === 'air' ? 10 : (e.kind === 'il' ? 3 : 0)), 0);
+    let sc = 3;
+    if (scaledWidth(sc) > ax1 - ax0) {
+      let lo = 0, hi = sc;
+      for (let i = 0; i < 32; i++) {
+        const mid = (lo + hi) / 2;
+        if (scaledWidth(mid) > ax1 - ax0) hi = mid;
+        else lo = mid;
+      }
+      sc = lo;
+    }
     const yTop = 56, yBot = 206;
-    let x = ax0;
+    let x = (W - scaledWidth(sc)) / 2;
     flat.forEach(e => {
-      e.w = Math.max(e.t * sc, e.kind === 'air' ? 10 : 3);
+      e.w = Math.max(e.t * sc, e.kind === 'air' ? 10 : (e.kind === 'il' ? 3 : 0));
       e.x = x; e.x1 = x + e.w;
       x += e.w;
     });
@@ -1240,7 +1240,7 @@ function tex2html(src) {
     /* 参数格宽度：玻璃 26、胶片 34 起，总宽不够时按比例收紧 */
     const nG = cells.filter(e => e.kind === 'g').length;
     const nI = cells.filter(e => e.kind === 'il').length;
-    const ILW = 46;
+    const ILW = 30;
     const cellW = nI > 0 && nG > 0
       ? (ax1 - ax0 - nI * ILW) / nG
       : (ax1 - ax0) / Math.max(nG, 1);
@@ -1251,7 +1251,7 @@ function tex2html(src) {
       cx0 += e.cw;
     });
 
-    let o = '<svg viewBox="0 0 ' + W + ' 268" role="img">';
+    let o = '<svg viewBox="0 0 ' + W + ' 300" role="img">';
     /* 各组等效厚度 te：括号横跨该组 */
     const gs = {};
     flat.forEach(e => {
@@ -1322,8 +1322,18 @@ function tex2html(src) {
                                 ? plyState[e.idx].raw
                                 : String(plyState[e.idx] ? plyState[e.idx].t : 8),
                               bw - 4));
+      if (!isIl) {
+        const sw = Math.min(e.cw - 2, 44);
+        const state = plyState[e.idx];
+        o += foBox(c - sw / 2, 254, sw, 24,
+          '<select data-fg="k' + e.idx + '" aria-label="第' + (e.idx + 1) +
+          '片玻璃种类" title="FT 钢化 / HS 半钢化 / AN 浮法">' +
+          GL_TYPES.map(type => '<option value="' + type[0] + '" title="' + type[1] + '"' +
+            (type[0] === state.type ? ' selected' : '') + '>' + type[0] + '</option>').join('') +
+          '</select>');
+      }
     });
-    o += '<text x="' + (W / 2) + '" y="260" text-anchor="middle" font-size="10.5" fill="#8aa4cc">' +
+    o += '<text x="' + (W / 2) + '" y="292" text-anchor="middle" font-size="10.5" fill="#8aa4cc">' +
          '单位 mm' + (nI > 0 ? '　·　ts = ' + (il === 'SGP' ? 'SGP 结构胶' : 'PVB 夹层胶片') : '') +
          '</text>';
 
@@ -1413,26 +1423,9 @@ function tex2html(src) {
     return o;
   }
 
-  /* 各片玻璃的种类选择（断面图下方的芯片行） */
-  function buildChips() {
-    const cfg = getCurrentConfig();
-    const n = totalPlies(cfg.struct);
-    ensureState(n);
-    let h = '<span class="figcap" style="margin:0">玻璃种类</span>';
-    for (let i = 0; i < n; i++) {
-      const s = plyState[i];
-      h += '<span class="chip"><span class="n">' + (i + 1) + '</span>' +
-           '<select data-fg="k' + i + '">' +
-           GL_TYPES.map(o => '<option value="' + o[0] + '"' +
-             (o[0] === s.type ? ' selected' : '') + '>' + o[1] + '</option>').join('') +
-           '</select></span>';
-    }
-    el.plyChips.innerHTML = h;
-  }
-
-  /* 生成各组玻璃输入卡 —— 现在改为「断面图 + 种类芯片行」 */
+  /* 构造切换后同步玻璃片状态与选项。 */
   function buildPlyCards() {
-    buildChips();
+    ensureState(totalPlies(getCurrentConfig().struct));
     syncOptions();
   }
 
@@ -2032,7 +2025,7 @@ function tex2html(src) {
     const k = t.getAttribute('data-fg');
     if (!k) return;
 
-    /* 芯片行里的种类下拉 */
+    /* 各片厚度下方的种类下拉 */
     if (k.charAt(0) === 'k') {
       const i = parseInt(k.slice(1), 10);
       if (!isNaN(i) && plyState[i]) {
@@ -2088,7 +2081,7 @@ function tex2html(src) {
     }
   }
 
-  [el.planFig, el.sectionFig, el.loadFig, el.plyChips].forEach(host => {
+  [el.planFig, el.sectionFig, el.loadFig].forEach(host => {
     host.addEventListener('input', e => onFigEdit(e, false));
     host.addEventListener('change', e => onFigEdit(e, true));
   });
