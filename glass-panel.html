@@ -427,13 +427,6 @@
             <label for="cfg">玻璃形式代码</label>
             <select id="cfg" style="flex:1 1 auto"></select>
           </div>
-          <div class="row" id="interRow">
-            <label for="inter">结构胶种类</label>
-            <select id="inter">
-              <option value="PVB" selected>PVB 夹层胶片</option>
-              <option value="SGP">SGP 结构胶</option>
-            </select>
-          </div>
           <p class="hint" id="cfgHint"></p>
         </div>
       </div>
@@ -1001,8 +994,8 @@ function tex2html(src) {
   const el = {};
   ['cfg', 'cfgHint', 'ig', 'E', 'nu', 'gg',
    'defdiv', 'gG', 'gw', 'gE', 'psE', 'psw', 'printBtn', 'fxOpen', 'fxClose',
-   'support', 'spanSide', 'spanRow', 'spanHint', 'inter', 'hole', 'holeRow',
-   'modeSw', 'lblBasic', 'lblAdv', 'interRow', 'supportRow', 'matBox',
+   'support', 'spanSide', 'spanRow', 'spanHint', 'hole', 'holeRow',
+   'modeSw', 'lblBasic', 'lblAdv', 'supportRow', 'matBox',
    'supTop', 'supBot',
    'planFig', 'planCap', 'sectionFig', 'sectionHint', 'loadFig', 'loadCap']
     .forEach(id => { el[id] = document.getElementById(id); });
@@ -1027,7 +1020,7 @@ function tex2html(src) {
   /* 各片玻璃的当前状态，切换配置时尽量沿用 */
   let plyState = [];
   /* 面板尺寸与胶片厚：现在直接在图上改，值存在这里 */
-  const GS = { a: 1500, b: 3000, ts: 2.28, wk: 1.5 };
+  const GS = { a: 1500, b: 3000, ts: 2.28, wk: 1.5, inter: 'PVB' };
 
   function ensureState(n) {
     while (plyState.length < n) plyState.push({ t: 8, type: 'HS', raw: '8' });
@@ -1190,7 +1183,7 @@ function tex2html(src) {
     const W = 340;
     const cfg = getCurrentConfig();
     const struct = cfg.struct;
-    const il = el.inter.value;
+    const il = GS.inter;
     const AIR = 12;                       /* 空气层厚度，仅作示意，不参与计算 */
     const flat = [];
     let k = 0;
@@ -1318,7 +1311,12 @@ function tex2html(src) {
                                 ? plyState[e.idx].raw
                                 : String(plyState[e.idx] ? plyState[e.idx].t : 8),
                               bw - 4));
-      if (!isIl) {
+      if (isIl) {
+        o += foBox(c - 22, 254, 44, 24,
+          '<select data-fg="inter" aria-label="结构胶种类（全部夹层共用）" title="结构胶种类：全部夹层同步">' +
+          '<option value="PVB"' + (il === 'PVB' ? ' selected' : '') + '>PVB</option>' +
+          '<option value="SGP"' + (il === 'SGP' ? ' selected' : '') + '>SGP</option></select>');
+      } else {
         const sw = Math.min(e.cw - 2, 44);
         const state = plyState[e.idx];
         o += foBox(c - sw / 2, 254, sw, 24,
@@ -1425,7 +1423,7 @@ function tex2html(src) {
   function syncOptions() {
     const two = el.support.value === 'two';
     const pt4 = el.support.value === 'pt4';
-    const sgp = el.inter.value === 'SGP';
+    const sgp = GS.inter === 'SGP';
     el.spanRow.hidden = !two;
     el.holeRow.hidden = !pt4;
 
@@ -1472,7 +1470,7 @@ function tex2html(src) {
       (sgp
         ? '蓝色为 SGP 结构胶（ts），等效厚度按 ' + SGP_REF + ' 计算。'
         : '蓝色为 PVB 夹层胶片（ts），PVB 不计剪切传递、不计入等效厚度。') +
-      ' 中间虚线空腔为空气层 A。t1、t2… 与 ts 可在图上直接改。';
+      ' 中间虚线空腔为空气层 A。厚度和种类可在图上直接改；胶片下方选择 PVB / SGP，全部夹层同步。';
 
     el.loadCap.innerHTML =
       '自重 Dead Load 沿板面竖向向下，风荷载 Wind Load 垂直板面水平作用。' +
@@ -1503,7 +1501,7 @@ function tex2html(src) {
       E: num('E'), nu: num('nu'), gammaG: num('gg'), defDiv: num('defdiv'),
       gG: num('gG'), gw: num('gw'), gE: num('gE'), psE: num('psE'), psw: num('psw'),
       support: el.support.value, span: span, hole: num('hole'),
-      interlayer: el.inter.value, tv: GS.ts
+      interlayer: GS.inter, tv: GS.ts
     };
   }
 
@@ -2004,9 +2002,6 @@ function tex2html(src) {
       e.addEventListener('change', fn);
     });
 
-  /* 切换胶片类型要重画断面图（te 标注与提示文字会跟着变） */
-  ['input', 'change'].forEach(t =>
-    el.inter.addEventListener(t, () => { syncOptions(); buildPlyCards(); render(); }));
 
   /* ---------- 图上直接改尺寸 / 厚度 / 种类 ---------- */
   /* 输入过程中只记原文、不重算 —— 让用户可以敲完整再生效；
@@ -2016,6 +2011,14 @@ function tex2html(src) {
     if (!t || !t.getAttribute) return;
     const k = t.getAttribute('data-fg');
     if (!k) return;
+
+    if (k === 'inter') {
+      if (!commit || (t.value !== 'PVB' && t.value !== 'SGP')) return;
+      GS.inter = t.value;
+      syncOptions();
+      render();
+      return;
+    }
 
     /* 各片厚度下方的种类下拉 */
     if (k.charAt(0) === 'k') {
