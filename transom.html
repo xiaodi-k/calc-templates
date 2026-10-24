@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>横梁计算</title>
+<style>
+:root{--bg:#f2f4f9;--ink:#172b40;--muted:#718094;--line:#dce4ed;--blue:#2f6feb;--green:#087d68;--red:#bd4545}
+*{box-sizing:border-box}[hidden]{display:none!important}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif}
+.topbar{max-width:1360px;margin:auto;padding:19px 24px;display:flex;align-items:center;gap:20px}.back{font-size:13px;color:var(--muted);text-decoration:none}h1{font-size:19px;margin:0;flex:1}button{border:1px solid var(--line);background:white;border-radius:8px;padding:7px 12px;cursor:pointer;color:var(--ink)}
+main{max-width:1360px;padding:0 24px;display:grid;grid-template-columns:400px minmax(0,1fr);gap:20px;align-items:start}.column{min-width:0;border:1px solid #d3e0f0;background:#eaf0fa;border-radius:15px;padding:14px}.outputs{background:#eef7f3;border-color:#cfe4db}.cap{display:inline-block;background:white;border-radius:30px;padding:4px 12px;margin-bottom:12px;color:var(--blue);font-weight:750;font-size:12px;letter-spacing:1px}.outputs>.cap{color:var(--green)}
+.card{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff;margin-bottom:14px;box-shadow:0 3px 10px #1d355706}.card:last-child{margin-bottom:0}.card h2{font-size:13px;letter-spacing:.3px;margin:0;background:#f0f5fd;color:#315f9e;padding:11px 14px;border-bottom:1px solid var(--line)}.outputs h2{background:#e5f3ed;color:var(--green)}.body{padding:14px}.hint{font-size:12px;color:var(--muted);line-height:1.8;margin:8px 0 0}.row{display:flex;align-items:center;gap:10px;margin-bottom:10px}.row label{font-size:12px;flex:none}.row>select,.row>input{flex:1;min-width:0}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.grid label{display:block;font-size:11px;color:var(--muted);margin-bottom:4px}
+input,select{font:inherit;color:var(--ink);border:1px solid #c8d5e3;border-radius:7px;background:#fcfdff;padding:6px 8px;width:100%;min-width:0}input{text-align:right;font-variant-numeric:tabular-nums}input:focus,select:focus{outline:2px solid #cdddff;border-color:var(--blue)}details>summary{cursor:pointer;font-size:12px;color:var(--muted);padding:7px 0}.fig{border:1px solid #dce6ef;border-radius:11px;background:linear-gradient(145deg,#fff,#f5f9fc);padding:8px 5px}.fig svg{display:block;width:100%;height:auto}.fo{width:100%;height:100%;display:flex;align-items:center;justify-content:center;gap:3px;font:11px "Microsoft YaHei",sans-serif;color:#6e8297}.fo input{width:100%;height:23px;padding:1px 3px;border-radius:5px;text-align:center;background:#f8fbff;font:600 12px Consolas,monospace}.fo span{white-space:nowrap}.mini{font-size:11px;color:var(--muted)}
+.kv{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px}.k{font-size:11px;color:var(--muted);margin-bottom:3px}.v{font-weight:750;font-size:15px;font-variant-numeric:tabular-nums}.hero{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;padding:18px;background:linear-gradient(#f2faf6,#fff)}.hero .v{font-size:28px}.hero .sub{font-size:11px;color:var(--muted);margin-top:4px}.badge{display:inline-block;padding:3px 10px;color:white;background:var(--green);border-radius:30px;font-size:12px;font-weight:700}.badge.ng{background:var(--red)}.ok{color:var(--green)}.ng{color:var(--red)}
+table{border-collapse:collapse;width:100%;font-size:12px}th,td{text-align:right;padding:9px 7px;border-bottom:1px solid #e6edf2}th{font-size:11px;color:var(--muted);font-weight:500}th:first-child,td:first-child{text-align:left}.scroll{overflow:auto}.fx details{border-bottom:1px solid #e6edf2}.fx details:last-child{border:0}.fx summary{color:#25455d;font-weight:650;font-size:13px;padding:12px 0}.equation{font:13px/1.9 Cambria,"Times New Roman","Microsoft YaHei",serif;background:#f7fafc;border-radius:7px;padding:10px 12px;margin:8px 0;overflow:auto}.equation small{font:12px/1.8 "Microsoft YaHei",sans-serif;color:var(--muted);display:block}.error{padding:12px 14px;background:#fff0ee;border:1px solid #ecc5be;border-radius:9px;margin-bottom:14px;color:#a6372f}footer{max-width:1360px;margin:20px auto 40px;padding:0 24px;font-size:11px;color:var(--muted);line-height:1.9}
+@media(max-width:960px){main{grid-template-columns:1fr}.column{max-width:none}.fig{max-width:500px;margin:auto}.hero .v{font-size:24px}}@media(max-width:520px){main{padding:0 10px}.topbar{padding:15px 10px;gap:10px}.column{padding:10px}.kv{grid-template-columns:repeat(2,1fr)}.hero{gap:8px;padding:14px}.hero .v{font-size:22px}}@media print{body{background:white;font-size:11px}.topbar button,.back{display:none}main{display:block;padding:0}.column{border:0;background:white;padding:0}.card{break-inside:avoid;box-shadow:none}.inputs{display:grid;grid-template-columns:1fr 1fr;gap:12px}.cap{display:none}.outputs{margin-top:18px}.fig{max-width:340px}details{display:block}details::details-content{content-visibility:visible}.fx details{break-inside:avoid}}
+</style>
+</head>
+<body>
+<header class="topbar"><a class="back" href="index.html">← 首页</a><h1>横梁计算</h1><button id="print">打印 / 存 PDF</button></header>
+<main>
+<section class="column inputs">
+<div class="cap">输入 INPUT</div>
+<div class="card"><h2>截面与材料</h2><div class="body">
+<div class="row"><label for="shape">标准截面</label><select id="shape"></select></div>
+<div class="row"><label for="material">材料</label><select id="material"></select></div>
+<div class="fig" id="sectionFigure"></div>
+<p class="hint">截面尺寸在图中修改，单位 mm。重力绕 x 轴弯曲，风荷载绕 y 轴弯曲；T 形按横躺方向绘制。空心梯形壁厚为垂直于边的实际厚度。</p>
+<details><summary>材料参数</summary><div class="grid">
+<div><label for="fOverride">强度 f（MPa，留空自动）</label><input id="fOverride" type="number" step="1" placeholder="自动"></div>
+<div><label for="EOverride">E（MPa，留空自动）</label><input id="EOverride" type="number" step="1000" placeholder="自动"></div>
+</div><p class="hint" id="materialHint"></p></details>
+</div></div>
+<div class="card"><h2>板块与跨度</h2><div class="body">
+<div class="fig" id="panelFigure"></div>
+<p class="hint">上下板块与横梁同宽，宽度即跨度 L；上下高度分别输入。上部板块的全部重力由本横梁两处垫块承担，下部板块重力由下一道横梁承担。</p>
+<div class="grid" style="margin-top:12px"><div><label for="tg">上部玻璃总厚度（mm）</label><input id="tg" type="number" value="20" step=".5"></div><div><label for="gg">玻璃重力密度（kN/m³）</label><input id="gg" type="number" value="25.6" step=".1"></div></div>
+</div></div>
+<div class="card"><h2>重力落点</h2><div class="body">
+<div class="fig" id="gravityFigure"></div>
+<p class="hint">两个集中力等值、对称；距端部距离 a 可在任一侧标注中修改，另一侧同步。横梁自重另按全跨均布荷载计入。</p>
+</div></div>
+<div class="card"><h2>风荷载 · 上下板块分配</h2><div class="body">
+<div class="fig" id="windFigure"></div>
+<p class="hint">风压 Wk 在图中输入，按绝对值验算。每侧荷载按 45° 分区传递，aᵢ = min(L, Hᵢ)/2；Hᵢ ≥ L 时自动成为三角形。</p>
+</div></div>
+<div class="card"><h2>组合与地震</h2><div class="body">
+<div class="row"><label for="alpha">水平地震系数 αmax</label><select id="alpha"><option value="0.04">6 度 · 0.05g</option><option value="0.08" selected>7 度 · 0.10g</option><option value="0.12">7 度 · 0.15g</option><option value="0.16">8 度 · 0.20g</option><option value="0.24">8 度 · 0.30g</option><option value="0.32">9 度 · 0.40g</option><option value="0">不计地震</option></select></div>
+<div class="row"><label for="seismicG">地震用面荷载 Gk（kPa）</label><input id="seismicG" type="number" value="1.4" step=".05"></div>
+<p class="hint">沿用参考计算书的等效水平地震 Ek = 5αmaxGk。此 Gk 为地震质量用幕墙总自重，独立于垫块重力荷载。</p>
+<details><summary>分项与组合系数</summary><div class="grid">
+<div><label for="gG">γG</label><input id="gG" type="number" value="1.3" step=".05"></div><div><label for="gW">γW</label><input id="gW" type="number" value="1.5" step=".05"></div>
+<div><label for="gE">γE</label><input id="gE" type="number" value="1.4" step=".05"></div><div><label for="psiE">ψE（风主导）</label><input id="psiE" type="number" value="0" step=".1"></div>
+<div><label for="psiW">ψW（地震主导）</label><input id="psiW" type="number" value="0.2" step=".1"></div>
+</div></details>
+</div></div>
+</section>
+<section class="column outputs">
+<div class="cap">输出 OUTPUT</div><div id="error" class="error" hidden></div>
+<div id="results">
+<div class="card"><h2>校核结论</h2><div id="verdict" class="hero"></div></div>
+<div class="card"><h2>截面性质与计算条件</h2><div class="body"><div id="properties" class="kv"></div></div></div>
+<div class="card"><h2>荷载与内力</h2><div class="body"><div id="loads" class="kv"></div><div class="scroll" id="loadTable" style="margin-top:16px"></div></div></div>
+<div class="card"><h2>挠度校核 · 两个方向分别计算</h2><div class="body"><div class="scroll" id="deflections"></div><p class="hint">材料限值：钢 L/250，铝合金 L/180。同时保留参考计算书自重单独作用 min(L/500，3 mm) 的校核。风和自重采用标准值弹性计算，不乘分项系数。</p></div></div>
+<div class="card"><h2>双向弯曲强度</h2><div class="body"><div id="strength" class="kv"></div><p class="hint">采用参考计算书的线性组合 σG/f + σW/f ≤ 1。对非双对称截面采用两方向最小截面模量形成保守包络。</p></div></div>
+<div class="card"><h2 style="display:flex;align-items:center;gap:8px">计算公式与代入<span style="flex:1"></span><button id="expand">全部展开</button><button id="collapse">收起</button></h2><div id="formulas" class="body fx"></div></div>
+</div>
+</section>
+</main>
+<footer>范围：等截面单跨简支横梁，线弹性小变形，七类理想标准截面；不含连接、扭转、整体稳定及局部屈曲验算。<br>方法：依据用户提供的横梁计算书第 4.11.1～4.11.4 节；按要求统一材料挠度限值。原书项目截面替换为几何计算，钢梁自重亦计入重力弯矩。地震主导组合的伴随风使用 ψW。<br>版本 1.1 · 2026-10-24</footer>
+<script id="calculation-core">
+/* Units: geometry mm; load kN/m = N/mm; force N; stress MPa. */
+(function(root){
+'use strict';
+const materials={
+Q235:{name:'钢 Q235',E:206000,rho:78.5,div:250,bands:[[16,215],[40,205],[100,200]]},
+Q355:{name:'钢 Q355',E:206000,rho:78.5,div:250,bands:[[16,305],[40,295],[63,290],[80,280],[100,270]]},
+AL6063T5:{name:'铝 6063-T5',E:70000,rho:28,div:180,f:90},
+AL6063T6:{name:'铝 6063-T6',E:70000,rho:28,div:180,f:150},
+AL6061T6:{name:'铝 6061-T6',E:70000,rho:28,div:180,f:200}
+};
+const shapes={
+circle:{name:'圆形',dims:[['D','直径',80]]},
+tube:{name:'圆管',dims:[['D','外径',100],['t','壁厚',5]]},
+rect:{name:'矩形',dims:[['b','宽度',90],['h','高度',75]]},
+box:{name:'箱型',dims:[['b','宽度',90],['h','高度',75],['tf','上下壁厚',3],['tw','左右壁厚',3]]},
+tee:{name:'T形（横躺）',dims:[['b','总宽',100],['h','总高',80],['tf','竖翼缘厚',8],['tw','横腹板厚',6]]},
+trap:{name:'梯形',dims:[['bt','上底',60],['bb','下底',90],['h','高度',75]]},
+htrap:{name:'空心梯形',dims:[['bt','上底',70],['bb','下底',110],['h','高度',75],['t','法向壁厚',4]]}
+};
+function check(v,message){if(!v)throw Error(message);}
+function polygon(ps){
+ let A=0,Sx=0,Sy=0,Ix=0,Iy=0;
+ ps.forEach((p,i)=>{const q=ps[(i+1)%ps.length],c=p[0]*q[1]-q[0]*p[1];A+=c;Sx+=(p[0]+q[0])*c;Sy+=(p[1]+q[1])*c;Ix+=(p[1]*p[1]+p[1]*q[1]+q[1]*q[1])*c;Iy+=(p[0]*p[0]+p[0]*q[0]+q[0]*q[0])*c;});
+ const sign=Math.sign(A);return {A:A*sign/2,Sx:Sx*sign/6,Sy:Sy*sign/6,Ix:Ix*sign/12,Iy:Iy*sign/12};
+}
+function inset(ps,t){
+ const lines=ps.map((p,i)=>{const q=ps[(i+1)%ps.length],dx=q[0]-p[0],dy=q[1]-p[1],l=Math.hypot(dx,dy);return {p:[p[0]-dy/l*t,p[1]+dx/l*t],d:[dx,dy]};});
+ return lines.map((line,i)=>{const prev=lines[(i+lines.length-1)%lines.length],cross=prev.d[0]*line.d[1]-prev.d[1]*line.d[0];check(Math.abs(cross)>1e-9,'空心梯形边线无法相交');const v=[line.p[0]-prev.p[0],line.p[1]-prev.p[1]],u=(v[0]*line.d[1]-v[1]*line.d[0])/cross;return [prev.p[0]+u*prev.d[0],prev.p[1]+u*prev.d[1]];});
+}
+function section(type,d){
+ check(shapes[type],'未知截面');
+ shapes[type].dims.forEach(x=>check(Number.isFinite(d[x[0]])&&d[x[0]]>0,x[1]+'必须大于零'));
+ let parts=[],A,Ix,Iy,cx,cy,Wx,Wy,b,h,tc,outer,inner;
+ if(type==='circle'||type==='tube'){
+ b=h=d.D;const di=type==='tube'?d.D-2*d.t:0;check(di>=0&&(type!=='tube'||di>0),'圆管壁厚必须小于半径');
+ A=Math.PI*(d.D*d.D-di*di)/4;Ix=Iy=Math.PI*(d.D**4-di**4)/64;cx=cy=d.D/2;Wx=Wy=Ix/(d.D/2);tc=type==='tube'?d.t:d.D;
+ return {A,Ix,Iy,cx,cy,Wx,Wy,b,h,tc,circle:true,di};
+ }
+ if(type==='rect'||type==='box'){
+ b=d.b;h=d.h;outer=[[0,0],[b,0],[b,h],[0,h]];parts=[{p:outer,s:1}];tc=Math.max(b,h);
+ if(type==='box'){check(2*d.tw<b&&2*d.tf<h,'箱型壁厚必须小于相应尺寸的一半');inner=[[d.tw,d.tf],[b-d.tw,d.tf],[b-d.tw,h-d.tf],[d.tw,h-d.tf]];parts.push({p:inner,s:-1});tc=Math.max(d.tf,d.tw);}
+ }else if(type==='tee'){
+ b=d.b;h=d.h;check(d.tf<b&&d.tw<h,'T形翼缘厚、腹板厚必须小于总宽、总高');
+ outer=[[0,0],[d.tf,0],[d.tf,(h-d.tw)/2],[b,(h-d.tw)/2],[b,(h+d.tw)/2],[d.tf,(h+d.tw)/2],[d.tf,h],[0,h]];parts=[{p:outer,s:1}];tc=Math.max(d.tf,d.tw);
+ }else{
+ b=Math.max(d.bt,d.bb);h=d.h;outer=[[(b-d.bb)/2,0],[(b+d.bb)/2,0],[(b+d.bt)/2,h],[(b-d.bt)/2,h]];parts=[{p:outer,s:1}];tc=Math.max(b,h);
+ if(type==='htrap'){
+ check(2*d.t<h,'空心梯形壁厚过大');inner=inset(outer,d.t);
+ check(inner[0][0]<inner[1][0]&&inner[3][0]<inner[2][0]&&inner[0][1]<inner[3][1],'空心梯形内腔已消失，请减小壁厚');
+ parts.push({p:inner,s:-1});tc=d.t;
+ }
+ }
+ const sums={A:0,Sx:0,Sy:0,Ix:0,Iy:0};
+ parts.forEach(part=>{const v=polygon(part.p);Object.keys(sums).forEach(k=>sums[k]+=part.s*v[k]);});
+ A=sums.A;check(A>0,'截面面积必须大于零');cx=sums.Sx/A;cy=sums.Sy/A;Ix=sums.Ix-A*cy*cy;Iy=sums.Iy-A*cx*cx;
+ check(Ix>0&&Iy>0,'截面惯性矩必须大于零');Wx=Ix/Math.max(cy,h-cy);Wy=Iy/Math.max(cx,b-cx);
+ return {A,Ix,Iy,cx,cy,Wx,Wy,b,h,tc,outer,inner};
+}
+function trapResponse(pressure,L,H,E,I){
+ const a=Math.min(L,H)/2,q=pressure*a/1000,r=a/L;
+ return {a,q,M:q*(3*L*L-4*a*a)/24,
+ d:q*L**4*(25-40*r*r+16*r**4)/(1920*E*I),R:q*(L-a)/2};
+}
+function calculate(p,override){
+ ['L','Hu','Hl','a','wk','tg','gg','seismicG','alpha','gG','gW','gE','psiE','psiW'].forEach(k=>check(Number.isFinite(p[k]),'请输入有效的 '+k));
+ check(p.L>0,'跨度必须大于零');check(p.Hu>=0&&p.Hl>=0,'上下板块高度不得为负');
+ check(p.a>=0&&p.a<=p.L/2,'重力落点距端部 a 应在 0～L/2 之间');
+ ['wk','tg','gg','seismicG','alpha','psiE','psiW'].forEach(k=>check(p[k]>=0,k+'不得为负'));
+ ['gG','gW','gE'].forEach(k=>check(p[k]>0,k+'必须大于零'));
+ check(materials[p.material],'请选择材料');const mat=materials[p.material],sec=override||section(p.type,p.dims);
+ if(mat.bands&&p.fOverride==null)check(sec.tc<=100,'当前钢材表覆盖厚度/直径不大于100 mm，请调整截面或手动提供经确认的材料参数');
+ const autoF=mat.f||(mat.bands.find(x=>sec.tc<=x[0])||mat.bands.at(-1))[1];
+ const f=p.fOverride==null?autoF:p.fOverride,E=p.EOverride==null?mat.E:p.EOverride;
+ check(Number.isFinite(f)&&f>0&&Number.isFinite(E)&&E>0,'材料强度和弹性模量必须大于零');
+ const {L,a}=p,g=mat.rho*sec.A/1e6,Gglass=p.gg*p.tg/1000,P=Gglass*(L/1000)*(p.Hu/1000)*1000/2;
+ const dPoint=P*a*(3*L*L-4*a*a)/(24*E*sec.Ix);
+ const dSelf=5*g*L**4/(384*E*sec.Ix),dG=dPoint+dSelf;
+ const wu=trapResponse(p.wk,L,p.Hu,E,sec.Iy),wl=trapResponse(p.wk,L,p.Hl,E,sec.Iy);
+ const Ek=5*p.alpha*p.seismicG;
+ const sWind=p.gW*p.wk+p.psiE*p.gE*Ek,sEarth=p.gE*Ek+p.psiW*p.gW*p.wk;
+ const designPressure=Math.max(sWind,sEarth);
+ const du=trapResponse(designPressure,L,p.Hu,E,sec.Iy),dl=trapResponse(designPressure,L,p.Hl,E,sec.Iy);
+ const MG=p.gG*(P*a+g*L*L/8),MW=du.M+dl.M;
+ const sigmaG=MG/sec.Wx,sigmaW=MW/sec.Wy,ratioS=(sigmaG+sigmaW)/f;
+ const dW=wu.d+wl.d,lim=L/mat.div,limG=Math.min(L/500,3);
+ const ratioW=dW/lim,ratioG=dG/limG,ratioGM=dG/lim;
+ return {sec,mat,E,f,autoF,g,Gglass,P,dPoint,dSelf,dG,wu,wl,Ek,sWind,sEarth,designPressure,du,dl,MG,MW,sigmaG,sigmaW,ratioS,dW,lim,limG,ratioW,ratioG,ratioGM,
+ reactionG:p.gG*(P+g*L/2),reactionW:du.R+dl.R,
+ ok:ratioS<=1&&ratioW<=1&&ratioG<=1&&ratioGM<=1};
+}
+root.Transom={materials,shapes,polygon,section,inset,trapResponse,calculate};
+})(globalThis);
+</script>
+<script>
+(function(){
+'use strict';
+const C=Transom,$=id=>document.getElementById(id),fmt=(v,n=2)=>Number(v).toLocaleString('en-US',{minimumFractionDigits:n,maximumFractionDigits:n}),plain=v=>Number(Number(v).toFixed(3)),esc=v=>String(v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+const state={L:1500,Hu:3200,Hl:1300,a:200,wk:1.85};
+const dimState=Object.fromEntries(Object.entries(C.shapes).map(([k,s])=>[k,Object.fromEntries(s.dims.map(d=>[d[0],d[2]]))]));
+let last=null;
+$('shape').innerHTML=Object.entries(C.shapes).map(([k,v])=>'<option value="'+k+'"'+(k==='box'?' selected':'')+'>'+v.name+'</option>').join('');
+$('material').innerHTML=Object.entries(C.materials).map(([k,v])=>'<option value="'+k+'">'+v.name+'</option>').join('');
+function field(key,value,x,y,w=78,unit='',label=''){
+ return '<foreignObject x="'+x+'" y="'+y+'" width="'+w+'" height="25"><div xmlns="http://www.w3.org/1999/xhtml" class="fo"><input aria-label="'+esc(label||key)+'" type="text" inputmode="decimal" autocomplete="off" data-key="'+key+'" value="'+esc(value)+'"><span>'+unit+'</span></div></foreignObject>';
+}
+function line(x1,y1,x2,y2,color='#9aaec0',width=1,extra=''){return '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="'+color+'" stroke-width="'+width+'" '+extra+'/>';}
+function text(x,y,value,color='#6c8094',size=11,anchor='middle'){return '<text x="'+x+'" y="'+y+'" fill="'+color+'" font-size="'+size+'" text-anchor="'+anchor+'">'+value+'</text>';}
+function svg(body,h=260,label='计算输入图'){return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 350 '+h+'" role="group" aria-label="'+label+'">'+body+'</svg>';}
+function support(x,y,roller=false){return '<path d="M'+x+','+y+' l-8,12 h16 Z" fill="#6a8195"/>'+(roller?line(x-10,y+16,x+10,y+16,'#6a8195',1.3):'');}
+function dim(x1,x2,y,key,value,unit,label){return line(x1,y,x2,y)+line(x1,y-4,x1,y+4)+line(x2,y-4,x2,y+4)+field(key,value,(x1+x2)/2-45,y-13,90,unit,label);}
+function arrow(x,y,len,color='#4185bc'){return line(x,y,x,y+len,color,1.4)+'<path d="M'+(x-3)+','+(y+len-6)+' l3,6 l3,-6" fill="none" stroke="'+color+'" stroke-width="1.4"/>';}
+function sectionFig(sec){
+ const type=$('shape').value,d=dimState[type],defs=C.shapes[type].dims;
+ let o='',s=sec;
+ try{s=s||C.section(type,d);}catch(e){o+=text(175,90,'截面尺寸待修正','#b85050');}
+ if(s){
+ const scale=Math.min(170/s.b,122/s.h),ox=175-s.b*scale/2,oy=27,py=y=>oy+(s.h-y)*scale,px=x=>ox+x*scale;
+ if(s.circle){o+='<circle cx="175" cy="'+(oy+s.h*scale/2)+'" r="'+s.b*scale/2+'" fill="#dcecf2" stroke="#557e8d" stroke-width="1.4"/>';if(s.di)o+='<circle cx="175" cy="'+(oy+s.h*scale/2)+'" r="'+s.di*scale/2+'" fill="#fff" stroke="#557e8d"/>';}
+ else {const points=ps=>ps.map(p=>px(p[0])+','+py(p[1])).join(' ');o+='<polygon points="'+points(s.outer)+'" fill="#dcecf2" stroke="#557e8d" stroke-width="1.4"/>';if(s.inner)o+='<polygon points="'+points(s.inner)+'" fill="#fff" stroke="#557e8d" stroke-width="1.1"/>';}
+ const cy=py(s.cy),cx=px(s.cx);
+ o+=line(ox-18,cy,ox+s.b*scale+18,cy,'#98b1c2',.8,'stroke-dasharray="4 3"')+text(ox+s.b*scale+24,cy+4,'x','#8b9fad',10);
+ o+=line(cx,oy-10,cx,oy+s.h*scale+13,'#98b1c2',.8,'stroke-dasharray="4 3"')+text(cx+9,oy-8,'y','#8b9fad',10);
+ o+=text(175,168,'截面尺寸 · mm','#8295a6',10);
+ }
+ defs.forEach((def,i)=>{const x=i%2?183:18,y=185+Math.floor(i/2)*43;o+=text(x,y,def[1],'#688095',10,'start')+field('dim:'+def[0],d[def[0]],x+70,y-17,70,'',def[1]+' mm');});
+ return svg(o,187+Math.ceil(defs.length/2)*43,'横梁截面及尺寸');
+}
+function panelFig(){
+ const x=86,w=226,beamY=165,upperH=95,lowerH=65;
+ let o='<rect x="'+x+'" y="'+(beamY-upperH)+'" width="'+w+'" height="'+upperH+'" rx="3" fill="#dfedf5" stroke="#a7bfce"/>'+
+ '<rect x="'+x+'" y="'+(beamY+7)+'" width="'+w+'" height="'+lowerH+'" rx="3" fill="#edf4f8" stroke="#b4c7d4"/>'+
+ line(x,beamY+3,x+w,beamY+3,'#37596e',6)+text(x+w/2,beamY-45,'上部板块','#577e96',12)+text(x+w/2,beamY+44,'下部板块','#7b98aa',12);
+ o+=dim(x,x+w,35,'L',state.L,'mm','横梁跨度及板块宽度');
+ o+=line(63,beamY-upperH,63,beamY)+field('Hu',state.Hu,3,beamY-upperH/2-13,75,'mm','上部板块高度');
+ o+=line(63,beamY+7,63,beamY+7+lowerH)+field('Hl',state.Hl,3,beamY+7+lowerH/2-13,75,'mm','下部板块高度');
+ o+=text(x+w/2,260,'横梁跨度 = 上下板块宽度','#8b9fad',10);
+ return svg(o,275,'上下板块宽高及横梁跨度');
+}
+function gravityFig(r){
+ const x=36,w=278,y=112,pos=state.L>0?Math.max(0,Math.min(w/2,state.a/state.L*w)):w/4;
+ let o=line(x,y,x+w,y,'#52788c',5)+support(x,y+3)+support(x+w,y+3,true);
+ for(let i=0;i<8;i++)o+=arrow(x+12+i*(w-24)/7,y-20,15,'#aabac6');
+ o+=arrow(x+pos,y-60,52,'#a16b50')+arrow(x+w-pos,y-60,52,'#a16b50');
+ o+=text(x+pos,35,r?'P = '+fmt(r.P/1000,3)+' kN':'P','#9a6b54',11)+text(x+w-pos,35,r?'P = '+fmt(r.P/1000,3)+' kN':'P','#9a6b54',11);
+ o+=line(x,154,x+pos,154)+line(x+w-pos,154,x+w,154);
+ o+=field('a',state.a,15,151,99,'mm','左侧重力落点距梁端')+field('a',state.a,235,151,99,'mm','右侧重力落点距梁端');
+ o+=text(175,198,'a 与 L−a 两点 · 同步对称','#8c9daa',10);
+ o+=text(175,219,r?'横梁自重 g = '+fmt(r.g,4)+' kN/m':'横梁自重另按均布计入','#8296a7',10);
+ return svg(o,235,'对称重力集中力与距端部距离');
+}
+function windFig(r){
+ const x=36,w=278,L=Math.max(state.L,1),beamY=198;
+ let o=field('wk',state.wk,110,12,135,'kPa','风荷载标准值 Wk')+text(72,29,'Wk','#467c9e',12);
+ function one(H,y,color,label){
+ const a=Math.min(L,Math.max(0,H))/2,aw=w*a/L,peak=44,q=state.wk*a/1000;
+ const pts=[[x,y],[x+aw,y-peak],[x+w-aw,y-peak],[x+w,y]];
+ if(a>0)o+='<polygon points="'+pts.map(p=>p.join(',')).join(' ')+'" fill="'+color+'" fill-opacity=".09" stroke="'+color+'" stroke-width="1.3"/>';
+ o+=line(x,y,x+w,y,'#b3c6d3',.8)+text(x+4,y-peak-8,label+' · '+(H>=L?'三角形':'梯形')+' · q='+fmt(q,3)+' kN/m',color,10,'start');
+ if(a>0)for(let i=1;i<9;i++){const xx=w*i/9,height=Math.min(xx,aw,w-xx)/Math.max(aw,.01)*peak;o+=arrow(x+xx,y-height,Math.max(height-3,0),color);}
+ }
+ one(state.Hu,108,'#4c89b4','上部');one(state.Hl,186,'#829fb2','下部');
+ o+=line(x,beamY,x+w,beamY,'#52788c',4)+support(x,beamY+2)+support(x+w,beamY+2,true);
+ o+=text(175,237,'上下荷载分别计算，再叠加效应','#8397a6',10);
+ return svg(o,251,'梯形或三角形风荷载及风压输入');
+}
+const ids=['tg','gg','alpha','seismicG','gG','gW','gE','psiE','psiW','fOverride','EOverride'];
+function inputs(){
+ const p={...state,type:$('shape').value,material:$('material').value,dims:{...dimState[$('shape').value]}};
+ ids.forEach(id=>{const raw=$(id).value;p[id]=id.endsWith('Override')&&raw.trim()===''?null:Number(raw);if(raw.trim()===''&&!id.endsWith('Override'))p[id]=NaN;});return p;
+}
+function kv(k,v){return '<div><div class="k">'+k+'</div><div class="v">'+v+'</div></div>';}
+function badge(ok){return '<span class="badge'+(ok?'':' ng')+'">'+(ok?'满足':'不满足')+'</span>';}
+function table(head,rows){return '<table><thead><tr>'+head.map(h=>'<th>'+h+'</th>').join('')+'</tr></thead><tbody>'+rows.map(row=>'<tr>'+row.map(c=>'<td>'+c+'</td>').join('')+'</tr>').join('')+'</tbody></table>';}
+function equation(label,formula,sub){return '<div class="equation"><b>'+label+'</b>　'+formula+'<small>'+sub+'</small></div>';}
+function step(title,body){return '<details><summary>'+title+'</summary>'+body+'</details>';}
+function renderResults(p,r){
+ const S=r.sec,n=r.mat.div;
+ $('verdict').innerHTML='<div><div class="k">双向弯曲利用率</div><div class="v '+(r.ratioS<=1?'ok':'ng')+'">'+fmt(r.ratioS,3)+'</div><div class="sub">σG/f + σW/f</div></div><div><div class="k">控制挠度利用率</div><div class="v '+(Math.max(r.ratioG,r.ratioW,r.ratioGM)<=1?'ok':'ng')+'">'+fmt(Math.max(r.ratioG,r.ratioW,r.ratioGM),3)+'</div><div class="sub">材料限值与自重专项限值取包络</div></div><div><div class="k">总体结论</div><div style="padding-top:8px">'+badge(r.ok)+'</div><div class="sub">单跨简支 · 弹性计算</div></div>';
+ $('properties').innerHTML=[['截面',C.shapes[p.type].name],['材料',r.mat.name],['跨度',fmt(p.L,0)+' mm'],['面积 A',fmt(S.A,1)+' mm²'],['Ix · 重力',fmt(S.Ix,0)+' mm⁴'],['Iy · 风',fmt(S.Iy,0)+' mm⁴'],['Wx（最小）',fmt(S.Wx,0)+' mm³'],['Wy（最小）',fmt(S.Wy,0)+' mm³'],['f / E',fmt(r.f,0)+' / '+fmt(r.E,0)+' MPa']].map(x=>kv(...x)).join('');
+ $('materialHint').textContent='当前 f = '+fmt(r.f,1)+' MPa，E = '+fmt(r.E,0)+' MPa；'+(r.mat.bands?'钢材按最大板厚/直径 '+fmt(S.tc,1)+' mm 分组。':'铝合金按材料预设值。')+' 挠度分母 '+n+'。';
+ $('loads').innerHTML=[['单点重力 Pk',fmt(r.P/1000,3)+' kN'],['梁自重 gk',fmt(r.g,4)+' kN/m'],['玻璃自重面荷载',fmt(r.Gglass,3)+' kPa'],['水平地震 Ek',fmt(r.Ek,3)+' kPa'],['重力设计弯矩 Mx',fmt(r.MG/1e6,3)+' kN·m'],['风/震设计弯矩 My',fmt(r.MW/1e6,3)+' kN·m']].map(x=>kv(...x)).join('');
+ $('loadTable').innerHTML=table(['板块','H mm','斜段 aᵢ mm','形状','峰值 qk kN/m'],[['上部',fmt(p.Hu,0),fmt(r.wu.a,1),p.Hu>=p.L?'三角形':'梯形',fmt(r.wu.q,3)],['下部',fmt(p.Hl,0),fmt(r.wl.a,1),p.Hl>=p.L?'三角形':'梯形',fmt(r.wl.q,3)]]);
+ $('deflections').innerHTML=table(['工况','挠度 mm','限值 mm','利用率','结果'],[
+ ['风 · 上板块',fmt(r.wu.d,3),'—','—','—'],['风 · 下板块',fmt(r.wl.d,3),'—','—','—'],
+ ['风 · 合计 / L÷'+n,fmt(r.dW,3),fmt(r.lim,3),fmt(r.ratioW,3),badge(r.ratioW<=1)],
+ ['重力 · 两点集中力',fmt(r.dPoint,3),'—','—','—'],['重力 · 梁自重',fmt(r.dSelf,3),'—','—','—'],
+ ['重力 · 合计 / L÷'+n,fmt(r.dG,3),fmt(r.lim,3),fmt(r.ratioGM,3),badge(r.ratioGM<=1)],
+ ['重力专项 · min(L/500, 3 mm)',fmt(r.dG,3),fmt(r.limG,3),fmt(r.ratioG,3),badge(r.ratioG<=1)]]);
+ $('strength').innerHTML=[['重力 σG',fmt(r.sigmaG,2)+' MPa'],['风/震 σW',fmt(r.sigmaW,2)+' MPa'],['σG/f + σW/f',fmt(r.ratioS,3)],['设计强度 f',fmt(r.f,1)+' MPa'],['控制组合',r.sWind>=r.sEarth?'风主导':'地震主导'],['验算结果',badge(r.ratioS<=1)]].map(x=>kv(...x)).join('');
+ const g=fmt(r.g,4),l=fmt(p.L,0),a=fmt(p.a,0),P=fmt(r.P,2);
+ const fbody=[
+ step('01　截面性质与方向',equation('截面几何','Ix = ∫(y−yc)²dA；Iy = ∫(x−xc)²dA','圆形/圆管用精确圆公式；其余按多边形面积积分，孔洞扣除。')+equation('最小截面模量','Wx = Ix / max(yc, h−yc)；Wy = Iy / max(xc, b−xc)','Ix='+fmt(S.Ix,1)+' mm⁴，Iy='+fmt(S.Iy,1)+' mm⁴，Wx='+fmt(S.Wx,1)+' mm³，Wy='+fmt(S.Wy,1)+' mm³')),
+ step('02　重力与对称落点',equation('玻璃面荷载','Gg = γg tg / 1000',fmt(p.gg,2)+' × '+fmt(p.tg,2)+' / 1000 = '+fmt(r.Gglass,4)+' kPa')+equation('单点重力','Pk = Gg (L/1000)(Hu/1000) × 1000 / 2',P+' N；作用于 x='+a+' mm 及 '+fmt(p.L-p.a,0)+' mm')+equation('梁自重','gk = γs A / 10⁶',g+' kN/m = N/mm')),
+ step('03　梯形与三角形荷载',equation('每侧分配','aᵢ = min(L, Hᵢ)/2；qk,ᵢ = Wk aᵢ/1000','上部：aᵤ='+fmt(r.wu.a,2)+' mm，qk,ᵤ='+fmt(r.wu.q,4)+' N/mm；下部：aₗ='+fmt(r.wl.a,2)+' mm，qk,ₗ='+fmt(r.wl.q,4)+' N/mm。aᵢ=L/2 即三角形。')+equation('标准荷载叠加','q(x) = Wk [min(x,L−x,aᵤ)+min(x,L−x,aₗ)]/1000','x、L、a 以 mm 计，压力以 kPa 计。')),
+ step('04　挠度 · 标准值',equation('重力两点荷载','dP = Pk a (3L²−4a²)/(24 E Ix)',P+' × '+a+' × (3 × '+l+'² − 4 × '+a+'²)/(24 × '+fmt(r.E,0)+' × '+fmt(S.Ix,0)+') = '+fmt(r.dPoint,4)+' mm')+equation('自重均布荷载','dg = 5 gk L⁴/(384 E Ix)',fmt(r.dSelf,4)+' mm；dG = dP + dg = '+fmt(r.dG,4)+' mm')+equation('每侧梯形荷载','dᵢ = qk,ᵢ L⁴ [25−40(aᵢ/L)²+16(aᵢ/L)⁴]/(1920 E Iy)','du='+fmt(r.wu.d,4)+' mm，dl='+fmt(r.wl.d,4)+' mm；dW=du+dl='+fmt(r.dW,4)+' mm')+equation('限值','[d] = L/'+n+'；[dG]专项 = min(L/500,3 mm)',fmt(r.lim,3)+' mm；自重专项 '+fmt(r.limG,3)+' mm。两个方向分别校核。')),
+ step('05　荷载组合与设计弯矩',equation('水平地震','Ek = 5 αmax Gk',fmt(r.Ek,4)+' kPa')+equation('设计压力包络','sd = max(γW Wk + ψE γE Ek, γE Ek + ψW γW Wk)','风主导 '+fmt(r.sWind,4)+' kPa；地震主导 '+fmt(r.sEarth,4)+' kPa；取 '+fmt(r.designPressure,4)+' kPa')+equation('重力弯矩','Mx = γG (Pk a + gk L²/8)',fmt(r.MG/1e6,4)+' kN·m（含横梁自重）')+equation('风/震弯矩','My = Σ qd,ᵢ (3L²−4aᵢ²)/24；qd,ᵢ = sd aᵢ/1000',fmt(r.du.M/1e6,4)+' + '+fmt(r.dl.M/1e6,4)+' = '+fmt(r.MW/1e6,4)+' kN·m')),
+ step('06　双向弯曲组合',equation('应力','σG = Mx/Wx；σW = My/Wy',fmt(r.sigmaG,3)+' MPa；'+fmt(r.sigmaW,3)+' MPa')+equation('组合利用率','η = σG/f + σW/f ≤ 1',fmt(r.ratioS,4)+'，'+(r.ratioS<=1?'满足':'不满足')+'。挠度另行校核。'))
+ ].join('');
+ const open=[...$('formulas').querySelectorAll('details')].map(x=>x.open);$('formulas').innerHTML=fbody;[...$('formulas').querySelectorAll('details')].forEach((x,i)=>x.open=open[i]||false);
+}
+function render(){
+ const active=document.activeElement,key=active?.getAttribute?.('data-key');let pos=null;try{pos=active?.selectionStart}catch(e){}
+ const p=inputs();let r=null;
+ try{r=C.calculate(p);last=r;$('error').hidden=true;$('results').hidden=false;renderResults(p,r);}
+ catch(e){$('error').hidden=false;$('error').textContent=e.message;$('results').hidden=true;}
+ $('sectionFigure').innerHTML=sectionFig(r?.sec);$('panelFigure').innerHTML=panelFig();$('gravityFigure').innerHTML=gravityFig(r);$('windFigure').innerHTML=windFig(r);
+ if(key){const targets=[...document.querySelectorAll('[data-key]')].filter(x=>x.getAttribute('data-key')===key);const target=targets[0];if(target){target.focus();try{target.setSelectionRange(pos,pos)}catch(e){}}}
+}
+document.querySelectorAll('input:not([data-key]),select').forEach(e=>e.addEventListener('change',render));
+['sectionFigure','panelFigure','gravityFigure','windFigure'].forEach(id=>$(id).addEventListener('change',e=>{
+ const key=e.target.getAttribute('data-key');if(!key)return;const raw=e.target.value.trim(),v=Number(raw);
+ if(raw===''||!Number.isFinite(v)){render();return;}
+ if(key.startsWith('dim:'))dimState[$('shape').value][key.slice(4)]=v;else state[key]=v;render();
+}));
+$('print').addEventListener('click',()=>window.print());$('expand').addEventListener('click',()=>document.querySelectorAll('#formulas details').forEach(e=>e.open=true));$('collapse').addEventListener('click',()=>document.querySelectorAll('#formulas details').forEach(e=>e.open=false));
+render();
+})();
+</script>
+</body></html>
