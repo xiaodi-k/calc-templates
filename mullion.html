@@ -662,7 +662,7 @@
     强度：碳钢按 GB 50017-2017 表 4.4.1 依板件厚度分组取 f，铝合金与不锈钢取材料表值。
     挠度：风（及护栏活荷载）标准值弹性计算，限值按受力形式自动取控制跨度，并与绝对限值取小。
     悬臂+飞边按护栏立柱模型计算，飞边长度 a 允许为负（面板顶端低于立柱顶端）。
-    立柱可与水平面成夹角 α（高级模式）：风荷载沿面板法向恒垂直于立柱，重力取 cos α 分量，活荷载按水平投影取 cos²α 分量；α &lt; 75° 判定为采光顶龙骨并计入活荷载。
+    立柱可与水平面成夹角 α（高级模式）：风荷载沿面板法向恒垂直于立柱，重力取 cos α 分量，活荷载按水平投影取 cos²α 分量；α &lt; 75° 判定为采光顶龙骨并计入活荷载，面板重力乘 1.1，另校核重力单独作用挠度 ≤ L/500。
     <span class="ver" id="verLine"></span>
   </footer>
 
@@ -1325,7 +1325,9 @@ function tex2html(src) {
     const Gk = inp.gg * inp.pt / 1000;                      /* kPa，面板自重 */
     const Ek = 5 * inp.amax * Gk;                           /* kPa，水平地震 */
     const gsw = pr.A * inp.mat.rho * 1e-6 * 9.8e-3;         /* kN/m，立柱自重 */
-    const qGk = (gsw + Gk * B) * ca;                        /* 永久：自重 + 面板自重 */
+    const panelGravityFactor = isRoof ? 1.1 : 1;
+    const panelGravity = panelGravityFactor * Gk * B;
+    const qGk = (gsw + panelGravity) * ca;                        /* 永久：自重 + 面板自重 */
     const qLk = isRoof ? inp.lk * B * ca * ca : 0;          /* 活：采光顶，按水平投影 */
     const qEk = Ek * B * sa;                                /* 地震：水平力取垂直分量 */
 
@@ -1337,13 +1339,13 @@ function tex2html(src) {
     const qdKind = qd === S1 ? '风荷载控制' : (qd === S2 ? '活荷载控制' : '地震控制');
 
     /* 沿立柱轴线的压力（重力沿轴向的分量），仅作提示，不参与受弯验算 */
-    const Nax = (gsw + Gk * B + (isRoof ? inp.lk * B * ca : 0)) * sa;
+    const Nax = (gsw + panelGravity + (isRoof ? inp.lk * B * ca : 0)) * sa;
 
     const r = {
       pr: pr, st: st, f: f, E: E, I: I, W: W, Wx: W, Wy: pr.Wy,
       qk: qk, Gk: Gk, Ek: Ek, qd: qd, qdKind: qdKind,
       ang: inp.ang, ca: ca, sa: sa, isRoof: isRoof,
-      gsw: gsw, qGk: qGk, qLk: qLk, qEk: qEk, Nax: Nax,
+      gsw: gsw, panelGravityFactor: panelGravityFactor, panelGravity: panelGravity, qGk: qGk, qLk: qLk, qEk: qEk, Nax: Nax,
       lk: inp.lk,
       form: inp.form, L: L, a: a, B: B,
       formName: { simple: '单跨（简支）', two: '双跨（连续）', cant: '悬臂', cantf: '悬臂 + 飞边' }[inp.form]
@@ -1392,6 +1394,7 @@ function tex2html(src) {
       /* 挠度与 q 成正比，先算单位均布荷载的挠度再按比例分配 */
       const t = twoSpanDefl(1, E, I, L1 * 1000, L2 * 1000);
       r.xMax = t.xmax; r.MBstd = MBstd;
+      r.gravitySpans = [{ L: L1, d: qGk * t.d1 }, { L: L2, d: qGk * t.d2 }];
       r.d = dComb(qk * t.dmax, qGk * t.dmax, qLk * t.dmax);
       r.spanOfMax = t.xmax <= L1 * 1000 ? 1 : 2;
       r.l0 = r.spanOfMax === 1 ? L1 : L2;
@@ -1439,12 +1442,25 @@ function tex2html(src) {
     r.limCtrl = r.limRel <= r.limAbs ? '相对限值控制' : '绝对限值控制';
     r.div = inp.div;
 
+    /* 采光顶重力单独校核：不含风、活载，不乘荷载分项系数。 */
+    r.gravityChecks = isRoof
+      ? (r.gravitySpans || [{ L: r.l0, d: r.dG }]).map(function (span, index) {
+          const limit = span.L * 1000 / 500;
+          return { span: index + 1, L: span.L, d: span.d, lim: limit,
+                   ratio: span.d / limit, ok: span.d <= limit };
+        }) : [];
+    r.gravityControl = r.gravityChecks.reduce(function (best, check) {
+      return !best || check.ratio > best.ratio ? check : best;
+    }, null);
+    r.okGravity = !isRoof || r.gravityChecks.every(function (check) { return check.ok; });
+
     /* 校核 */
     r.sigma = r.Md * 1e6 / W;
     r.rStrength = r.sigma / f;
     r.rDefl = r.d / r.lim;
     r.okStrength = r.sigma <= f;
-    r.okDefl = r.d <= r.lim;
+    r.okCombinedDefl = r.d <= r.lim;
+    r.okDefl = r.okCombinedDefl && r.okGravity;
     r.ok = r.okStrength && r.okDefl;
 
     /* 自重（竖直向下的总量，未分解） */
@@ -1466,14 +1482,16 @@ function tex2html(src) {
       return -(RC * Math.pow(u, 3) / 6 - q * Math.pow(u, 4) / 24 +
                (-RC * L2 * L2 / 6 + q * Math.pow(L2, 3) / 24) * u) / EI;
     }
-    let dmax = 0, xmax = 0;
+    let dmax = 0, xmax = 0, d1 = 0, d2 = 0;
     const N = 600, tot = L1 + L2;
     for (let i = 0; i <= N; i++) {
       const x = tot * i / N;
       const d = Math.abs(y(x));
       if (d > dmax) { dmax = d; xmax = x; }
+      if (x <= L1) d1 = Math.max(d1, d);
+      else d2 = Math.max(d2, d);
     }
-    return { dmax: dmax, xmax: xmax, MB: MB, RA: RA, RC: RC };
+    return { dmax: dmax, xmax: xmax, d1: d1, d2: d2, MB: MB, RA: RA, RC: RC };
   }
 
   /* ================= 绘图 ================= */
@@ -1980,7 +1998,7 @@ function tex2html(src) {
       angNote = '<br>立柱与水平面夹角 <b>α = ' + fmt(inp.ang, 1) + '°</b>：' +
         (inp.isRoof
           ? '<b style="color:#b45309">α &lt; 75°，本立柱按采光顶龙骨验算</b>。' +
-            '已计入立柱自重、面板重力与活荷载垂直于立柱的分量；活荷载按水平投影取值。'
+            '面板重力按 1.1 倍计入，立柱自重不放大；另校核重力单独作用挠度 ≤ L/500。活荷载按水平投影取值。'
           : '自重与面板重力垂直于立柱的分量按 cos α 计入（' + fmt(inp.ang, 1) + '° 时为 ' +
             fmt(r.ca, 3) + '），α = 90° 时归零。');
     }
@@ -1992,8 +2010,12 @@ function tex2html(src) {
       '<div class="v" style="color:' + (r.okStrength ? 'var(--ok)' : 'var(--ng)') + '">' + f3(r.rStrength) + '</div>' +
       '<div class="sub">' + fmt(r.sigma, 1) + ' / ' + fmt(r.f, 0) + ' MPa</div></div>' +
       '<div class="item"><div class="k">挠度利用率 d / [d]</div>' +
-      '<div class="v" style="color:' + (r.okDefl ? 'var(--ok)' : 'var(--ng)') + '">' + f3(r.rDefl) + '</div>' +
+      '<div class="v" style="color:' + (r.okCombinedDefl ? 'var(--ok)' : 'var(--ng)') + '">' + f3(r.rDefl) + '</div>' +
       '<div class="sub">' + fmt(r.d, 2) + ' / ' + fmt(r.lim, 1) + ' mm</div></div>' +
+      (inp.isRoof ? '<div class="item"><div class="k">重力挠度利用率（L/500）</div>' +
+        '<div class="v" style="color:' + (r.okGravity ? 'var(--ok)' : 'var(--ng)') + '">' +
+        f3(r.gravityControl.ratio) + '</div><div class="sub">' +
+        fmt(r.gravityControl.d, 2) + ' / ' + fmt(r.gravityControl.lim, 2) + ' mm</div></div>' : '') +
       '<div class="item"><div class="k">结论</div>' +
       '<div class="v" style="padding-top:6px">' + badge(r.ok) + '</div>' +
       '<div class="sub">' + (r.ok ? '强度与挠度均满足' : (r.okStrength ? '挠度超限' : (r.okDefl ? '强度超限' : '强度、挠度均超限'))) + '</div></div>';
@@ -2056,7 +2078,7 @@ function tex2html(src) {
       dep += '<div class="dep"><b>倾斜立柱的重力分解</b>（α = ' + fmt(inp.ang, 1) + '°，cos α = ' +
              fmt(r.ca, 4) + '）　' +
              '立柱自重 ' + fmt(r.gsw, 4) + ' kN/m + 面板自重 G<sub>k</sub>·B = ' +
-             fmt(r.Gk * inp.B, 4) + ' kN/m，合计竖向 ' + fmt(r.gsw + r.Gk * inp.B, 4) +
+             fmt(r.Gk * inp.B, 4) + ' × ' + fmt(r.panelGravityFactor, 1) + ' = ' + fmt(r.panelGravity, 4) + ' kN/m，合计竖向 ' + fmt(r.gsw + r.panelGravity, 4) +
              ' kN/m，垂直于立柱的分量 q<sub>G⊥</sub> = ' + fmt(r.qGk, 4) + ' kN/m。' +
              (inp.isRoof
                ? '<br><b style="color:#b45309">α &lt; 75°：判定为采光顶龙骨</b>，' +
@@ -2094,13 +2116,24 @@ function tex2html(src) {
       '</div>' +
       '<p class="hint" style="margin-top:10px">' + r.l0Note + '；' + r.limCtrl +
       '（绝对限值 ' + fmt(r.limAbs, 0) + ' mm）。利用率 <b>' + f3(r.rDefl) + '</b> ' +
-      (r.okDefl ? '<span class="ok">满足</span>' : '<span class="ng">超限</span>') + '。</p>';
+      (r.okCombinedDefl ? '<span class="ok">满足</span>' : '<span class="ng">超限</span>') + '。</p>';
 
     if (inp.form === 'two') {
       dHtml = '<p class="hint" style="margin:0 0 10px">双跨梁按两跨连续梁解析式逐点求最大挠度（600 点扫描），最大挠度位于 x = ' +
               fmt(r.xMax / 1000, 3) + ' m（第 ' + (r.spanOfMax || 1) + ' 跨内）。' +
               (r.aClamped ? '<br><b style="color:#b45309">a 超出 (0, L) 范围，已按 ' + fmt(r.aC, 2) + ' m 计算。</b>' : '') +
               '</p>' + dHtml;
+    }
+    if (inp.isRoof) {
+      dHtml += '<h3 style="font-size:13px;margin:18px 0 8px">采光顶：重力单独作用挠度（L/500）</h3>' +
+        '<p class="hint">立柱自重 + 1.1 × 面板重力，取垂直于龙骨的分量；不含风、活载及荷载分项系数。' +
+        '双跨逐跨检查；单跨取实际跨度，悬臂沿用 2×悬挑总长的控制跨度。</p>' +
+        '<table><thead><tr><th>校核项</th><th>控制跨度 m</th><th>重力挠度 mm</th><th>L/500 mm</th><th>结果</th></tr></thead><tbody>' +
+        r.gravityChecks.map(function (check) {
+          return '<tr><td>' + (inp.form === 'two' ? '第 ' + check.span + ' 跨' : '重力工况') +
+            '</td><td>' + fmt(check.L, 3) + '</td><td>' + fmt(check.d, 2) + '</td><td>' +
+            fmt(check.lim, 2) + '</td><td>' + badge(check.ok) + '</td></tr>';
+        }).join('') + '</tbody></table>';
     }
     el.deflBox.innerHTML = dHtml;
 
@@ -2221,8 +2254,8 @@ function tex2html(src) {
       L3.push(fxl('立柱自重', 'g_{k}', 'A\\,\\rho',
         nn(r.pr.A, 0) + '\\times ' + nn(inp.mat.rho, 0) + '\\times 10^{-6}\\times 9.8\\times 10^{-3}=\\ ' +
         nn(r.gsw, 4) + '\\ \\mathrm{kN/m}'));
-      L3.push(fxl('重力 ⊥分量', 'q_{G\\perp}', '\\left(g_{k}+G_{k}B\\right)\\cos\\alpha',
-        '\\left(' + nn(r.gsw, 4) + '+' + nn(r.Gk * inp.B, 4) + '\\right)\\times\\cos ' + nn(inp.ang, 1) +
+      L3.push(fxl('重力 ⊥分量', 'q_{G\\perp}', '\\left(g_{k}+' + nn(r.panelGravityFactor, 1) + 'G_{k}B\\right)\\cos\\alpha',
+        '\\left(' + nn(r.gsw, 4) + '+' + nn(r.panelGravity, 4) + '\\right)\\times\\cos ' + nn(inp.ang, 1) +
         '^{\\circ}=\\ ' + nn(r.qGk, 4) + '\\ \\mathrm{kN/m}'));
       if (inp.isRoof) {
         L3.push(fxl('活载 ⊥分量', 'q_{L\\perp}', 'L_{k}B\\cos^{2}\\alpha',
@@ -2240,7 +2273,7 @@ function tex2html(src) {
           '风荷载沿面板法向，本来就垂直于立柱，取 full 值；' +
           '重力（自重、面板自重）竖直向下，垂直分量乘 cos α；' +
           (inp.isRoof
-            ? '<b>α &lt; 75°，判定为采光顶龙骨</b>，活荷载按水平投影取值，垂直分量再乘一次 cos α，即 cos²α；'
+            ? '<b>α &lt; 75°，判定为采光顶龙骨</b>，面板重力乘 1.1，另校核重力挠度 L/500；活荷载按水平投影取值，垂直分量再乘一次 cos α，即 cos²α；'
             : '') +
           '水平地震的垂直分量乘 sin α。α = 90° 时 cos α = 0，全部重力项归零，退回常规竖直立柱。'
         : '风荷载按立柱间距 B 换算为线荷载；α = 90°（竖直立柱）时自重与面板重力不产生弯矩，面板自重仅用于计算地震等效静力。',
@@ -2317,9 +2350,9 @@ function tex2html(src) {
     /* ⑥ 挠度 */
     const L6 = [];
     if (inp.form === 'simple') {
-      L6.push(fxl('挠度', 'd', '\\frac{5q_{k}L^{4}}{384EI}',
+      L6.push(fxl('风致挠度', 'd_W', '\\frac{5q_{k}L^{4}}{384EI}',
         '\\frac{5\\times ' + nn(r.qk, 3) + '\\times ' + nn(r.L * 1000, 0) + '^{4}}{384\\times ' + nn(E, 0) +
-        '\\times ' + nn(I, 0) + '}=\\ ' + nn(r.d, 2) + '\\ \\mathrm{mm}'));
+        '\\times ' + nn(I, 0) + '}=\\ ' + nn(r.dW, 2) + '\\ \\mathrm{mm}'));
     } else if (inp.form === 'two') {
       L6.push(fxl('逐点挠度', 'y(x)', '\\frac{-1}{EI}\\left[\\frac{R x^{3}}{6}-\\frac{q x^{4}}{24}+C_{0}x\\right]',
         nn(r.d, 2) + '\\ \\mathrm{mm}\\ \\mathrm{(max)}'));
@@ -2330,6 +2363,11 @@ function tex2html(src) {
       L6.push(fxl('活载挠度', 'd_{L}', '\\frac{FL^{3}}{3EI}', nn(r.dL, 2) + '\\ \\mathrm{mm}'));
       L6.push(fxl('标准组合', 'd', '\\max\\left(d_{w}+0.7d_{L},\\ d_{L}+0.6d_{w}\\right)',
         '\\max\\left(' + nn(r.dCombA, 2) + ',\\ ' + nn(r.dCombB, 2) + '\\right)=\\ ' + nn(r.d, 2) + '\\ \\mathrm{mm}'));
+    }
+    if (tilt) {
+      L6.push(fxl('重力挠度', 'd_G', '', nn(r.dG, 3) + '\\ \\mathrm{mm}'));
+      L6.push(fxl('标准组合', 'd', 'd_G+\\max(d_W+\\psi_L d_L,d_L+\\psi_W d_W)',
+        nn(r.dG, 3) + '+\\max(' + nn(r.dCombA, 3) + ',' + nn(r.dCombB, 3) + ')=' + nn(r.d, 3) + '\\ \\mathrm{mm}'));
     }
     steps.push({
       t: '挠度（标准值）',
@@ -2358,6 +2396,20 @@ function tex2html(src) {
          '再与绝对限值取小，并给出哪一项控制。',
       L: L7
     });
+
+    if (inp.isRoof) {
+      const gravityRows = [];
+      gravityRows.push(fxl('面板重力放大系数', 'k_G', '', '1.1'));
+      r.gravityChecks.forEach(function (check) {
+        gravityRows.push(fxl('重力挠度（第' + check.span + '项）', 'd_G', '',
+          nn(check.d, 3) + '\\ \\mathrm{mm}'));
+        gravityRows.push(fxl('重力挠度限值', '[d_G]', '\\frac{L}{500}',
+          nn(check.L * 1000, 1) + '/500=' + nn(check.lim, 3) + '\\ \\mathrm{mm}'));
+        gravityRows.push(fxl('利用率', 'd_G/[d_G]', '',
+          nn(check.ratio, 3), check.ok ? 'ok' : 'ng'));
+      });
+      steps.push({t: '采光顶重力单独作用挠度', n: '立柱自重不放大；面板重力乘 1.1，取垂直于龙骨的分量。双跨逐跨检查，悬臂控制跨度沿用 2×悬挑总长。此项不通过时总结果不通过。', L: gravityRows});
+    }
 
     /* ⑧ 强度 */
     const L8 = [];
