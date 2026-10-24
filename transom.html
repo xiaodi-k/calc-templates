@@ -4,15 +4,145 @@
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>横梁计算</title>
 <style>
-:root{--bg:#f2f4f9;--ink:#172b40;--muted:#718094;--line:#dce4ed;--blue:#2f6feb;--green:#087d68;--red:#bd4545}
-*{box-sizing:border-box}[hidden]{display:none!important}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif}
-.topbar{max-width:1360px;margin:auto;padding:19px 24px;display:flex;align-items:center;gap:20px}.back{font-size:13px;color:var(--muted);text-decoration:none}h1{font-size:19px;margin:0;flex:1}button{border:1px solid var(--line);background:white;border-radius:8px;padding:7px 12px;cursor:pointer;color:var(--ink)}
-main{max-width:1360px;padding:0 24px;display:grid;grid-template-columns:400px minmax(0,1fr);gap:20px;align-items:start}.column{min-width:0;border:1px solid #d3e0f0;background:#eaf0fa;border-radius:15px;padding:14px}.outputs{background:#eef7f3;border-color:#cfe4db}.cap{display:inline-block;background:white;border-radius:30px;padding:4px 12px;margin-bottom:12px;color:var(--blue);font-weight:750;font-size:12px;letter-spacing:1px}.outputs>.cap{color:var(--green)}
-.card{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff;margin-bottom:14px;box-shadow:0 3px 10px #1d355706}.card:last-child{margin-bottom:0}.card h2{font-size:13px;letter-spacing:.3px;margin:0;background:#f0f5fd;color:#315f9e;padding:11px 14px;border-bottom:1px solid var(--line)}.outputs h2{background:#e5f3ed;color:var(--green)}.body{padding:14px}.hint{font-size:12px;color:var(--muted);line-height:1.8;margin:8px 0 0}.row{display:flex;align-items:center;gap:10px;margin-bottom:10px}.row label{font-size:12px;flex:none}.row>select,.row>input{flex:1;min-width:0}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.grid label{display:block;font-size:11px;color:var(--muted);margin-bottom:4px}
-input,select{font:inherit;color:var(--ink);border:1px solid #c8d5e3;border-radius:7px;background:#fcfdff;padding:6px 8px;width:100%;min-width:0}input{text-align:right;font-variant-numeric:tabular-nums}input:focus,select:focus{outline:2px solid #cdddff;border-color:var(--blue)}details>summary{cursor:pointer;font-size:12px;color:var(--muted);padding:7px 0}.fig{border:1px solid #dce6ef;border-radius:11px;background:linear-gradient(145deg,#fff,#f5f9fc);padding:8px 5px}.fig svg{display:block;width:100%;height:auto}.fo{width:100%;height:100%;display:flex;align-items:center;justify-content:center;gap:3px;font:11px "Microsoft YaHei",sans-serif;color:#6e8297}.fo input{width:100%;height:23px;padding:1px 3px;border-radius:5px;text-align:center;background:#f8fbff;font:600 12px Consolas,monospace}.fo span{white-space:nowrap}.mini{font-size:11px;color:var(--muted)}
-.kv{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px}.k{font-size:11px;color:var(--muted);margin-bottom:3px}.v{font-weight:750;font-size:15px;font-variant-numeric:tabular-nums}.hero{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;padding:18px;background:linear-gradient(#f2faf6,#fff)}.hero .v{font-size:28px}.hero .sub{font-size:11px;color:var(--muted);margin-top:4px}.badge{display:inline-block;padding:3px 10px;color:white;background:var(--green);border-radius:30px;font-size:12px;font-weight:700}.badge.ng{background:var(--red)}.ok{color:var(--green)}.ng{color:var(--red)}
-table{border-collapse:collapse;width:100%;font-size:12px}th,td{text-align:right;padding:9px 7px;border-bottom:1px solid #e6edf2}th{font-size:11px;color:var(--muted);font-weight:500}th:first-child,td:first-child{text-align:left}.scroll{overflow:auto}.fx details{border-bottom:1px solid #e6edf2}.fx details:last-child{border:0}.fx summary{color:#25455d;font-weight:650;font-size:13px;padding:12px 0}.equation{font:13px/1.9 Cambria,"Times New Roman","Microsoft YaHei",serif;background:#f7fafc;border-radius:7px;padding:10px 12px;margin:8px 0;overflow:auto}.equation small{font:12px/1.8 "Microsoft YaHei",sans-serif;color:var(--muted);display:block}.error{padding:12px 14px;background:#fff0ee;border:1px solid #ecc5be;border-radius:9px;margin-bottom:14px;color:#a6372f}footer{max-width:1360px;margin:20px auto 40px;padding:0 24px;font-size:11px;color:var(--muted);line-height:1.9}
-@media(max-width:960px){main{grid-template-columns:1fr}.column{max-width:none}.fig{max-width:500px;margin:auto}.hero .v{font-size:24px}}@media(max-width:520px){main{padding:0 10px}.topbar{padding:15px 10px;gap:10px}.column{padding:10px}.kv{grid-template-columns:repeat(2,1fr)}.hero{gap:8px;padding:14px}.hero .v{font-size:22px}}@media print{body{background:white;font-size:11px}.topbar button,.back{display:none}main{display:block;padding:0}.column{border:0;background:white;padding:0}.card{break-inside:avoid;box-shadow:none}.inputs{display:grid;grid-template-columns:1fr 1fr;gap:12px}.cap{display:none}.outputs{margin-top:18px}.fig{max-width:340px}details{display:block}details::details-content{content-visibility:visible}.fx details{break-inside:avoid}}
+
+:root {
+  --bg:#f2f4f9; --card:#fff; --text:#111; --ink:#111; --muted:#6b7280;
+  --line:rgba(0,0,0,.10); --ok:#1a7f37; --ng:#c62828;
+  --in:#2f6feb; --in-soft:#e9f0ff; --in-band:#e8eefb; --in-line:#d2dff7;
+  --out:#0e7c66; --out-soft:#e5f4f0; --out-band:#edf7f4; --out-line:#c8e5dc;
+  --blue:var(--in); --green:var(--ok); --red:var(--ng);
+}
+* { box-sizing:border-box; }
+[hidden] { display:none!important; }
+body {
+  margin:0; padding:0 24px 72px; background:var(--bg); color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;
+  font-size:14px;
+}
+.topbar {
+  position:sticky; top:0; z-index:10; display:flex; align-items:center; gap:12px;
+  width:100%; max-width:1280px; margin:0 auto 20px; padding:16px 0;
+  background:var(--bg); border-bottom:1px solid var(--line);
+}
+.topbar h1 { flex:1; font-size:18px; font-weight:800; margin:0; letter-spacing:.3px; }
+.back { color:var(--muted); text-decoration:none; font-size:13px; }
+.back:hover { color:var(--text); }
+main {
+  display:grid; grid-template-columns:380px minmax(0,1fr); gap:20px; align-items:start;
+  width:100%; max-width:1280px; margin:0 auto;
+}
+.column { min-width:0; border-radius:14px; padding:14px; }
+.inputs { background:var(--in-band); border:1px solid var(--in-line); }
+.outputs { background:var(--out-band); border:1px solid var(--out-line); }
+.cap {
+  display:inline-flex; align-items:center; gap:7px; margin-bottom:12px; padding:5px 13px;
+  border-radius:999px; font-size:12px; font-weight:800; letter-spacing:1px;
+  background:#fff; color:var(--in); box-shadow:0 1px 4px rgba(20,50,100,.10);
+}
+.cap::before { content:''; width:7px; height:7px; border-radius:50%; background:currentColor; }
+.outputs>.cap { color:var(--out); }
+.card {
+  background:var(--card); border:1px solid var(--line); border-radius:12px;
+  box-shadow:0 10px 24px rgba(0,0,0,.05); overflow:hidden;
+}
+.card+.card { margin-top:16px; }
+.inputs .card { border-left:3px solid var(--in); box-shadow:0 3px 10px rgba(20,50,100,.05); }
+.outputs .card { border-left:3px solid var(--out); box-shadow:0 3px 10px rgba(10,60,50,.05); }
+.card>h2 {
+  margin:0; padding:12px 16px; font-size:13px; font-weight:800; letter-spacing:.5px;
+  color:var(--in); background:var(--in-soft); border-bottom:1px solid var(--in-line);
+}
+.outputs .card>h2 { background:var(--out-soft); color:var(--out); border-bottom-color:var(--out-line); }
+.card>.body { padding:14px 16px 16px; }
+.hint { font-size:12px; color:var(--muted); line-height:1.7; margin:8px 0 0; }
+.row { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+.row:last-child { margin-bottom:0; }
+.row label { flex:0 1 auto; font-size:13px; color:#333; white-space:nowrap; }
+.row>select,.row>input { width:auto; flex:1 1 96px; min-width:0; }
+.grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; align-items:start; }
+.grid>div { min-width:0; }
+.grid label { display:block; font-size:12px; color:var(--muted); margin-bottom:4px; }
+input,select {
+  width:100%; min-width:0; padding:7px 9px; border:1px solid #d5dded; border-radius:8px;
+  font:inherit; color:var(--text); background:#fcfdff; font-variant-numeric:tabular-nums;
+}
+input { text-align:right; }
+select { cursor:pointer; }
+input:focus,select:focus { outline:2px solid #cfdcff; border-color:var(--in); background:#fff; }
+details { margin-top:4px; }
+details>summary { cursor:pointer; color:var(--muted); font-size:12px; padding:6px 0; user-select:none; }
+button {
+  appearance:none; border:0; padding:8px 14px; border-radius:10px;
+  font:inherit; font-weight:700; cursor:pointer; background:#111; color:#fff;
+}
+button:active { transform:scale(.98); }
+.card h2>button { padding:4px 10px; font-size:12px; border-radius:8px; background:#fff; color:#111; border:1px solid var(--line); }
+.fig { margin:10px 0 4px; border:1px solid var(--in-line); border-radius:10px; background:#fff; padding:6px 4px 2px; }
+.fig svg { display:block; width:100%; height:auto; }
+.fo { display:flex; align-items:center; justify-content:center; gap:3px; width:100%; height:100%; font:12px "Microsoft YaHei",sans-serif; color:var(--muted); }
+.fo input {
+  width:100%; min-width:0; height:23px; margin:0; padding:1px 3px; text-align:center;
+  font:700 12px/1.25 ui-monospace,"SFMono-Regular",Consolas,monospace;
+  color:#16325c; background:#fff; border:1px solid #c2d2ee; border-radius:5px;
+}
+.fo input:focus { border-color:var(--in); box-shadow:0 0 0 2px rgba(47,111,235,.15); }
+.fo span { white-space:nowrap; }
+.mini { font-size:11px; color:var(--muted); }
+.kv { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; }
+.k { font-size:12px; color:var(--muted); }
+.v { font-weight:700; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+.hero { display:flex; gap:28px; flex-wrap:wrap; padding:16px; background:linear-gradient(180deg,#eef8f5,#fff); }
+.hero>div { flex:1 1 155px; min-width:0; }
+.hero .v { font-size:26px; font-weight:900; line-height:1.2; }
+.hero .sub { font-size:12px; color:var(--muted); margin-top:2px; }
+.badge { display:inline-block; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:800; color:#fff; background:var(--ok); }
+.badge.ng { background:var(--ng); }
+.ok { color:var(--ok); font-weight:700; }
+.ng { color:var(--ng); font-weight:700; }
+table { width:100%; border-collapse:collapse; font-size:13px; }
+th,td { padding:8px 10px; text-align:right; border-bottom:1px solid var(--line); }
+th { color:var(--muted); font-weight:700; font-size:12px; background:#fbfbfd; white-space:nowrap; }
+th:first-child,td:first-child { text-align:left; }
+tbody tr:last-child td { border-bottom:0; }
+.scroll { overflow-x:auto; }
+.fx details { border-bottom:1px solid var(--line); }
+.fx details:last-child { border:0; }
+.fx summary { list-style:none; padding:10px 2px; font-size:13px; font-weight:700; color:#222; }
+.fx summary::-webkit-details-marker { display:none; }
+.fx summary::before { content:'+'; display:inline-block; width:18px; color:var(--muted); font-weight:900; }
+.fx details[open]>summary::before { content:'−'; }
+.equation { font:15px/1.9 "Cambria Math",Cambria,"Times New Roman",serif; margin:0 0 0 18px; padding:9px 0; border-top:1px dashed rgba(0,0,0,.07); overflow-x:auto; }
+.equation small { display:block; font:12px/1.75 "Microsoft YaHei",sans-serif; color:var(--muted); }
+.error { padding:10px 12px; border:1px solid #efcfba; border-radius:8px; background:#fff7ed; color:#9a3412; margin-bottom:12px; }
+footer { width:100%; max-width:1280px; margin:24px auto 0; color:var(--muted); font-size:12px; line-height:1.7; }
+@media(max-width:900px) {
+  main { grid-template-columns:minmax(0,1fr); }
+  .fig { max-width:500px; margin-left:auto; margin-right:auto; }
+}
+@media(max-width:520px) {
+  body { padding:0 12px 40px; }
+  .topbar { gap:8px; }
+  .topbar h1 { font-size:16px; }
+  .column { padding:10px; }
+  .kv { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media print {
+  body { background:#fff; padding:0; }
+  .topbar { position:static; border:0; }
+  .topbar button,.back,.cap,footer { display:none; }
+  main { display:block; }
+  .column { background:none; border:0; padding:0; }
+  .card { break-inside:avoid; box-shadow:none; border-color:#ddd; }
+  .inputs .card,.outputs .card { box-shadow:none; border-left-width:1px; }
+  .card>h2,.outputs .card>h2 { background:#f4f4f6; color:#333; }
+  .inputs { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px; }
+  .inputs .card+.card { margin-top:0; }
+  .hero { background:#fff; }
+  .fig { max-width:340px; }
+  .fo input { border-color:transparent; background:transparent; }
+  details::details-content { content-visibility:visible; }
+  .fx details { break-inside:avoid; }
+}
 </style>
 </head>
 <body>
@@ -24,7 +154,7 @@ table{border-collapse:collapse;width:100%;font-size:12px}th,td{text-align:right;
 <div class="row"><label for="shape">标准截面</label><select id="shape"></select></div>
 <div class="row"><label for="material">材料</label><select id="material"></select></div>
 <div class="fig" id="sectionFigure"></div>
-<p class="hint">截面尺寸在图中修改，单位 mm。重力绕 x 轴弯曲，风荷载绕 y 轴弯曲；T 形按横躺方向绘制。空心梯形壁厚为垂直于边的实际厚度。</p>
+<p class="hint">截面尺寸在图中修改，单位 mm。重力绕 x 轴弯曲，风荷载绕 y 轴弯曲。空心梯形壁厚为垂直于边的实际厚度。</p>
 <details><summary>材料参数</summary><div class="grid">
 <div><label for="fOverride">强度 f（MPa，留空自动）</label><input id="fOverride" type="number" step="1" placeholder="自动"></div>
 <div><label for="EOverride">E（MPa，留空自动）</label><input id="EOverride" type="number" step="1000" placeholder="自动"></div>
@@ -83,9 +213,9 @@ circle:{name:'圆形',dims:[['D','直径',80]]},
 tube:{name:'圆管',dims:[['D','外径',100],['t','壁厚',5]]},
 rect:{name:'矩形',dims:[['b','宽度',90],['h','高度',75]]},
 box:{name:'箱型',dims:[['b','宽度',90],['h','高度',75],['tf','上下壁厚',3],['tw','左右壁厚',3]]},
-tee:{name:'T形（横躺）',dims:[['b','总宽',100],['h','总高',80],['tf','竖翼缘厚',8],['tw','横腹板厚',6]]},
-trap:{name:'梯形',dims:[['bt','上底',60],['bb','下底',90],['h','高度',75]]},
-htrap:{name:'空心梯形',dims:[['bt','上底',70],['bb','下底',110],['h','高度',75],['t','法向壁厚',4]]}
+tee:{name:'T形',dims:[['b','总宽',100],['h','总高',80],['tf','竖翼缘厚',8],['tw','横腹板厚',6]]},
+trap:{name:'梯形',dims:[['bt','左边高',60],['bb','右边高',90],['h','总宽',75]]},
+htrap:{name:'空心梯形',dims:[['bt','左边高',70],['bb','右边高',110],['h','总宽',75],['t','法向壁厚',4]]}
 };
 function check(v,message){if(!v)throw Error(message);}
 function polygon(ps){
@@ -113,10 +243,10 @@ function section(type,d){
  b=d.b;h=d.h;check(d.tf<b&&d.tw<h,'T形翼缘厚、腹板厚必须小于总宽、总高');
  outer=[[0,0],[d.tf,0],[d.tf,(h-d.tw)/2],[b,(h-d.tw)/2],[b,(h+d.tw)/2],[d.tf,(h+d.tw)/2],[d.tf,h],[0,h]];parts=[{p:outer,s:1}];tc=Math.max(d.tf,d.tw);
  }else{
- b=Math.max(d.bt,d.bb);h=d.h;outer=[[(b-d.bb)/2,0],[(b+d.bb)/2,0],[(b+d.bt)/2,h],[(b-d.bt)/2,h]];parts=[{p:outer,s:1}];tc=Math.max(b,h);
+ b=d.h;h=Math.max(d.bt,d.bb);outer=[[b,(h-d.bb)/2],[b,(h+d.bb)/2],[0,(h+d.bt)/2],[0,(h-d.bt)/2]];parts=[{p:outer,s:1}];tc=Math.max(b,h);
  if(type==='htrap'){
- check(2*d.t<h,'空心梯形壁厚过大');inner=inset(outer,d.t);
- check(inner[0][0]<inner[1][0]&&inner[3][0]<inner[2][0]&&inner[0][1]<inner[3][1],'空心梯形内腔已消失，请减小壁厚');
+ check(2*d.t<b,'空心梯形壁厚过大');inner=inset(outer,d.t);
+ check(inner.every((p,i)=>{const q=inner[(i+1)%4],u=outer[i],v=outer[(i+1)%4];return (q[0]-p[0])*(v[0]-u[0])+(q[1]-p[1])*(v[1]-u[1])>1e-9;}),'空心梯形内腔已消失，请减小壁厚');
  parts.push({p:inner,s:-1});tc=d.t;
  }
  }
