@@ -28,7 +28,7 @@ body {
 .back { color:var(--muted); text-decoration:none; font-size:13px; }
 .back:hover { color:var(--text); }
 main {
-  display:grid; grid-template-columns:380px minmax(0,1fr); gap:20px; align-items:start;
+  display:grid; grid-template-columns:560px minmax(0,1fr); gap:20px; align-items:start;
   width:100%; max-width:1280px; margin:0 auto;
 }
 .column { min-width:0; border-radius:14px; padding:14px; }
@@ -115,9 +115,15 @@ tbody tr:last-child td { border-bottom:0; }
 .equation small { display:block; font:12px/1.75 "Microsoft YaHei",sans-serif; color:var(--muted); }
 .error { padding:10px 12px; border:1px solid #efcfba; border-radius:8px; background:#fff7ed; color:#9a3412; margin-bottom:12px; }
 footer { width:100%; max-width:1280px; margin:24px auto 0; color:var(--muted); font-size:12px; line-height:1.7; }
-@media(max-width:900px) {
+
+#sectionFigure svg { max-width:420px; margin:0 auto; }
+.matgrid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px 12px; margin-top:8px; font-size:12px; }
+.matgrid .v { font-size:13px; }
+.fo .dimlabel { font-style:normal; font-weight:600; }
+
+@media(max-width:1000px) {
   main { grid-template-columns:minmax(0,1fr); }
-  .fig { max-width:500px; margin-left:auto; margin-right:auto; }
+  .fig { max-width:560px; margin-left:auto; margin-right:auto; }
 }
 @media(max-width:520px) {
   body { padding:0 12px 40px; }
@@ -150,19 +156,23 @@ footer { width:100%; max-width:1280px; margin:24px auto 0; color:var(--muted); f
 <main>
 <section class="column inputs">
 <div class="cap">输入 INPUT</div>
-<div class="card"><h2>截面与材料</h2><div class="body">
-<div class="row"><label for="shape">标准截面</label><select id="shape"></select></div>
-<div class="row"><label for="material">材料</label><select id="material"></select></div>
+<div class="card"><h2>截面</h2><div class="body">
+<div class="row"><label for="shape">型式</label><select id="shape"></select></div>
 <div class="fig" id="sectionFigure"></div>
-<p class="hint">截面尺寸在图中修改，单位 mm。重力绕 x 轴弯曲，风荷载绕 y 轴弯曲。空心梯形壁厚为垂直于边的实际厚度。</p>
-<details><summary>材料参数</summary><div class="grid">
+<p class="hint">尺寸直接在图中修改，单位 mm。重力绕 x 轴，风荷载绕 y 轴；空心梯形按法向等厚。</p>
+</div></div>
+<div class="card"><h2>材料</h2><div class="body">
+<div class="row"><label for="material">牌号</label><select id="material"></select></div>
+<div class="matgrid" id="materialInfo"></div>
+<p class="hint" id="materialHint"></p>
+<details><summary>材料参数覆盖</summary><div class="grid">
 <div><label for="fOverride">强度 f（MPa，留空自动）</label><input id="fOverride" type="number" step="1" placeholder="自动"></div>
 <div><label for="EOverride">E（MPa，留空自动）</label><input id="EOverride" type="number" step="1000" placeholder="自动"></div>
-</div><p class="hint" id="materialHint"></p></details>
+</div></details>
 </div></div>
 <div class="card"><h2>板块与荷载</h2><div class="body">
 <div class="fig" id="loadFigure"></div>
-<p class="hint">固定斜视角：竖向箭头为玻璃重力，蓝色箭头为垂直面板的风荷载。上、下板块轮廓展示各自的梯形 / 三角形分配；两个重力落点距梁端均为 a，任一侧修改会同步。</p>
+<p class="hint">竖向箭头为重力，蓝色斜向箭头为面板法向风力。板块与跨度采用相同比例，端距随箭头定位；左右端距同步修改。</p>
 <div class="grid" style="margin-top:12px"><div><label for="tg">玻璃总厚度（mm）</label><input id="tg" type="number" value="20" step=".5"></div><div><label for="gg">玻璃重力密度（kN/m³）</label><input id="gg" type="number" value="25.6" step=".1"></div></div>
 <p class="hint">上下板块共用玻璃配置，宽度均为跨度 L。上板块全部重力落在本横梁两处垫块，下板块重力由下一道横梁承担。</p>
 </div></div>
@@ -188,7 +198,7 @@ footer { width:100%; max-width:1280px; margin:24px auto 0; color:var(--muted); f
 </div>
 </section>
 </main>
-<footer>范围：等截面单跨简支横梁，线弹性小变形，七类理想标准截面；不含连接、扭转、整体稳定及局部屈曲验算。<br>方法：依据用户提供的横梁计算书第 4.11.1～4.11.4 节；按要求统一材料挠度限值。原书项目截面替换为几何计算，钢梁自重亦计入重力弯矩。地震主导组合的伴随风使用 ψW。<br>版本 1.3.2 · 2026-10-24 18:29</footer>
+<footer>范围：等截面单跨简支横梁，线弹性小变形，七类理想标准截面；不含连接、扭转、整体稳定及局部屈曲验算。<br>方法：依据用户提供的横梁计算书第 4.11.1～4.11.4 节；按要求统一材料挠度限值。原书项目截面替换为几何计算，钢梁自重亦计入重力弯矩。地震主导组合的伴随风使用 ψW。<br>版本 1.4.3 · 2026-10-24 18:44</footer>
 <script id="calculation-core">
 /* Units: geometry mm; load kN/m = N/mm; force N; stress MPa. */
 (function(root){
@@ -302,77 +312,105 @@ function support(x,y,roller=false){return '<path d="M'+x+','+y+' l-8,12 h16 Z" f
 function dim(x1,x2,y,key,value,unit,label){return line(x1,y,x2,y)+line(x1,y-4,x1,y+4)+line(x2,y-4,x2,y+4)+field(key,value,(x1+x2)/2-45,y-13,90,unit,label);}
 function arrow(x,y,len,color='#4185bc'){return line(x,y,x,y+len,color,1.4)+'<path d="M'+(x-3)+','+(y+len-6)+' l3,6 l3,-6" fill="none" stroke="'+color+'" stroke-width="1.4"/>';}
 function sectionFig(sec){
- const type=$('shape').value,d=dimState[type],defs=C.shapes[type].dims;
- let o='',s=sec;
- try{s=s||C.section(type,d);}catch(e){o+=text(175,90,'截面尺寸待修正','#b85050');}
- if(s){
- const scale=Math.min(170/s.b,122/s.h),ox=175-s.b*scale/2,oy=27,py=y=>oy+(s.h-y)*scale,px=x=>ox+x*scale;
- if(s.circle){o+='<circle cx="175" cy="'+(oy+s.h*scale/2)+'" r="'+s.b*scale/2+'" fill="#dcecf2" stroke="#557e8d" stroke-width="1.4"/>';if(s.di)o+='<circle cx="175" cy="'+(oy+s.h*scale/2)+'" r="'+s.di*scale/2+'" fill="#fff" stroke="#557e8d"/>';}
- else {const points=ps=>ps.map(p=>px(p[0])+','+py(p[1])).join(' ');o+='<polygon points="'+points(s.outer)+'" fill="#dcecf2" stroke="#557e8d" stroke-width="1.4"/>';if(s.inner)o+='<polygon points="'+points(s.inner)+'" fill="#fff" stroke="#557e8d" stroke-width="1.1"/>';}
- const cy=py(s.cy),cx=px(s.cx);
- o+=line(ox-18,cy,ox+s.b*scale+18,cy,'#98b1c2',.8,'stroke-dasharray="4 3"')+text(ox+s.b*scale+24,cy+4,'x','#8b9fad',10);
- o+=line(cx,oy-10,cx,oy+s.h*scale+13,'#98b1c2',.8,'stroke-dasharray="4 3"')+text(cx+9,oy-8,'y','#8b9fad',10);
- o+=text(175,168,'截面尺寸 · mm','#8295a6',10);
+ const type=$('shape').value,d=dimState[type],W=420,H=280;
+ let s=sec,o='';
+ try{s=s||C.section(type,d);}catch(e){return '<svg viewBox="0 0 420 280">'+text(210,130,'截面尺寸待修正','#b85050')+'</svg>';}
+ const sc=Math.min(190/s.b,155/s.h),x0=106+(190-s.b*sc)/2,y0=38+(155-s.h*sc)/2;
+ const px=x=>x0+x*sc,py=y=>y0+(s.h-y)*sc,x1=px(s.b),y1=py(0);
+ const path=ps=>ps.map((p,i)=>(i?'L':'M')+px(p[0])+','+py(p[1])).join(' ')+' Z';
+ if(s.circle){
+   o+='<circle cx="'+px(s.b/2)+'" cy="'+py(s.h/2)+'" r="'+s.b*sc/2+'" fill="#dbe7fb" stroke="#2f6feb" stroke-width="1.5"/>';
+   if(s.di)o+='<circle cx="'+px(s.b/2)+'" cy="'+py(s.h/2)+'" r="'+s.di*sc/2+'" fill="#fff" stroke="#2f6feb"/>';
+ }else o+='<path d="'+path(s.outer)+(s.inner?' '+path(s.inner):'')+'" fill-rule="evenodd" fill="#dbe7fb" stroke="#2f6feb" stroke-width="1.5" stroke-linejoin="round"/>';
+ o+=line(x0-13,py(s.cy),x1+13,py(s.cy),'#b4c3d5',.8,'stroke-dasharray="4 3"')+text(x1+20,py(s.cy)+4,'x','#8b9faf',10);
+ o+=line(px(s.cx),y0-12,px(s.cx),y1+12,'#b4c3d5',.8,'stroke-dasharray="4 3"')+text(px(s.cx)+9,y0-10,'y','#8b9faf',10);
+ function dimensionField(key,label,x,y,w=83){
+   return '<foreignObject x="'+x+'" y="'+y+'" width="'+w+'" height="26"><div xmlns="http://www.w3.org/1999/xhtml" class="fo"><span class="dimlabel">'+label+'</span><input aria-label="'+C.shapes[type].dims.find(a=>a[0]===key)[1]+' mm" type="text" inputmode="decimal" data-key="dim:'+key+'" value="'+esc(d[key])+'"></div></foreignObject>';
  }
- defs.forEach((def,i)=>{const x=i%2?183:18,y=185+Math.floor(i/2)*43;o+=text(x,y,def[1],'#688095',10,'start')+field('dim:'+def[0],d[def[0]],x+70,y-17,70,'',def[1]+' mm');});
- return svg(o,187+Math.ceil(defs.length/2)*43,'横梁截面及尺寸');
+ function vertical(key,label,x,low,high,right=false){
+   const yT=py(high),yB=py(low),edge=right?x1:x0;
+   o+=line(x,yT,x,yB)+line(x-4,yT,x+4,yT)+line(x-4,yB,x+4,yB);
+   o+=line(x,yT,edge,yT,'#d3d9e5',.8,'stroke-dasharray="2 3"')+line(x,yB,edge,yB,'#d3d9e5',.8,'stroke-dasharray="2 3"');
+   o+=dimensionField(key,label,right?x+5:2,(yT+yB)/2-13,right?87:84);
+ }
+ if(type==='trap'||type==='htrap'){
+   vertical('bt','B₁',89,(s.h-d.bt)/2,(s.h+d.bt)/2);
+   vertical('bb','B₂',318,(s.h-d.bb)/2,(s.h+d.bb)/2,true);
+ }else vertical(s.circle?'D':'h',s.circle?'D':'H',89,0,s.h);
+ if(!s.circle){
+   o+=line(x0,225,x1,225)+line(x0,221,x0,229)+line(x1,221,x1,229);
+   o+=line(x0,y1,x0,225,'#d3d9e5',.8,'stroke-dasharray="2 3"')+line(x1,y1,x1,225,'#d3d9e5',.8,'stroke-dasharray="2 3"');
+   o+=dimensionField(type==='trap'||type==='htrap'?'h':'b','B',(x0+x1)/2-42,235,84);
+ }
+ const wallKeys=type==='box'||type==='tee'?['tf','tw']:type==='tube'||type==='htrap'?['t']:[];
+ wallKeys.forEach((key,i)=>{
+   let ax,ay;
+   if(type==='tube'){ax=px(s.b-d.t/2);ay=py(s.h/2);}
+   else if(type==='box'&&key==='tf'){ax=px(s.b*.6);ay=py(s.h-d.tf/2);}
+   else if(type==='box'){ax=px(s.b-d.tw/2);ay=py(s.h*.45);}
+   else if(type==='tee'&&key==='tf'){ax=px(d.tf/2);ay=py(s.h*.8);}
+   else if(type==='tee'){ax=px(s.b*.7);ay=py(s.h/2);}
+   else {ax=px(s.b-d.t/2);ay=py(s.h/2);}
+   const yy=type==='htrap'?8:12+i*36;
+   o+=line(327,yy+13,ax,ay,'#b9c6dd',.9,'stroke-dasharray="3 2"')+dimensionField(key,key==='tf'?'t_f':key==='tw'?'t_w':'t',326,yy,90);
+ });
+ return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+W+' '+H+'" role="group" aria-label="截面尺寸标注">'+o+'</svg>';
 }
 function loadFig(r){
- const bx=72,ex=286,yb=190,width=ex-bx,L=Math.max(state.L,1);
- const px=x=>bx+x/L*width,project=(x,y,z=0)=>[x+z*.48,y-z*.32];
- const polygon=(ps,fill,stroke,opacity=1)=>'<polygon points="'+ps.map(p=>p.join(',')).join(' ')+'" fill="'+fill+'" fill-opacity="'+opacity+'" stroke="'+stroke+'" stroke-width="1.1"/>';
- const normalArrow=(x,y,z,color)=>{
-   const tail=project(x,y,z),tip=project(x,y,0),dx=tip[0]-tail[0],dy=tip[1]-tail[1],len=Math.hypot(dx,dy),ux=dx/len,uy=dy/len;
-   return line(tail[0],tail[1],tip[0],tip[1],color,1.3)+'<path d="M'+(tip[0]-ux*6-uy*3)+','+(tip[1]-uy*6+ux*3)+' L'+tip.join(',')+' L'+(tip[0]-ux*6+uy*3)+','+(tip[1]-uy*6-ux*3)+'" fill="none" stroke="'+color+'" stroke-width="1.3"/>';
- };
+ const W=560,L=Math.max(state.L,1),Hu=Math.max(0,state.Hu),Hl=Math.max(0,state.Hl);
+ /* 同一比例尺绘制跨度及两块面板，固定法向斜向投影只用于风箭头。 */
+ const sc=Math.min(350/L,340/Math.max(Hu+Hl,1));
+ const width=L*sc,bx=(W-width)/2,ex=bx+width,top=90+Math.max(0,70-Hu*sc);
+ const beamY=top+Hu*sc,bottom=beamY+Hl*sc,viewH=Math.max(bottom+92,300);
+ const px=x=>bx+x*sc,project=(x,y,z)=>[x+z*.48,y-z*.32];
+ const polygon=(ps,fill,stroke,opacity=1)=>'<polygon points="'+ps.map(p=>p.join(',')).join(' ')+'" fill="'+fill+'" fill-opacity="'+opacity+'" stroke="'+stroke+'" stroke-width="1"/>';
  let o='';
- const top=84,bottom=278;
- o+=polygon([[bx,top],[ex,top],[ex,yb],[bx,yb]],'#deedf5','#a9c1d0',.72);
- o+=polygon([[bx,yb+7],[ex,yb+7],[ex,bottom],[bx,bottom]],'#eff5f9','#b5cbd7',.75);
- o+=text(165,106,'上部板块','#7a99ad',11)+text(165,265,'下部板块','#91a8b7',11);
- /* 固定法向：面板在 x-y 平面，风力沿斜向 z 轴。 */
- function windCurtain(H,sign,color){
-   const ramp=Math.min(L,Math.max(H,0))/2,aw=ramp/L*width,peak=Math.max(0,state.wk)*ramp/1000;
-   const depth=ramp>0?24+Math.min(24,peak*7):0,base=yb+sign*12;
-   const p0=[bx,base],p1=project(bx+aw,base,depth),p2=project(ex-aw,base,depth),p3=[ex,base];
-   if(ramp>0){
-     o+=polygon([p0,p1,p2,p3],color,color,.075);
-     for(let i=1;i<7;i++){const xx=width*i/7,z=depth*Math.min(xx,aw,width-xx)/Math.max(aw,.01);if(z>0)o+=normalArrow(bx+xx,base,z,color);}
+ if(Hu>0)o+='<rect data-panel="upper" x="'+bx+'" y="'+top+'" width="'+width+'" height="'+(Hu*sc)+'" fill="#e8f0f8" fill-opacity=".7" stroke="#a7bed1" stroke-width="1.1"/>';
+ if(Hl>0)o+='<rect data-panel="lower" x="'+bx+'" y="'+beamY+'" width="'+width+'" height="'+(Hl*sc)+'" fill="#f3f7fb" stroke="#b5c7d7" stroke-width="1.1"/>';
+ function windArrow(x,y,depth,color){
+   if(depth<.1)return '';
+   const p=project(x,y,depth),q=[x,y],dx=q[0]-p[0],dy=q[1]-p[1],len=Math.hypot(dx,dy),ux=dx/len,uy=dy/len;
+   return line(p[0],p[1],q[0],q[1],color,1.3)+'<path d="M'+(x-ux*6-uy*3)+','+(y-uy*6+ux*3)+' L'+x+','+y+' L'+(x-ux*6+uy*3)+','+(y-uy*6-ux*3)+'" fill="none" stroke="'+color+'" stroke-width="1.3"/>';
+ }
+ /* 梯形分配轮廓保留，但不重复文字名称；两侧错开以看清箭头。 */
+ const maxA=Math.max(Math.min(L,Hu),Math.min(L,Hl))/2;
+ function wind(H,y,color){
+   if(H<=0||state.wk<=0)return;
+   const a=Math.min(L,H)/2,dx=a*sc,z=38*a/Math.max(maxA,1),base=[[bx,y],project(bx+dx,y,z),project(ex-dx,y,z),[ex,y]];
+   o+=polygon(base,color,color,.045);
+   for(let i=1;i<=5;i++){
+     const x=width*i/6,depth=z*Math.min(x,dx,width-x)/Math.max(dx,.001);
+     o+=windArrow(bx+x,y,depth,color);
    }
-   const label=(sign<0?'上部':'下部')+' '+(H>=L?'三角形':'梯形');
-   o+=text(sign<0?ex:bx,sign<0?base-depth*.32-7:base+22,label,color,9.5,sign<0?'end':'start');
  }
- windCurtain(state.Hl,1,'#88a6ba');
- windCurtain(state.Hu,-1,'#3c88bb');
- for(const xy of [[100,124],[182,124],[252,124],[126,245],[232,245]])o+=normalArrow(xy[0],xy[1],31,'#80aac5');
- /* 梁的三个面形成固定斜视角，不随参数转动。 */
- o+=polygon([[bx,yb],[ex,yb],[ex+10,yb-7],[bx+10,yb-7]],'#7798ab','#52778d');
- o+=polygon([[bx,yb],[ex,yb],[ex,yb+8],[bx,yb+8]],'#a2b8c5','#52778d');
- o+=polygon([[ex,yb],[ex+10,yb-7],[ex+10,yb+1],[ex,yb+8]],'#63859b','#52778d');
- o+=support(bx,yb+8)+support(ex,yb+8,true);
- const loc=Math.min(L/2,Math.max(0,state.a)),xp=px(loc),xr=px(L-loc);
- if(Math.abs(xp-xr)<1){
-   o+=arrow(xp,131,52,'#9b6b50')+text(xp,124,r?'2P = '+fmt(r.P*2/1000,3)+' kN':'2P','#9b6b50',10);
- }else{
-   o+=arrow(xp,131,52,'#9b6b50')+arrow(xr,131,52,'#9b6b50');
-   o+=text(xp,124,r?'P = '+fmt(r.P/1000,3)+' kN':'P','#9b6b50',10);
-   o+=text(xr,124,r?'P = '+fmt(r.P/1000,3)+' kN':'P','#9b6b50',10);
+ wind(Hu,beamY-11,'#3e88ba');wind(Hl,beamY+15,'#8caabd');
+ /* 横梁仅用线表示，不画截面体块。 */
+ o+=line(bx,beamY,ex,beamY,'#4d6f86',3)+support(bx,beamY+2)+support(ex,beamY+2,true);
+ const loc=Math.max(0,Math.min(L/2,state.a)),left=px(loc),right=px(L-loc),dimY=beamY-61;
+ const gravityColor='#a47659';
+ o+=arrow(left,beamY-43,38,gravityColor);
+ if(Math.abs(right-left)>1)o+=arrow(right,beamY-43,38,gravityColor);
+ /* 端距尺寸与重力箭头一起移动；输入框紧贴箭头上端左右两侧。 */
+ o+=line(bx,dimY,left,dimY)+line(right,dimY,ex,dimY);
+ for(const x of [bx,left,right,ex])o+=line(x,dimY-4,x,dimY+4,'#9aaec0',1);
+ o+=line(bx,beamY-3,bx,dimY-4,'#c6d3df',.8,'stroke-dasharray="2 3"')+line(ex,beamY-3,ex,dimY-4,'#c6d3df',.8,'stroke-dasharray="2 3"');
+ o+=field('a',state.a,Math.max(5,left-91),dimY-27,83,'mm','左侧重力落点距梁端');
+ o+=field('a',state.a,Math.min(W-88,right+8),dimY-27,83,'mm','右侧重力落点距梁端');
+ /* 共同跨度与上下高度，尺寸线锚定实际板块边缘。 */
+ o+=dim(bx,ex,52,'L',state.L,'mm','横梁跨度及板块宽度');
+ o+=line(bx,top,bx,57,'#c6d3df',.8,'stroke-dasharray="2 3"')+line(ex,top,ex,57,'#c6d3df',.8,'stroke-dasharray="2 3"');
+ const dimX=bx-19;
+ function height(key,value,y0,y1){
+   o+=line(dimX,y0,dimX,y1)+line(dimX-4,y0,dimX+4,y0)+line(dimX-4,y1,dimX+4,y1);
+   const cy=key==='Hu'?Math.min((y0+y1)/2,beamY-22):Math.max((y0+y1)/2,beamY+26);
+   o+=field(key,value,Math.max(2,dimX-91),cy-13,85,'mm',key==='Hu'?'上部板块高度':'下部板块高度');
  }
- o+=dim(bx,ex,37,'L',state.L,'mm','横梁跨度及板块宽度');
- o+=text(165,62,'跨度 / 板块宽度','#859aaa',9.5);
- o+=line(54,top,54,yb)+field('Hu',state.Hu,1,91,66,'mm','上部板块高度');
- o+=line(54,yb+8,54,bottom)+field('Hl',state.Hl,1,235,66,'mm','下部板块高度');
- o+=text(18,78,'上部高度','#8299aa',9,'start')+text(18,226,'下部高度','#8299aa',9,'start');
- /* 对称端距与风压放在图中下方，避免挡住两个方向的箭头。 */
- o+=line(bx,311,xp,311)+line(xr,311,ex,311);
- o+=line(bx,306,bx,316)+line(ex,306,ex,316);
- o+=field('a',state.a,25,307,99,'mm','左侧重力落点距梁端');
- o+=field('a',state.a,225,307,99,'mm','右侧重力落点距梁端');
- o+=text(74,348,'左端距 a','#7e94a5',10)+text(274,348,'右端距 a','#7e94a5',10);
- o+=field('wk',state.wk,130,369,126,'kPa','风荷载标准值 Wk')+text(99,386,'Wk','#3c88bb',12);
- o+=line(24,415,40,415,'#9b6b50',1.5)+text(46,419,'竖向重力','#8d796e',10,'start');
- o+=line(147,415,163,405,'#3c88bb',1.5)+text(171,415,'面板法向风力','#668da7',10,'start');
- return svg(o,433,'固定三维视角：跨度、板块高度、竖向重力落点和法向风荷载');
+ height('Hu',state.Hu,top,beamY);height('Hl',state.Hl,beamY,bottom);
+ const wkY=bottom+39;
+ o+=field('wk',state.wk,W/2-45,wkY,118,'kPa','风荷载标准值 Wk')+text(W/2-60,wkY+17,'Wk','#3e88ba',12);
+ o+=line(W/2-103,viewH-14,W/2-93,viewH-14,gravityColor,1.4)+text(W/2-85,viewH-10,'重力',gravityColor,10,'start');
+ o+=line(W/2+11,viewH-10,W/2+23,viewH-18,'#3e88ba',1.4)+text(W/2+31,viewH-10,'风力','#648ba5',10,'start');
+ return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+W+' '+viewH+'" role="group" aria-label="按实际比例绘制的板块跨度、重力落点和风荷载">'+o+'</svg>';
 }
 const ids=['tg','gg','alpha','gG','gW','gE','psiE','psiW','fOverride','EOverride'];
 function inputs(){
@@ -388,6 +426,7 @@ function renderResults(p,r){
  const S=r.sec,n=r.mat.div;
  $('verdict').innerHTML='<div><div class="k">双向弯曲利用率</div><div class="v '+(r.ratioS<=1?'ok':'ng')+'">'+fmt(r.ratioS,3)+'</div><div class="sub">σG/f + σW/f</div></div><div><div class="k">控制挠度利用率</div><div class="v '+(Math.max(r.ratioG,r.ratioW,r.ratioGM)<=1?'ok':'ng')+'">'+fmt(Math.max(r.ratioG,r.ratioW,r.ratioGM),3)+'</div><div class="sub">材料限值与自重专项限值取包络</div></div><div><div class="k">总体结论</div><div style="padding-top:8px">'+badge(r.ok)+'</div><div class="sub">单跨简支 · 弹性计算</div></div>';
  $('properties').innerHTML=[['截面',C.shapes[p.type].name],['材料',r.mat.name],['跨度',fmt(p.L,0)+' mm'],['面积 A',fmt(S.A,1)+' mm²'],['Ix · 重力',fmt(S.Ix,0)+' mm⁴'],['Iy · 风',fmt(S.Iy,0)+' mm⁴'],['Wx（最小）',fmt(S.Wx,0)+' mm³'],['Wy（最小）',fmt(S.Wy,0)+' mm³'],['f / E',fmt(r.f,0)+' / '+fmt(r.E,0)+' MPa']].map(x=>kv(...x)).join('');
+ $('materialInfo').innerHTML=[['f（抗弯）',fmt(r.f,0)+' MPa'],['E',fmt(r.E,0)+' MPa'],['γs',fmt(r.mat.rho,1)+' kN/m³'],['挠度 1/n',n]].map(x=>kv(...x)).join('');
  $('materialHint').textContent='当前 f = '+fmt(r.f,1)+' MPa，E = '+fmt(r.E,0)+' MPa；'+(r.mat.bands?'钢材按最大板厚/直径 '+fmt(S.tc,1)+' mm 分组。':'铝合金按材料预设值。')+' 挠度分母 '+n+'。';
  $('loads').innerHTML=[['单点重力 Pk',fmt(r.P/1000,3)+' kN'],['梁自重 gk',fmt(r.g,4)+' kN/m'],['玻璃自重面荷载',fmt(r.Gglass,3)+' kPa'],['水平地震 Ek',fmt(r.Ek,3)+' kPa'],['重力设计弯矩 Mx',fmt(r.MG/1e6,3)+' kN·m'],['风/震设计弯矩 My',fmt(r.MW/1e6,3)+' kN·m']].map(x=>kv(...x)).join('');
  $('loadTable').innerHTML=table(['板块','H mm','斜段 aᵢ mm','形状','峰值 qk kN/m'],[['上部',fmt(p.Hu,0),fmt(r.wu.a,1),p.Hu>=p.L?'三角形':'梯形',fmt(r.wu.q,3)],['下部',fmt(p.Hl,0),fmt(r.wl.a,1),p.Hl>=p.L?'三角形':'梯形',fmt(r.wl.q,3)]]);
