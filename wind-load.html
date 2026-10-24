@@ -169,6 +169,7 @@
       margin-bottom: 4px; white-space: nowrap;
     }
     .grid2 > div { min-width: 0; }
+    .height-area { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
     /* 构造层次分隔条 */
     .seam {
@@ -384,8 +385,6 @@
       color: var(--in); font-size: 12px;
     }
 
-    .beamprev { margin-top: 6px; }
-    .beamprev svg { width: 100%; height: auto; display: block; }
     .dim-l input {
       width: 46px; padding: 1px 3px; font-size: 11px; text-align: right;
       border: 1px solid var(--in-line); border-radius: 4px;
@@ -469,15 +468,15 @@
           </div>
           <p class="hint" id="pickInfo" style="margin-top:-2px"></p>
 
-          <div class="row">
-            <label for="z">计算高度 z</label>
-            <input type="number" id="z" value="40" step="1" min="0" max="550" />
-            <span class="unit">m</span>
-          </div>
-          <div class="row">
-            <label for="area">从属面积 A</label>
-            <input type="number" id="area" value="4.8" step="0.1" min="0.01" />
-            <span class="unit">m²</span>
+          <div class="grid2 height-area">
+            <div>
+              <label for="z">计算高度 z（m）</label>
+              <input type="number" id="z" value="40" step="1" min="0" max="550" />
+            </div>
+            <div>
+              <label for="area">从属面积 A（m²）</label>
+              <input type="number" id="area" value="4.8" step="0.1" min="0.01" />
+            </div>
           </div>
           <p class="hint">从属面积用于体型系数折减：≤1 m² 时不折减，≥25 m² 时取 η₂₅，其间按对数插值。</p>
         </div>
@@ -593,14 +592,6 @@
           </div>
         </div>
         <p class="hint" style="padding:0 16px 14px;margin:0" id="floorHint"></p>
-      </div>
-
-      <div class="card">
-        <h2>示意</h2>
-        <div class="body">
-          <div class="beamprev" id="prevHost"></div>
-          <p class="hint">高度标注可直接改；箭头按风的方向（正压向内、负压向外）绘制。</p>
-        </div>
       </div>
 
       <div class="card">
@@ -888,7 +879,7 @@ var IDS = ['fxHost', 'fxOpen', 'fxClose', 'printBtn', 'verLine',
            'preset', 'resBox', 'errBox', 'floorHint', 'pickInfo', 'terHint', 'presetHint', 'terSeg',
            'outPP', 'outPN', 'outRP', 'outRN',
            'kZ', 'kMu', 'kQ', 'kBeta', 'kBL', 'kEta', 'kLim', 'kDep',
-           'prevHost', 'srcBody', 'advCard1', 'advCard2', 'custTag',
+           'srcBody', 'advCard1', 'advCard2', 'custTag',
            'modeSw', 'lblBasic', 'lblAdv',
            'dlg', 'pvSel', 'ctSel', 'rpSeg', 'stNote', 'stPick', 'dlgCancel', 'dlgOk', 'pickBtn'];
 
@@ -988,95 +979,6 @@ function compute(a) {
     PP: PP, PN: PN, RP: RP, RN: RN, useFloor: useFloor, floorHit: hitGusset,
     t: t, p: p, A: A, z: z, w0: w0, ep: ep, en: en, ip: ip, inn: inn, kt: kt, kd: kd
   };
-}
-
-/* =================================================================
-   示意图
-================================================================= */
-function drawPrev(a, r, errs) {
-  var W = 340, H = 210, y0 = 178;
-  var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg">';
-  s += '<line x1="8" y1="' + y0 + '" x2="' + (W - 8) + '" y2="' + y0 + '" stroke="#333" stroke-width="1.4"/>';
-
-  /* 地面粗糙度：左侧口袋默小示意 */
-  var rough = { A: [], B: [[24, 16]], C: [[20, 22], [46, 30], [72, 18]], D: [[20, 34], [46, 46], [72, 30], [96, 38]] }[a.terr];
-  rough.forEach(function (b) {
-    s += '<rect x="' + b[0] + '" y="' + (y0 - b[1]) + '" width="16" height="' + b[1] +
-         '" fill="none" stroke="#9aa7bd" stroke-width="1.1"/>';
-  });
-  if (a.terr === 'B') {
-    s += '<path d="M30 ' + y0 + ' L38 ' + (y0 - 20) + ' L46 ' + y0 + ' Z" fill="none" stroke="#9aa7bd" stroke-width="1.1"/>';
-  }
-
-  /* 主体房屋 */
-  var bx = 150, bw = 132, top = 46;
-  s += '<rect x="' + bx + '" y="' + top + '" width="' + bw + '" height="' + (y0 - top) +
-       '" fill="#f4f7fd" stroke="#333" stroke-width="1.4"/>';
-  /* 楼层线 */
-  var floors = 4;
-  for (var f = 1; f < floors; f++) {
-    var yy = top + (y0 - top) * f / floors;
-    s += '<line x1="' + bx + '" y1="' + yy + '" x2="' + (bx + bw) + '" y2="' + yy +
-         '" stroke="#cfd8ea" stroke-width="1"/>';
-  }
-
-  /* 分区：边角区阴影 / 大面区实线框 */
-  if (r && r.p.kind === 'wall') {
-    if (a.preset === 'wall-edge') {
-      s += '<rect x="' + bx + '" y="' + top + '" width="' + (bw * 0.28) + '" height="' + (y0 - top) +
-           '" fill="#2f6feb" fill-opacity="0.10" stroke="none"/>';
-    } else {
-      s += '<rect x="' + (bx + bw * 0.28) + '" y="' + (top + 16) + '" width="' + (bw * 0.44) +
-           '" height="' + (y0 - top - 32) + '" fill="#0e7c66" fill-opacity="0.10" stroke="none"/>';
-    }
-  } else {
-    /* 采光顶：屋面上方箭头 */
-    s += '<line x1="' + (bx - 10) + '" y1="' + top + '" x2="' + (bx + bw + 10) + '" y2="' + top +
-         '" stroke="#b45309" stroke-width="2.2"/>';
-  }
-
-  /* 高度标注（可编辑） */
-  var zMaxPx = 128;
-  var zpx = Math.max(14, Math.min(zMaxPx, Number(a.z) / 120 * zMaxPx));
-  var zTop = y0 - zpx;
-  var xd = 128;
-  s += '<line x1="' + xd + '" y1="' + y0 + '" x2="' + xd + '" y2="' + zTop + '" stroke="#333" stroke-width="1"/>';
-  s += '<line x1="' + xd + '" y1="' + y0 + '" x2="' + (xd + 5) + '" y2="' + (y0 + 5) + '" stroke="#333" stroke-width="1"/>';
-  s += '<line x1="' + xd + '" y1="' + y0 + '" x2="' + (xd - 5) + '" y2="' + (y0 + 5) + '" stroke="#333" stroke-width="1"/>';
-  s += '<line x1="' + (xd - 5) + '" y1="' + zTop + '" x2="' + (xd + 5) + '" y2="' + zTop + '" stroke="#333" stroke-width="1"/>';
-  s += '<line x1="' + (xd - 5) + '" y1="' + y0 + '" x2="' + (xd + 5) + '" y2="' + y0 + '" stroke="#333" stroke-width="1"/>';
-  s += '<foreignObject x="' + (xd - 62) + '" y="' + ((zTop + y0) / 2 - 11) + '" width="60" height="22" overflow="visible">' +
-       '<span class="dim-l" xmlns="http://www.w3.org/1999/xhtml">z=' +
-       '<input type="number" data-dim="z" value="' + a.z + '" style="width:42px"/></span></foreignObject>';
-
-  /* 有效高度提示（被夹持时） */
-  if (r && r.clipped) {
-    s += '<text x="' + (xd - 8) + '" y="' + (zTop - 6) + '" text-anchor="end" font-size="9.5" fill="#c62828">Z=' +
-         n6(r.Z) + ' m（夹持）</text>';
-  }
-
-  /* 风箭头：正压向内（指向墙面），负压向外（背离墙面） */
-  var ax = bx - 14, ay = [66, 100, 134];
-  if (!errs.length && r) {
-    ay.forEach(function (y) {
-      s += '<line x1="' + (ax - 34) + '" y1="' + y + '" x2="' + ax + '" y2="' + y +
-           '" stroke="#2f6feb" stroke-width="1.6"/>';
-      s += '<path d="M' + ax + ' ' + y + ' L' + (ax - 8) + ' ' + (y - 4) + ' L' + (ax - 8) + ' ' + (y + 4) + ' Z" fill="#2f6feb"/>';
-    });
-    s += '<text x="' + (ax - 36) + '" y="' + (ay[0] - 8) + '" text-anchor="end" font-size="9.5" fill="#2f6feb">+' +
-         f3(r.PP) + '</text>';
-    ay.forEach(function (y) {
-      s += '<line x1="' + (bx + bw + 14) + '" y1="' + y + '" x2="' + (bx + bw + 48) + '" y2="' + y +
-           '" stroke="#b45309" stroke-width="1.6"/>';
-      s += '<path d="M' + (bx + bw + 48) + ' ' + y + ' L' + (bx + bw + 40) + ' ' + (y - 4) + ' L' + (bx + bw + 40) + ' ' + (y + 4) + ' Z" fill="#b45309"/>';
-    });
-    s += '<text x="' + (bx + bw + 50) + '" y="' + (ay[0] - 8) + '" font-size="9.5" fill="#b45309">−' +
-         f3(r.PN) + '</text>';
-  }
-  s += '<text x="10" y="' + (H - 6) + '" font-size="9.5" fill="#6b7280">' + a.terr + ' 类 · ' +
-       TERR[a.terr].s + '</text>';
-  s += '</svg>';
-  E.prevHost.innerHTML = s;
 }
 
 /* =================================================================
@@ -1262,7 +1164,6 @@ function refresh() {
     ['kZ', 'kMu', 'kQ', 'kBeta', 'kBL', 'kEta', 'kLim', 'kDep'].forEach(function (id) { E[id].textContent = '—'; });
     ['outPP', 'outPN', 'outRP', 'outRN'].forEach(function (id) { E[id].textContent = '—'; });
     E.floorHint.textContent = '';
-    drawPrev(a, null, errs);
     renderFx(a, null, errs);
     return;
   }
@@ -1292,8 +1193,6 @@ function refresh() {
     fh += ' 注意：计算高度 ' + n6(r.z) + ' m 已按 ' + a.terr + ' 类地面夹持到 ' + n6(r.Z) + ' m。';
   }
   E.floorHint.textContent = fh;
-
-  drawPrev(a, r, errs);
   renderFx(a, r, errs);
 }
 
@@ -1338,17 +1237,6 @@ E.fxClose.addEventListener('click', function () {
   Array.prototype.forEach.call(E.fxHost.querySelectorAll('details'), function (d) { d.open = false; });
 });
 E.printBtn.addEventListener('click', function () { window.print(); });
-
-/* 图上标注：高度的就地编辑 */
-E.prevHost.addEventListener('change', function (ev) {
-  var el = ev.target;
-  if (!el.getAttribute) return;
-  var k = el.getAttribute('data-dim');
-  if (!k) return;
-  var v = Number(el.value);
-  if (k === 'z' && isFinite(v)) document.getElementById('z').value = el.value;
-  refresh();
-});
 
 /* ---------- 初始化：下拉 / 分段控件 ---------- */
 document.getElementById('preset').innerHTML = PRESET_KEYS.map(function (k) {
