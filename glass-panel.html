@@ -349,7 +349,7 @@
     /* ===== 本页新增：图示（平面图 / 断面图 / 受力简图） ===== */
     .figbox {
       margin: 12px 0 8px; border: 1px solid var(--in-line);
-      border-radius: 10px; background: #fff; padding: 10px 6px 4px;
+      border-radius: 12px; background: linear-gradient(160deg, #ffffff, #f4f8fb); padding: 14px 8px 8px;
     }
     .figbox svg { display: block; width: 100%; height: auto; }
     .figcap {
@@ -370,8 +370,8 @@
       width: 100%; min-width: 0; margin: 0; padding: 1px 2px;
       font: 700 12px/1.25 ui-monospace, "SFMono-Regular", Consolas, monospace;
       font-variant-numeric: tabular-nums;
-      color: #16325c; text-align: center;
-      background: #fff; border: 1px solid #c2d2ee; border-radius: 5px;
+      color: #25455f; text-align: center;
+      background: #f8fbff; border: 1px solid #bfd0df; border-radius: 6px;
       box-sizing: border-box; outline: none;
     }
     .dbox input:focus {
@@ -479,11 +479,6 @@
       <div class="card">
         <h2>荷载</h2>
         <div class="body">
-          <div class="row">
-            <label for="wk">风荷载标准值 W<sub>k</sub></label>
-            <input type="number" id="wk" value="1.5" step="0.05" />
-            <span class="unit">kPa</span>
-          </div>
           <div class="row">
             <label for="ig">抗震设防烈度</label>
             <select id="ig">
@@ -611,7 +606,7 @@
     SGP 夹层等效厚度按 DG/TJ 08-56-2019 上海地标 第 11.2.8 条计算。单位制 mm / N / MPa。
     四点支承（点支承）按 JGJ 102-2003 第 8.1.5 条：跨度取支承点之间长边 b，
     m 查表 8.1.5-1、μ 查表 8.1.5-3、η 查表 6.1.2-2，挠度限值 b/60，f<sub>g</sub> 取玻璃大面强度。
-    <br>图示：面板尺寸与支承平面图（红色虚线为支承边）、玻璃配置断面图（自室外至室内，标 te 等效厚度、
+    <br>图示：面板尺寸与支承平面图（红色虚线为支承边）、玻璃配置断面图（自室外至室内，标各组实际总厚度、
     t 各片玻璃厚、ts 胶片厚、空气层 A，均可在图上直接改）、荷载受力简图（自重 Dead Load 与
     风荷载 Wind Load，地震与冲击荷载不在图中表示）。
     <span class="ver">版本 1.5.3 · 2026-10-22 15:55</span>
@@ -1004,7 +999,7 @@ function tex2html(src) {
   let mode = 'basic';
 
   const el = {};
-  ['cfg', 'cfgHint', 'wk', 'ig', 'E', 'nu', 'gg',
+  ['cfg', 'cfgHint', 'ig', 'E', 'nu', 'gg',
    'defdiv', 'gG', 'gw', 'gE', 'psE', 'psw', 'printBtn', 'fxOpen', 'fxClose',
    'support', 'spanSide', 'spanRow', 'spanHint', 'inter', 'hole', 'holeRow',
    'modeSw', 'lblBasic', 'lblAdv', 'interRow', 'supportRow', 'matBox',
@@ -1032,7 +1027,7 @@ function tex2html(src) {
   /* 各片玻璃的当前状态，切换配置时尽量沿用 */
   let plyState = [];
   /* 面板尺寸与胶片厚：现在直接在图上改，值存在这里 */
-  const GS = { a: 1500, b: 3000, ts: 2.28 };
+  const GS = { a: 1500, b: 3000, ts: 2.28, wk: 1.5 };
 
   function ensureState(n) {
     while (plyState.length < n) plyState.push({ t: 8, type: 'HS', raw: '8' });
@@ -1082,7 +1077,7 @@ function tex2html(src) {
 
   /* ===== 图示：平面图 / 断面图 / 受力简图 ===== */
   /* 图上输入框的原始文本（保留用户敲的样子，如 1.50 不变成 1.5） */
-  const GSRAW = { a: '1.500', b: '3.000', ts: '2.28' };
+  const GSRAW = { a: '1.500', b: '3.000', ts: '2.28', wk: '1.50' };
   const f1 = x => (Math.round(x * 10) / 10).toFixed(1);
   const esc2 = s => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 
@@ -1104,7 +1099,7 @@ function tex2html(src) {
     const aM = GS.a / 1000, bM = GS.b / 1000;
     /* 高度撑满，宽度按比例；左侧留出长边 b 的标注位 */
     const ay0 = 56, ay1 = 222;
-    const axL = 128, axR = 322;
+    const axL = 104, axR = 312;
     /* 宽高都受可用区限制：太宽的板按宽度反推高度 */
     let sc = Math.min((ay1 - ay0) / Math.max(bM, 0.01), (axR - axL) / Math.max(aM, 0.01));
     const gh = bM * sc, gw = aM * sc;
@@ -1117,7 +1112,7 @@ function tex2html(src) {
 
     /* 玻璃板 */
     o += '<rect x="' + f1(gx) + '" y="' + f1(gy) + '" width="' + f1(gw) + '" height="' + f1(gh) +
-         '" fill="#cfe6f0" stroke="#14505f" stroke-width="1.6"/>';
+         '" fill="#dceef3" stroke="#4d7c8b" stroke-width="1.3"/>';
     /* 玻璃纹理 */
     const cxm = (gx + x1) / 2, cym = (gy + y1) / 2;
     for (let i = -1; i <= 1; i++) {
@@ -1188,7 +1183,7 @@ function tex2html(src) {
 
   /* ---------- 断面图：玻璃配置与厚度 ---------- */
   /* 布局（viewBox 0 0 340 H）：
-       上部  玻璃片 / 胶片 / 空气层 的断面示意，te 括号在上
+       上部  玻璃片 / 胶片 / 空气层 的断面示意，组总厚度尺寸在上
        下部  一排等宽「参数格」：每片玻璃的 t_i、每道胶片的 ts，
              用引线连回对应的图元（图元与格子左右顺序一致，不会交叉） */
   function drawSection(r) {
@@ -1240,7 +1235,7 @@ function tex2html(src) {
     /* 参数格宽度：玻璃 26、胶片 34 起，总宽不够时按比例收紧 */
     const nG = cells.filter(e => e.kind === 'g').length;
     const nI = cells.filter(e => e.kind === 'il').length;
-    const ILW = 30;
+    const ILW = 46;
     const cellW = nI > 0 && nG > 0
       ? (ax1 - ax0 - nI * ILW) / nG
       : (ax1 - ax0) / Math.max(nG, 1);
@@ -1252,17 +1247,18 @@ function tex2html(src) {
     });
 
     let o = '<svg viewBox="0 0 ' + W + ' 300" role="img">';
-    /* 各组等效厚度 te：括号横跨该组 */
+    /* 各组实际总厚度：玻璃厚度 + 组内胶片厚度，不含空气层。 */
     const gs = {};
     flat.forEach(e => {
-      if (e.gi === undefined) return;
+      if (e.kind === 'air' || e.gi === undefined) return;
       if (!gs[e.gi]) gs[e.gi] = { x0: 1e9, x1: -1e9 };
       gs[e.gi].x0 = Math.min(gs[e.gi].x0, e.x);
       gs[e.gi].x1 = Math.max(gs[e.gi].x1, e.x1);
     });
     Object.keys(gs).forEach(gi => {
       const g = gs[gi];
-      const te = r && r.groups[+gi] ? r.groups[+gi].teS : null;
+      const thickness = flat.filter(e => e.gi === +gi && e.kind !== 'air')
+        .reduce((sum, e) => sum + e.t, 0);
       o += '<line x1="' + f1(g.x0) + '" y1="44" x2="' + f1(g.x1) + '" y2="44" ' +
            'stroke="#8aa4cc" stroke-width="1"/>';
       o += '<line x1="' + f1(g.x0) + '" y1="40" x2="' + f1(g.x0) + '" y2="48" ' +
@@ -1270,14 +1266,14 @@ function tex2html(src) {
       o += '<line x1="' + f1(g.x1) + '" y1="40" x2="' + f1(g.x1) + '" y2="48" ' +
            'stroke="#8aa4cc" stroke-width="1"/>';
       o += '<text x="' + f1((g.x0 + g.x1) / 2) + '" y="34" text-anchor="middle" font-size="11.5" ' +
-           'fill="#1c6b8c">te' + (+gi + 1) + (te ? ' = ' + f2(te) + ' mm' : '') + '</text>';
+           'fill="#52677a">' + Number(thickness.toFixed(2)) + '</text>';
     });
 
     /* 玻璃片 / 胶片 / 空气层 */
     flat.forEach(e => {
       if (e.kind === 'g') {
         o += '<rect x="' + f1(e.x) + '" y="' + yTop + '" width="' + f1(e.w) + '" height="' + (yBot - yTop) +
-             '" fill="#cfe6f0" stroke="#14505f" stroke-width="1.2"/>';
+             '" fill="#dceef3" stroke="#14505f" stroke-width="1.2"/>';
         if (e.w > 13) {
           o += '<text x="' + f1(e.x + e.w / 2) + '" y="' + ((yTop + yBot) / 2 + 4) +
                '" text-anchor="middle" font-size="12" fill="#14505f">' + (e.idx + 1) + '</text>';
@@ -1314,7 +1310,7 @@ function tex2html(src) {
       const lbl = isIl ? 'ts' : 't' + (e.idx + 1);
       o += '<text x="' + f1(c) + '" y="220" text-anchor="middle" font-size="10.5" fill="#6b7280">' +
            lbl + '</text>';
-      const bw = Math.min(e.cw - 4, isIl ? 42 : 26);
+      const bw = Math.min(e.cw - 4, isIl ? 44 : 26);
       o += foBox(c - bw / 2, 228, bw, 20,
                  isIl ? foInp('ts', GSRAW.ts, bw - 4)
                       : foInp('t' + e.idx,
@@ -1343,14 +1339,12 @@ function tex2html(src) {
 
   /* ---------- 受力简图：自重 + 风荷载 ---------- */
   function drawLoad(r) {
-    const W = 340, Hh = 286;
-    const aM = GS.a / 1000, bM = GS.b / 1000;
-    /* 玻璃画成细长条：宽度按 aM 收窄，高度按 bM 撑满 */
-    const sc = Math.min(52 / aM, 172 / bM);
-    const pw = Math.max(7, aM * sc), ph = Math.max(40, bM * sc);
-    const px0 = 72, py0 = 62;
+    const W = 340, Hh = 266;
+    /* 受力图专注荷载方向，面板尺寸统一在尺寸图中设置。 */
+    const pw = 20, ph = 160;
+    const px0 = 100, py0 = 64;
     const px1 = px0 + pw, py1 = py0 + ph;
-    const wk = el.wk ? parseFloat(el.wk.value) : 1.5;
+    const wk = GS.wk;
     const gk = r ? r.Gk * 1000 : 0;
     let o = '<svg viewBox="0 0 ' + W + ' ' + Hh + '" role="img">';
     o += '<defs>' +
@@ -1361,7 +1355,7 @@ function tex2html(src) {
 
     /* 玻璃板 */
     o += '<rect x="' + f1(px0) + '" y="' + py0 + '" width="' + f1(pw) + '" height="' + f1(ph) +
-         '" fill="#cfe6f0" stroke="#14505f" stroke-width="1.6"/>';
+         '" fill="#dceef3" stroke="#4d7c8b" stroke-width="1.3"/>';
 
     /* 支座：按上端 / 下端各自的选择画符号
        PIN    = 实心三角（固定）
@@ -1395,7 +1389,7 @@ function tex2html(src) {
     o += '<line x1="' + f1(dcx) + '" y1="' + f1(dlTop) + '" x2="' + f1(dcx) + '" y2="' + f1(py0 - 10) +
          '" stroke="#111" stroke-width="2" marker-end="url(#mkD)"/>';
     o += '<text x="' + f1(dcx + 8) + '" y="' + f1(dlTop) + '" font-size="12" fill="#111">' +
-         'Dead Load 自重</text>';
+         '自重</text>';
     o += '<text x="' + f1(dcx + 8) + '" y="' + f1(dlTop + 14) + '" font-size="10.5" ' +
          'fill="#6b7280">Gk = ' + f3(gk) + ' kPa</text>';
 
@@ -1410,15 +1404,13 @@ function tex2html(src) {
     }
     o += '<line x1="' + f1(tail) + '" y1="' + f1(y0) + '" x2="' + tail + '" y2="' + f1(y1) +
          '" stroke="#1f9ae0" stroke-width="1.3"/>';
-    o += '<text x="' + f1(tail + 4) + '" y="' + f1((y0 + y1) / 2 - 6) + '" font-size="12" ' +
-         'fill="#1f9ae0">Wind Load</text>';
-    o += '<text x="' + f1(tail + 4) + '" y="' + f1((y0 + y1) / 2 + 9) + '" font-size="10.5" ' +
-         'fill="#1f9ae0">风荷载</text>';
-    o += '<text x="' + f1(tail + 4) + '" y="' + f1((y0 + y1) / 2 + 23) + '" font-size="10.5" ' +
-         'fill="#6b7280">wk = ' + f3(wk) + ' kPa</text>';
-
-    o += '<text x="' + f1(px0) + '" y="' + f1(py1 + 20) + '" font-size="11" fill="#6b7280">' +
-         '面板 ' + f2(aM) + ' × ' + f2(bM) + ' m</text>';
+    const labelX = tail + 12, midY = (y0 + y1) / 2;
+    o += '<text x="' + f1(labelX) + '" y="' + f1(midY - 24) +
+         '" font-size="11" font-weight="600" fill="#287cad">风荷载 Wk</text>';
+    o += foBox(labelX, midY - 13, 110, 28,
+      foInp('wk', GSRAW.wk, 62) + '<i>kPa</i>');
+    o += '<text x="' + f1(labelX) + '" y="' + f1(midY + 31) +
+         '" font-size="9.5" fill="#8b9dad">点击数值修改</text>';
     o += '</svg>';
     return o;
   }
@@ -1476,7 +1468,7 @@ function tex2html(src) {
       : '红色实心方块为点支承位置，红色虚线为支承点连线。';
 
     el.sectionHint.innerHTML =
-      '断面自左向右为<b>室外 → 室内</b>：te 为各构造组等效厚度，' +
+      '断面自左向右为<b>室外 → 室内</b>；上方尺寸为各组实际总厚度（含组内胶片，不含空气层），单位 mm。' +
       (sgp
         ? '蓝色为 SGP 结构胶（ts），等效厚度按 ' + SGP_REF + ' 计算。'
         : '蓝色为 PVB 夹层胶片（ts），PVB 不计剪切传递、不计入等效厚度。') +
@@ -1485,7 +1477,7 @@ function tex2html(src) {
     el.loadCap.innerHTML =
       '自重 Dead Load 沿板面竖向向下，风荷载 Wind Load 垂直板面水平作用。' +
       '上、下端支座可分别选 Roller（滑动，三角形左侧加横线）或 PIN（固定）；' +
-      '挂式玻璃常取上方 PIN、下方 Roller。地震作用与冲击荷载不在本图中表示。';
+      '风荷载 Wk 直接在图中修改；面板尺寸在上方尺寸图设置。地震作用与冲击荷载不在本图中表示。';
   }
 
   function readInputs() {
@@ -1506,7 +1498,7 @@ function tex2html(src) {
     return {
       a: A, b: B,
       groups: buildGroups(struct, ts, types),
-      wk: num('wk'),
+      wk: GS.wk,
       alpha: parseFloat(el.ig.value),
       E: num('E'), nu: num('nu'), gammaG: num('gg'), defDiv: num('defdiv'),
       gG: num('gG'), gw: num('gw'), gE: num('gE'), psE: num('psE'), psw: num('psw'),
@@ -2003,7 +1995,7 @@ function tex2html(src) {
 
   el.printBtn.addEventListener('click', () => window.print());
 
-  ['wk', 'ig', 'E', 'nu', 'gg', 'defdiv', 'gG', 'gw', 'gE', 'psE', 'psw',
+  ['ig', 'E', 'nu', 'gg', 'defdiv', 'gG', 'gw', 'gE', 'psE', 'psw',
    'support', 'spanSide', 'hole', 'supTop', 'supBot']
     .forEach(id => {
       const e = document.getElementById(id);
@@ -2044,6 +2036,20 @@ function tex2html(src) {
         GSRAW[k] = t.value.trim();
       } else {
         GSRAW[k] = (GS[k] / 1000).toFixed(3);
+      }
+      render();
+      return;
+    }
+
+    if (k === 'wk') {
+      GSRAW.wk = t.value;
+      if (!commit) return;
+      const v = Number(t.value);
+      if (t.value.trim() !== '' && isFinite(v) && v > 0) {
+        GS.wk = v;
+        GSRAW.wk = t.value.trim();
+      } else {
+        GSRAW.wk = String(GS.wk);
       }
       render();
       return;
