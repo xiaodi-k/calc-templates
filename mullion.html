@@ -109,25 +109,25 @@
       padding: 14px;
     }
 
-    .inputs > .card {
+    :is(.inputs > .card, .inputs > .mode-content > .card) {
       border-left: 3px solid var(--in);
       box-shadow: 0 3px 10px rgba(20, 50, 100, .05);
     }
-    .inputs > .card > h2 {
+    :is(.inputs > .card, .inputs > .mode-content > .card) > h2 {
       background: var(--in-soft); color: var(--in);
       border-bottom-color: var(--in-line);
     }
-    .outputs > .card {
+    :is(.outputs > .card, .outputs > .mode-content > .card) {
       border-left: 3px solid var(--out);
       box-shadow: 0 3px 10px rgba(10, 60, 50, .05);
     }
-    .outputs > .card > h2 {
+    :is(.outputs > .card, .outputs > .mode-content > .card) > h2 {
       background: var(--out-soft); color: var(--out);
       border-bottom-color: var(--out-line);
     }
 
-    .outputs > .card.lead > h2 { font-size: 14px; letter-spacing: 1px; }
-    .outputs > .card.lead > .verdict {
+    :is(.outputs > .card, .outputs > .mode-content > .card).lead > h2 { font-size: 14px; letter-spacing: 1px; }
+    :is(.outputs > .card, .outputs > .mode-content > .card).lead > .verdict {
       background: linear-gradient(180deg, #eef8f5 0%, #ffffff 100%);
     }
 
@@ -329,11 +329,11 @@
       .inputs, .outputs {
         background: none; border: 0; border-radius: 0; padding: 0;
       }
-      .inputs > .card, .outputs > .card { box-shadow: none; border-left-width: 1px; }
-      .inputs > .card > h2, .outputs > .card > h2 {
+      :is(.inputs > .card, .inputs > .mode-content > .card), :is(.outputs > .card, .outputs > .mode-content > .card) { box-shadow: none; border-left-width: 1px; }
+      :is(.inputs > .card, .inputs > .mode-content > .card) > h2, :is(.outputs > .card, .outputs > .mode-content > .card) > h2 {
         background: #f4f4f6; color: #333;
       }
-      .outputs > .card.lead > .verdict { background: #fff; }
+      :is(.outputs > .card, .outputs > .mode-content > .card).lead > .verdict { background: #fff; }
       main > .inputs { margin-bottom: 16px; }
       .inputs .card > .body { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0 24px; }
       .inputs details { display: none; }
@@ -344,7 +344,57 @@
       .fxbody { padding-left: 0; overflow: visible; }
       .fx-frac { vertical-align: middle; }
     }
-  </style>
+  
+/* Glass-rib mode: shared page shell, isolated calculator panels. */
+[hidden]{display:none!important}
+.inhead{gap:7px}
+.inhead .ios{gap:5px}
+.rib-toggle{font-size:11px;line-height:20px;padding:2px 8px;border:1px solid var(--in-line);border-radius:6px;background:#fff;color:var(--in);white-space:nowrap}
+.rib-toggle[aria-pressed="true"]{background:var(--in);border-color:var(--in);color:#fff}
+body.rib-mode .ios-lbl.on{color:var(--muted)}
+body.rib-mode .ios-sw{opacity:.5}
+.rib-panel .diagram{margin:8px 0 14px;border:1px solid var(--in-line);border-radius:10px;background:#fcfdff;padding:5px 0}
+.rib-panel .diagram svg{display:block;width:100%;height:auto}
+.rib-panel .dbox{gap:3px}
+.rib-panel .dbox input{font-size:15.5px;height:29px;min-width:0;padding:2px 4px}
+.rib-panel .dbox select{font-size:15.5px;font-weight:650;height:30px;padding:2px 5px;border-radius:5px}
+.rib-panel .source-note{font-size:12px;line-height:1.75}
+.rib-panel .source-note p{margin:0 0 13px}
+.rib-panel .ok{color:var(--ok)}.rib-panel .ng{color:var(--ng)}
+.rib-panel .properties{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}
+.rib-panel .properties span{display:block;color:var(--muted);font-size:12px;margin-bottom:5px}
+.rib-panel .properties b{font-size:14px}
+.rib-panel table{width:100%;border-collapse:collapse;font-size:13px}
+.rib-panel td,.rib-panel th{padding:10px 7px;border-bottom:1px solid var(--line);text-align:left}
+.rib-panel td:not(:first-child){text-align:right;font-variant-numeric:tabular-nums}
+.rib-panel .fxbody{overflow-x:auto}.rib-panel .fx{min-width:max-content}.rib-panel .fxl{min-width:100%}
+.fx-bar{text-decoration:overline}
+.rib-panel button:disabled{opacity:.4;cursor:not-allowed}
+.rib-result-note{margin:0 0 16px;color:var(--muted);font-size:13px}
+.rib-utilization{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:20px 24px}
+.rib-utilization .k{font-size:12px;color:var(--muted);margin-bottom:6px}
+.rib-utilization .v{font-size:26px;font-weight:900;line-height:1.2;font-variant-numeric:tabular-nums}
+.rib-utilization .sub{font-size:12px;color:var(--muted);margin-top:5px}
+@media(max-width:400px){
+ .inhead{gap:4px}.inhead .ios{gap:4px}.inhead .colcap{font-size:9px;letter-spacing:0;padding:4px 6px}
+ .inhead .ios-sw{width:34px}.inhead .ios-sw.on::after{transform:translateX(12px)}
+ .rib-toggle{font-size:10px;padding:2px 6px}
+}
+@media print{
+ .rib-toggle{display:none}
+ .rib-panel .diagram{overflow:visible}
+ .rib-panel .source-note{font-size:11px}
+ .rib-panel .fx{min-width:0;white-space:normal;font-size:13px}
+ .rib-panel .fxbody{overflow:visible}
+ .rib-panel .fxstep,.rib-panel .card{break-inside:auto}
+ .rib-panel .fxl{break-inside:avoid}
+ .rib-panel details{display:block}
+ .rib-panel .diagram svg{max-height:330px}
+ .rib-panel .fx-frac{max-width:100%}
+ body.rib-mode .inputs .card>.body{display:block}
+ body.rib-mode footer{display:block}
+}
+</style>
   <style>
     /* ===== 本页新增 ===== */
     .secprev {
@@ -427,10 +477,10 @@
     .small { font-size: 12px; }
 
     /* ===== 基础模式：关掉所有小字提示 ===== */
-    body.m-basic .hint,
-    body.m-basic .fxnote,
-    body.m-basic .dep,
-    body.m-basic .fx-tools { display: none !important; }
+    body.m-basic:not(.rib-mode) .hint,
+    body.m-basic:not(.rib-mode) .fxnote,
+    body.m-basic:not(.rib-mode) .dep,
+    body.m-basic:not(.rib-mode) .fx-tools { display: none !important; }
 
     /* ===== 打印：本页结构比玻璃页复杂，覆盖成单列流式布局 ===== */
     @media print {
@@ -451,6 +501,7 @@
     <a class="back" href="index.html">← 返回首页</a>
     <h1>立柱（竖梃）承载力计算</h1>
     <span class="spacer"></span>
+    <button class="ghost" id="rib-export" hidden>导出 LaTeX</button>
     <button class="ghost" id="printBtn">打印 / 存 PDF</button>
   </div>
 
@@ -465,9 +516,11 @@
                   role="switch" aria-checked="false"
                   title="基础：圆管/箱型/T形 · Q355 或 6063-T6 · 单跨与双跨（地区、面板、地震按常规取值）　／　高级：12 种截面 · 17 种材料 · 单跨/双跨/悬臂/飞边悬臂 · 地区与系数全部可调"></button>
           <span class="ios-lbl" id="lblAdv">高级</span>
+          <button type="button" class="rib-toggle" id="glassRibBtn" aria-pressed="false" aria-controls="rib-inputs rib-outputs" title="切换玻璃肋计算；再次点击返回普通立柱">玻璃肋</button>
         </div>
       </div>
 
+      <div class="mode-content" id="metal-inputs">
       <div class="card">
         <h2>截面</h2>
         <div class="body">
@@ -597,12 +650,29 @@
           </details>
         </div>
       </div>
+      </div>
+      <div class="mode-content rib-panel" id="rib-inputs" hidden>
+
+<div class="card"><h2>玻璃肋截面</h2><div class="body"><div id="rib-sectionFigure" class="diagram"></div><p class="hint">输入原配置片数及共用的单片厚度、种类；截面图和计算均按减去一片后的剩余玻璃，标注剩余总厚度。</p></div></div>
+<div class="card"><h2>计算模型与荷载</h2><div class="body"><div id="rib-modeBox"></div><div id="rib-systemFigure" class="diagram"></div><div id="rib-choices"></div><details><summary>面板重力、地震与变形</summary><div id="rib-loadFields"></div><p class="hint">地震按完整面板＋玻璃肋的重量自动计算。正负风按相同绝对值包络。L/360、自重附加系数 1.1 沿用参考书的设计假定，可按项目修改。</p></details></div></div>
+<div class="card" id="rib-supportCard"><h2>面板侧向支撑</h2><div class="body"><div id="rib-supportFigure" class="diagram"></div><p class="hint">仅适用于面板与肋通过硅酮结构胶连续、可靠粘接。破损工况有效粘接宽度取输入值与减片后总厚度的较小值。</p></div></div>
+<div class="card"><h2>材料参数</h2><div class="body"><div class="matgrid"><div><span class="k">E · MPa</span><div class="v">72,000</div></div><div><span class="k">ν</span><div class="v">0.20</div></div><div><span class="k">γ · kN/m³</span><div class="v">25.6</div></div></div><details><summary>指定模量</summary><div id="rib-moduli"></div></details><p class="hint">按已确认假定，胶片 G=11.3 MPa、结构胶 E=0.4 MPa 沿用原书，短期与长期共用。G 是指定参数，不随 SGP / PVB 名称自动取值。</p></div></div>
+<div class="card"><h2>计算依据与设计假定</h2><div class="body source-note">
+<p><b>T/CECS 1099-2022《玻璃结构工程技术规程》</b><br>5.2.5：弱轴等效刚度；5.3.4、5.3.6～5.3.7：强度与弯扭稳定；5.4.2～5.4.3：轴压稳定；5.5.1～5.5.2：轴压比与压弯；附录 A：临界弯矩与扭转刚度；B.0.1～B.0.2：连续胶缝约束下的临界轴力。</p>
+<p><b>JGJ 113-2015《建筑玻璃应用技术规程》</b><br>表 4.1.9、4.1.10：短期和长期玻璃强度。本章强度用端面值，稳定用边缘值；稳定计算的强度标准值采用边缘设计值×1.667。</p>
+<p><b>荷载口径</b><br>风荷载标准值由图中输入，取值依据 GB 50009-2012，广东项目可按 DBJ 15-101-2014。组合沿用已确认的参考文件口径，γG=1.3、γW=1.5，γE 国标1.3／粤标1.4；分别计算风主导和地震主导组合。</p>
+<p><b>仅验算减去一片</b><br>直接按配置片数 n−1 计算截面面积、惯性矩及稳定参数，不另算完整片数的验算工况。荷载仍取完整构造的全设计荷载，包含完整玻璃肋自重。采用指定的等厚夹层重组模型，未考虑具体破片位置的连接退化。</p>
+<p><b>适用边界</b><br>竖直、等截面、单跨两端简支、均布水平荷载；端部应具有可靠抗扭约束。吊式验弯扭稳定，坐式还验轴压比≤0.5及压弯。混合持荷另保留原书更严格的线性轴项包络。</p>
+<p>本章结论限玻璃肋构件的强度、风挠度与整体稳定。孔洞、拼接、支座、吊夹具、结构胶强度及其提供支撑的可靠性另行验算；未包含附录 B.0.3 的胶缝强度承载力。</p>
+</div></div>
+      </div>
     </div>
 
     <!-- ============ 输出 ============ -->
     <div class="outputs">
       <div class="colcap out">输出 OUTPUT</div>
 
+      <div class="mode-content" id="metal-outputs">
       <div class="card lead">
         <h2>结论</h2>
         <div class="verdict" id="verdict"></div>
@@ -653,10 +723,19 @@
           <div id="fxSteps"></div>
         </div>
       </div>
+      </div>
+      <div class="mode-content rib-panel" id="rib-outputs" hidden>
+
+<div class="card lead"><h2>验算结论</h2><div class="body"><div id="rib-status" role="status"></div><p class="hint">各项利用率以 1.00 为限，按左侧所列设计假定及计算范围验算。坐式轴压限值利用率为 μN / 0.5。</p></div></div>
+<div class="card"><h2>减片后的截面几何特性</h2><div class="body"><div id="rib-properties" class="properties"></div></div></div>
+
+<div class="card"><h2>荷载与内力</h2><div class="body" id="rib-loads"></div></div>
+<div class="card"><h2>分步计算过程 · LaTeX</h2><div class="body"><div class="fx-tools"><button class="ghost mini" id="rib-expand">全部展开</button><button class="ghost mini" id="rib-collapse">全部收起</button></div><div id="rib-fxSteps"></div></div></div>
+      </div>
     </div>
   </main>
 
-  <footer>
+  <footer id="metal-footer">
     截面尺寸、跨度与风荷载可直接改图上的标注（点数字即改）。
     截面特性按几何精确积分（多边形 + 孔洞），圆/圆管用解析式。
     强度：碳钢按 GB 50017-2017 表 4.4.1 依板件厚度分组取 f，铝合金与不锈钢取材料表值。
@@ -665,6 +744,7 @@
     立柱可与水平面成夹角 α（高级模式）：风荷载沿面板法向恒垂直于立柱，重力取 cos α 分量，活荷载按水平投影取 cos²α 分量；α &lt; 75° 判定为采光顶龙骨并计入活荷载，面板重力乘 1.1，另校核重力单独作用挠度 ≤ L/500。
     <span class="ver" id="verLine"></span>
   </footer>
+  <footer id="rib-footer" hidden>玻璃肋按配置片数减去一片后的截面验算，荷载保持完整构造全设计值。<br>立柱版本 1.12.9 · 玻璃肋算法 1.3.2 · 2026-10-25 12:37</footer>
 
 <script>
 /* ===== 极简 LaTeX 渲染器（自包含，不依赖 MathJax / KaTeX） ===== */
@@ -737,7 +817,7 @@ function tex2html(src) {
           var a = readArg(), b = readArg();
           out += '<span class="fx-frac"><span class="fx-num">' + tex2html(a) +
                  '</span><span class="fx-den">' + tex2html(b) + '</span></span>';
-        } else if (cmd === 'sqrt') {
+        } else if (cmd === 'bar') { out += '<span class="fx-bar">' + tex2html(readArg()) + '</span>'; } else if (cmd === 'sqrt') {
           var idx = '';
           if (s[i] === '[') {
             i++;
@@ -2556,9 +2636,352 @@ function tex2html(src) {
   });
 
   /* 启动（默认基础模式） */
-  document.getElementById('verLine').textContent = '版本 1.11.8 · 2026-10-24 17:51';
+  document.getElementById('verLine').textContent = '版本 1.12.9 · 2026-10-25 12:37';
   applyMode();
 })();
 </script>
+<script id="glass-rib-core">/* GlassRib v1.3.2. Units: mm, N, MPa.
+ * T/CECS 1099-2022: 5.2.5, 5.3.4/6/7, 5.4.2/3,
+ * 5.5.1/2, A.0.1/2/3, B.0.1/2. Strength: JGJ 113-2015 4.1.9/10.
+ * Pure model, reusable by mullion.html. User-specified assumptions:
+ * G_interlayer=11.3 MPa for both durations; intact design loads retained
+ * after reducing one ply; remaining plies reassembled as an n-1 laminate.
+ */
+(function(root){
+'use strict';
+const E=72000,nu=.2,Gglass=E/(2*(1+nu)),rho=25.6;
+const strengths={FT:[[59,30,67,34],[51,26,58,29],[42,21,47,24]],HS:[[40,20,44,22],[34,17,38,19],[28,14,32,16]],AN:[[20,6,22,7],[17,5,19,6],[14,4,16,5]]};
+function positive(x,name,zero=false){if(!Number.isFinite(x)||(zero?x<0:x<=0))throw Error(name+(zero?'须为非负有限数':'须为正有限数'));return x;}
+function strength(type,t){
+ const band=t>=4&&t<=12?0:t>=15&&t<=19?1:t>=20?2:-1;
+ if(band<0||!strengths[type])throw Error('玻璃强度表适用厚度为 4～12、15～19、≥20 mm，种类为 FT / HS / AN');
+ return [...strengths[type][band]];
+}
+function geometry(n,t,s,h){
+ if(!Number.isInteger(n)||n<1||n>12)throw Error('玻璃片数应为 1～12 的整数');
+ positive(t,'玻璃厚度');positive(s,'胶片厚度',n===1);positive(h,'肋高');
+ const glassT=n*t,total=glassT+(n-1)*s,A=glassT*h,Ix=glassT*h**3/12,Wx=glassT*h*h/6;
+ if(![total,A,Ix,Wx].every(Number.isFinite))throw Error('截面尺寸超出数值范围');
+ return {n,t,s,h,glassT,total,A,Ix,Wx,IyFree:n*h*t**3/12,IyFull:h*(n*t)**3/12};
+}
+function laminate(n,t,s,h,L,G,psi=9.88){
+ const g=geometry(n,t,s,h);positive(L,'跨度');positive(G,'胶片剪切模量',true);positive(psi,'边界参数');
+ const A1=t*h,I1=h*t**3/12,IyFull=g.IyFull,J1=h*t**3/3,JFull=h*(n*t)**3/3;
+ const eta=n===1?1:G===0?0:1/(1+E*I1*s/(12*G*h*L*L)*(n*n*A1*(n+1)/IyFull)*psi);
+ const Iy=1/(eta/IyFull+(1-eta)/(n*I1));
+ const etaT=n===1?1:G===0?0:1/(1+(n+1)*t*s/n*Gglass*(L*L+h*h)/(G*L*L*h*h));
+ const J=1/(etaT/JFull+(1-etaT)/(n*J1));
+ return {...g,Iy,te:Math.cbrt(12*Iy/h),J,eta,etaT,J1,JFull,I1};
+}
+function spring(Es,width,thickness){positive(Es,'结构胶弹性模量',true);positive(width,'有效粘接宽度',true);positive(thickness,'结构胶厚度');return Es*width/(3*thickness);}
+function critical(n,t,s,h,L,G,k){
+ positive(k,'侧向线刚度',true);
+ const p=laminate(n,t,s,h,L,G);
+ const i02=(p.Ix+p.IyFull)/p.A;
+ let halfWave=1,a=(L/Math.PI)**2,Nw=null,Ny=E*p.Iy/a,Ncr=Ny,Mplus,Mminus,method;
+ if(k>0){
+  method='A.0.3 / B.0.1～B.0.2';
+  halfWave=Math.max(L/Math.PI*(k/(E*p.Iy))**.25,1);
+  a=(L/(halfWave*Math.PI))**2;Nw=(Gglass*p.J+.25*a*k*h*h)/i02;Ny=E*p.Iy/a+a*k;
+  const coupling=k*k*h*h*a*a/i02;
+  Ncr=2*(Nw*Ny-coupling/4)/(Nw+Ny+Math.sqrt((Nw-Ny)**2+coupling));
+  const y=h/2,z=y*k*L**3,Q=Math.PI**2*k*L**4*Gglass*p.J+Math.PI**4*y*y*k*L*L*E*p.Iy+Math.PI**6*E*p.Iy*Gglass*p.J;
+  const D=Math.sqrt(z*z+Q),scale=.95/(Math.PI**2*L);
+  Mplus=scale*(z+D);Mminus=scale*Q/(D+z);
+ }else{
+  method='A.0.1 / 5.4.3';
+  // Uniform load, no intermediate lateral support: C1=1.15, C2=0.47.
+  // Positive pressure acts toward the shear centre: y1=-h/2.
+  const z=.47*h/2,Q=Gglass*p.J*L*L/(E*p.Iy*Math.PI**2),D=Math.sqrt(z*z+Q),scale=1.15*Math.PI**2*E*p.Iy/(L*L);
+  Mplus=scale*Q/(D+z);Mminus=scale*(D+z);
+ }
+ if(![Ncr,Mplus,Mminus].every(x=>Number.isFinite(x)&&x>0))throw Error('临界荷载超出有效数值范围');
+ return {...p,halfWave,a,i02,Nw,Ny,Ncr,Mplus,Mminus,Mcr:Math.min(Mplus,Mminus),k,method};
+}
+function reduction(lambda,alpha,lambda0){
+ positive(lambda,'正则化长细比',true);
+ const phi=.5*(1+alpha*(lambda-lambda0)+lambda*lambda);
+ if(lambda<=lambda0)return {phi,chi:1};
+ const rad=phi*phi-lambda*lambda;if(rad<0)throw Error('稳定系数根号项为负');
+ return {phi,chi:Math.min(1,1/(phi+Math.sqrt(rad)))};
+}
+function stability(p){
+ const {A,Wx,N,M,fLong,fShort,critical:c,mode}=p;
+ ['A','Wx','fLong','fShort'].forEach(k=>positive(p[k],k));positive(N,'轴力绝对值',true);positive(M,'弯矩绝对值',true);
+ const lambdaB=Math.sqrt(Wx*1.667*fShort/c.Mcr),b=reduction(lambdaB,.45,.15),muB=M/(b.chi*Wx*fShort);
+ if(mode==='hanging')return {lambdaB,chiB:b.chi,phiB:b.phi,muB,eta:muB,ok:muB<=1};
+ if(mode!=='seated')throw Error('请选择吊式或坐式');
+ const lambdaC=Math.sqrt(A*1.667*fLong/c.Ncr),q=reduction(lambdaC,.97,.63),muN=N/(q.chi*A*fLong);
+ const etaCode=muN**1.5+muB**1.5,etaMixed=muN+muB**1.5;
+ // Reference worksheet mixed-duration envelope. For muN<=0.5 this
+ // linear axial term is at least as restrictive as the code's m=1.5 term.
+ return {lambdaB,chiB:b.chi,phiB:b.phi,muB,lambdaC,chiC:q.chi,phiC:q.phi,muN,etaCode,etaMixed,eta:Math.max(etaCode,etaMixed),ok:muN<=.5&&etaCode<=1&&etaMixed<=1};
+}
+function compute(p){
+ if(!Number.isInteger(p.n)||p.n<1||p.n>12)throw Error('配置片数应为 1～12 的整数');
+ positive(p.t,'玻璃厚度');positive(p.ts,'胶片厚度',p.n===1);positive(p.h,'肋高');
+ // The original configuration supplies full design loads only.
+ // No intact-section stiffness or intact-section checks are calculated.
+ const original={n:p.n,total:p.n*p.t+(p.n-1)*p.ts,A:p.n*p.t*p.h},f=strength(p.type,p.t);
+ ['L','B','div','extra','seal'].forEach(k=>positive(p[k],k));
+ ['wk','pt','alpha','G','Es','bond'].forEach(k=>positive(p[k],k,true));
+ if(!['national','guangdong'].includes(p.profile)||!['rib','panel'].includes(p.gravity)||!['yes','no'].includes(p.restraint)||!['hanging','seated'].includes(p.mode))throw Error('计算选项无效');
+ const gE=p.profile==='guangdong'?1.4:1.3,Ek=5*p.alpha*rho*(p.pt+original.A/p.B)/1000;
+ const pWind=1.5*p.wk+.5*gE*Ek,pEarth=.2*p.wk+gE*Ek,pd=Math.max(pWind,pEarth),qd=pd*p.B/1000,qk=p.wk*p.B/1000;
+ const ribWeight=p.extra*rho*p.L*original.A/1e6,panelWeight=p.gravity==='panel'?p.extra*rho*p.L*p.B*p.pt/1e6:0;
+ const N=1.3*(ribWeight+panelWeight),M=qd*p.L*p.L/8,load={gE,Ek,pWind,pEarth,pd,qd,qk,N,M,ribWeight,panelWeight,Rh:qd*p.L/2};
+ if(!Object.values(load).every(Number.isFinite))throw Error('荷载超出数值范围');
+ const n=p.n-1,label='减去一片';
+ if(n===0)return {original,f,load,result:{n,label,ok:false,empty:true,reason:'减去一片后无剩余承载玻璃'},ok:false};
+ if(p.restraint==='yes'&&p.bond>original.total)throw Error('有效粘接宽度不能大于配置总厚度');
+ const g=geometry(n,p.t,p.ts,p.h),bond=Math.min(p.bond,g.total),k=p.restraint==='yes'?spring(p.Es,bond,p.seal):0;
+ const c=critical(n,p.t,p.ts,p.h,p.L,p.G,k),st=stability({A:g.A,Wx:g.Wx,N,M,fLong:f[3],fShort:f[2],critical:c,mode:p.mode});
+ const stressB=M/g.Wx,stressN=N/g.A,etaStrength=stressB/f[0]+stressN/f[1],defl=5*qk*p.L**4/(384*E*g.Ix),lim=p.L/p.div,etaDefl=defl/lim;
+ if(![etaStrength,defl,etaDefl,st.eta].every(Number.isFinite))throw Error('验算结果超出数值范围');
+ const result={n,label,g,c,st,bond,stressB,stressN,etaStrength,defl,lim,etaDefl,ok:etaStrength<=1&&etaDefl<=1&&st.ok};
+ return {original,f,load,result,ok:result.ok};
+}
+root.GlassRib={E,nu,Gglass,rho,strength,geometry,laminate,spring,critical,reduction,stability,compute};
+})(typeof globalThis!=='undefined'?globalThis:this);
+</script>
+<script id="glass-rib-ui">(function(){
+'use strict';
+const integrated=!!document.getElementById('rib-inputs'),prefix=integrated?'rib-':'';
+const $=id=>document.getElementById(prefix+id),R=GlassRib;
+const s={mode:'hanging',profile:'national',gravity:'rib',restraint:'yes',n:3,t:12,ts:1.52,type:'FT',inter:'SGP',L:6000,B:1500,h:350,wk:2,pt:24,alpha:.08,G:11.3,Es:.4,bond:20,seal:20,extra:1.1,div:360};
+let lastResult=null;
+const esc=x=>String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+const f=(x,n=2)=>Number.isFinite(x)?Number(x.toFixed(n)).toLocaleString('en-US',{maximumFractionDigits:n}):'—';
+const num=(x,n=4)=>Number.isFinite(x)?String(Number(x.toFixed(n))):'—';
+const comparison=(x,limit)=>num(x)+'\\ '+(x<=limit?'\\leq ': '> ')+limit;
+function line(x,y,a,b,c='#91a8c5',extra=''){return '<line x1="'+x+'" y1="'+y+'" x2="'+a+'" y2="'+b+'" stroke="'+c+'" '+extra+'/>';}
+function txt(x,y,t,size=14,anchor='middle',color='#52677a'){return '<text x="'+x+'" y="'+y+'" text-anchor="'+anchor+'" font-size="'+size+'" fill="'+color+'">'+esc(t)+'</text>';}
+function box(key,value,x,y,w=80,label=''){
+ return '<foreignObject x="'+x+'" y="'+y+'" width="'+w+'" height="32"><div xmlns="http://www.w3.org/1999/xhtml" class="dbox">'+(label?'<i>'+label+'</i>':'')+'<input type="number" step="any" data-key="'+key+'" aria-label="'+esc(label||key)+'" value="'+(value===null?'':value)+'"/></div></foreignObject>';
+}
+function sel(key,value,list,x,y,w=76){return '<foreignObject x="'+x+'" y="'+y+'" width="'+w+'" height="32"><div xmlns="http://www.w3.org/1999/xhtml" class="dbox"><select aria-label="'+esc(key)+'" data-key="'+key+'">'+list.map(([v,l])=>'<option value="'+v+'"'+(String(v)===String(value)?' selected':'')+'>'+l+'</option>').join('')+'</select></div></foreignObject>';}
+function arrow(x,y,a,b,color){return line(x,y,a,b,color,'stroke-width="1.8"')+'<path d="M'+(a-5)+','+(b-6)+' L'+a+','+b+' L'+(a+5)+','+(b-6)+'" fill="none" stroke="'+color+'" transform="rotate('+(Math.atan2(b-y,a-x)*180/Math.PI-90)+' '+a+' '+b+')"/>';}
+function sectionFigure(){
+ const t=s.t>0&&Number.isFinite(s.t)?s.t:1,ts=s.ts>0&&Number.isFinite(s.ts)?s.ts:1,n=Math.max(0,s.n-1);
+ const total=n?n*t+(n-1)*ts:0,sc=total>0?Math.min(3,148/total):3,start=224-total*sc/2;
+ let o='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 390" role="group" aria-label="玻璃肋共用截面参数">';
+ o+=txt(16,27,'配置片数',14,'start')+sel('n',s.n,Array.from({length:12},(_,i)=>[i+1,i+1]),92,7,62)+txt(323,27,'mm',14,'end');
+ o+=line(start,65,start+total*sc,65)+line(start,60,start,70)+line(start+total*sc,60,start+total*sc,70)+txt(224,55,n?f(n*s.t+(n-1)*s.ts):'—');
+ let x=start,glassAnchor=start+t*sc/2,filmAnchor=start+t*sc+ts*sc/2;
+ for(let i=0;i<n;i++){
+ if(i){o+='<rect data-layer="film" x="'+x+'" y="83" width="'+ts*sc+'" height="144" fill="#5684d6" stroke="#2358a4" stroke-width=".6"/>';x+=ts*sc;}
+ o+='<rect data-layer="glass" x="'+x+'" y="83" width="'+t*sc+'" height="144" fill="#dceef3" stroke="#14505f" stroke-width="1"/>';x+=t*sc;
+ }
+ o+=line(128,83,128,227)+line(123,83,133,83)+line(123,227,133,227)+txt(59,140,'肋高 h',14)+box('h',s.h,17,149,85);
+ if(n)o+=line(glassAnchor,227,88,257,'#b7c6d9','stroke-dasharray="3 3"');
+ else o+=txt(224,157,'无剩余玻璃',14);
+ if(n>1)o+=line(filmAnchor,227,252,257,'#b7c6d9','stroke-dasharray="3 3"');
+ o+=txt(88,279,'单片玻璃',14)+txt(252,279,'单层胶片',14);
+ o+=box('t',s.t,43,289,90)+box('ts',s.ts,207,289,90);
+ o+=sel('type',s.type,[['FT','FT'],['HS','HS'],['AN','AN']],43,329,90)+sel('inter',s.inter,[['SGP','SGP'],['PVB','PVB']],207,329,90);
+ return o+txt(170,382,'减去1片 · 剩余'+n+'片参与计算',13.5)+'</svg>';
+}
+function systemFigure(){
+ const x=172,top=50,bottom=285,hanging=s.mode==='hanging';
+ let o='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 402" role="group" aria-label="简化的玻璃肋受力模型">';
+ o+=line(x,top,x,bottom,'#345773','stroke-width="3"');
+ for(const y of[top,bottom]){
+ const pin=(y===top)===hanging;
+ o+='<path d="M'+x+','+y+' l19,-11 v22 Z" fill="#fff" stroke="#4b596b"/>';
+ o+=pin?line(x+23,y-17,x+23,y+17,'#4b596b'):'<circle cx="'+(x+23)+'" cy="'+(y-6)+'" r="3" fill="#fff" stroke="#4b596b"/><circle cx="'+(x+23)+'" cy="'+(y+6)+'" r="3" fill="#fff" stroke="#4b596b"/>'+line(x+29,y-17,x+29,y+17,'#4b596b');
+ o+=txt(218,y+5,pin?'固定铰':'竖向滑动',13.5,'start');
+ }
+ o+=arrow(137,hanging?100:235,137,hanging?63:272,'#b98334')+txt(103,hanging?83:260,hanging?'轴拉':'轴压',13.5);
+ for(const y of[110,155,200,245])o+=arrow(288,y,x+6,y,'#4488be');
+ o+=line(49,top,49,bottom)+line(44,top,70,top)+line(44,bottom,70,bottom)+txt(52,153,'L · mm',13.5)+box('L',s.L,8,163,87);
+ o+=txt(252,147,'Wk · kPa',13.5)+box('wk',s.wk,212,163,104);
+ o+=line(92,333,249,333)+line(92,328,92,338)+line(249,328,249,338)+box('B',s.B,120,317,104);
+ return o+txt(172,368,'B · 面板从属宽度 / mm',13.5)+txt(172,392,'横向两端简支 · 正负风包络',13.5)+'</svg>';
+}
+function supportFigure(){
+ let o='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 257" role="group" aria-label="面板与玻璃肋连续胶缝">';
+ o+='<rect x="44" y="35" width="252" height="16" fill="#dceef3" stroke="#14505f"/><rect x="144" y="51" width="48" height="26" fill="#ccd7e9" stroke="#8b9dba"/><rect x="144" y="77" width="48" height="91" fill="#dceef3" stroke="#14505f"/>';
+ o+=txt(291,26,'面板',13.5)+txt(168,149,'肋',14);
+ o+=line(209,51,209,77)+txt(270,64,'厚度 ts',13.5)+box('seal',s.seal,224,77,92);
+ o+=line(144,185,192,185)+line(144,179,144,191)+line(192,179,192,191);
+ o+=txt(92,213,'粘接宽度 d',13.5)+box('bond',s.bond,150,194,100);
+ return o+txt(170,247,'尺寸单位 mm',13.5)+'</svg>';
+}
+function fieldRow(key,label,unit){return '<div class="row"><label for="'+prefix+key+'">'+label+'</label><input id="'+prefix+key+'" data-key="'+key+'" type="number" step="any" value="'+(s[key]??'')+'"/><span class="unit">'+unit+'</span></div>';}
+function selectRow(key,label,list){return '<div class="row"><label for="'+prefix+key+'">'+label+'</label><select id="'+prefix+key+'" data-key="'+key+'">'+list.map(([v,l])=>'<option value="'+v+'"'+(s[key]===v?' selected':'')+'>'+l+'</option>').join('')+'</select></div>';}
+function renderInputs(){
+ $('sectionFigure').innerHTML=sectionFigure();$('systemFigure').innerHTML=systemFigure();$('supportFigure').innerHTML=supportFigure();
+ $('modeBox').innerHTML=selectRow('mode','支承形式',[['hanging','吊式'],['seated','坐式']]);
+ $('choices').innerHTML=selectRow('profile','荷载口径',[['national','国标'],['guangdong','粤标']])+selectRow('gravity','重力传递',[['rib','仅承担肋自重'],['panel','肋＋面板自重']])+selectRow('restraint','面板侧向支撑',[['yes','考虑连续胶缝支撑'],['no','不考虑']]);
+ $('loadFields').innerHTML=fieldRow('pt','面板玻璃总厚度','mm')+fieldRow('alpha','地震影响系数 αmax','')+fieldRow('extra','自重附加系数','')+fieldRow('div','挠度限值 L /','');
+ $('moduli').innerHTML=fieldRow('G','胶片指定 G','MPa')+fieldRow('Es','结构胶 E','MPa');
+ $('supportCard').hidden=s.restraint==='no';
+}
+const fx=(tag,sym,sub,result)=>({tag,sym,sub,result});
+function sections(r){
+ const v=r.result;
+ if(v.empty)return [{title:'损失一片后无剩余承载玻璃',note:'无法形成承载截面，本工况不满足要求。',rows:[]}];
+ const {g,c,st}=v,l=r.load,ff=r.f,n=v.n,t=s.t,ts=s.ts;
+ const u=(x,unit,d=3)=>num(x,d)+'\\ \\mathrm{'+unit+'}';
+ const rows=[];
+ rows.push({title:'减片后的截面与材料',note:'JGJ 113-2015 表4.1.9、4.1.10；强度用端面值，稳定用边缘值。'+ '按指定的 n−1 简化模型计算；完整构造荷载保持。',rows:[
+ fx('片数','n',s.n+'-1',String(n)),
+ fx('厚度','T=nt+(n-1)s',n+'\\times '+t+'+('+n+'-1)\\times '+ts,u(g.total,'mm')),
+ fx('面积','A=nth',n+'\\times '+t+'\\times '+s.h,u(g.A,'mm^2',0)),
+ fx('强轴惯性矩','I_x=\\frac{nth^3}{12}',n+'\\times '+t+'\\times '+s.h+'^3/12',u(g.Ix,'mm^4',0)),
+ fx('截面模量','W_x=2I_x/h','2\\times '+num(g.Ix,0)+'/'+s.h,u(g.Wx,'mm^3',0)),
+ fx('端面强度','f_{e,S},f_{e,L}',s.type+'\\quad t='+t,u(ff[0],'MPa')+'\\ ;\\ '+u(ff[1],'MPa')),
+ fx('边缘强度','f_{b,S},f_{b,L}',s.type+'\\quad t='+t,u(ff[2],'MPa')+'\\ ;\\ '+u(ff[3],'MPa'))
+ ]});
+ rows.push({title:'弱轴与扭转等效刚度',note:'T/CECS 1099-2022 第5.2.5条、附录A.0.2。均布荷载 Ψ=9.88。按指定假定，短期和长期共用胶片 G='+num(s.G)+' MPa，不按名称自动查表。',rows:[
+ fx('剪切组合','\\eta=\\left[1+\\frac{EI_1s}{12G_ihL^2}\\frac{n^2A_1(n+1)}{I_{y,full}}\\Psi\\right]^{-1}','n='+n+',\\ G_i='+s.G+',\\ L='+s.L,num(c.eta,6)),
+ fx('等效厚度','t_{eff}=\\left[\\frac{\\eta}{(nt)^3}+\\frac{1-\\eta}{nt^3}\\right]^{-1/3}','\\eta='+num(c.eta,6),u(c.te,'mm')),
+ fx('弱轴惯性矩','I_{y,eff}=h t_{eff}^3/12',s.h+'\\times '+num(c.te,3)+'^3/12',u(c.Iy,'mm^4',0)),
+ fx('扭转组合','\\eta_T=\\left[1+\\frac{(n+1)ts}{n}\\frac{G_g(L^2+h^2)}{G_iL^2h^2}\\right]^{-1}','G_g='+R.Gglass,num(c.etaT,6)),
+ fx('扭转惯性矩','J_{eff}=\\left[\\frac{\\eta_T}{J_{full}}+\\frac{1-\\eta_T}{nJ_1}\\right]^{-1}','J_1='+num(c.J1,0)+',\\ J_{full}='+num(c.JFull,0),u(c.J,'mm^4',0))
+ ]});
+ rows.push({title:'荷载与组合',note:'国标／粤标沿用已确认的参考文件组合口径。荷载按完整配置取值；承载力和刚度仅按减片后的截面计算。',rows:[
+ fx('取荷载面积','A_0=n_0th',s.n+'\\times '+t+'\\times '+s.h,u(r.original.A,'mm^2',0)),
+ fx('地震面荷载','E_k=5\\alpha_{max}\\gamma_g(t_p+A_0/B)10^{-3}','5\\times '+s.alpha+'\\times '+R.rho+'\\times('+s.pt+'+'+num(r.original.A,0)+'/'+s.B+')\\times 10^{-3}',u(l.Ek,'kPa',4)),
+ fx('风主导','p_{d,W}=1.5w_k+0.5\\gamma_E E_k','1.5\\times '+s.wk+'+0.5\\times '+l.gE+'\\times '+num(l.Ek),u(l.pWind,'kPa',4)),
+ fx('地震主导','p_{d,E}=0.2w_k+\\gamma_E E_k','0.2\\times '+s.wk+'+'+l.gE+'\\times '+num(l.Ek),u(l.pEarth,'kPa',4)),
+ fx('控制组合','p_d=\\max(p_{d,W},p_{d,E})','\\max('+num(l.pWind)+','+num(l.pEarth)+')',u(l.pd,'kPa',4)),
+ fx('线荷载','q_d=p_dB/1000',num(l.pd)+'\\times '+s.B+'/1000',u(l.qd,'N/mm',4)),
+ fx('标准线载','q_k=w_kB/1000',s.wk+'\\times '+s.B+'/1000',u(l.qk,'N/mm',4)),
+ fx('肋自重','G_{rib,k}=c_G\\gamma_gLA_0 10^{-6}',s.extra+'\\times '+R.rho+'\\times '+s.L+'\\times '+num(r.original.A,0)+'\\times10^{-6}',u(l.ribWeight,'N')),
+ fx('面板重力','G_{panel,k}=c_G\\gamma_gLBt_p10^{-6}',s.gravity==='panel'?s.extra+'\\times '+R.rho+'\\times '+s.L+'\\times '+s.B+'\\times '+s.pt+'\\times10^{-6}':'\\mathrm{由独立支承传递}',u(l.panelWeight,'N')),
+ fx('轴力','|N_d|=1.3(G_{rib,k}+G_{panel,k})','1.3\\times('+num(l.ribWeight)+'+'+num(l.panelWeight)+')',u(l.N,'N')),
+ fx('水平反力','R_h=q_dL/2',num(l.qd)+'\\times '+s.L+'/2',u(l.Rh/1000,'kN'))
+ ]});
+ rows.push({title:'强度与挠度',note:'端面强度采用短期弯曲＋长期轴力的利用比相加。吊式为轴拉；坐式取不利的压侧包络。挠度 L/'+s.div+' 为参考书的设计控制值。',rows:[
+ fx('弯矩','M_d=q_dL^2/8',num(l.qd)+'\\times '+s.L+'^2/8',u(l.M/1e6,'kN\\cdot m')),
+ fx('弯曲应力','\\sigma_M=M_d/W_x',num(l.M,0)+'/'+num(g.Wx,0),u(v.stressB,'MPa')),
+ fx('轴向应力','\\sigma_N=|N_d|/A',num(l.N)+'/'+num(g.A,0),u(v.stressN,'MPa')),
+ fx('强度比','\\eta_\\sigma=\\sigma_M/f_{e,S}+\\sigma_N/f_{e,L}',num(v.stressB)+'/'+ff[0]+'+'+num(v.stressN)+'/'+ff[1],comparison(v.etaStrength,1)),
+ fx('风挠度','\\delta_k=\\frac{5q_kL^4}{384EI_x}','\\frac{5\\times '+num(l.qk)+'\\times '+s.L+'^4}{384\\times '+R.E+'\\times '+num(g.Ix,0)+'}',u(v.defl,'mm')),
+ fx('限值','[\\delta]=L/'+s.div,s.L+'/'+s.div,u(v.lim,'mm'))
+ ]});
+ const bRows=[];
+ if(c.k>0)bRows.push(
+ fx('有效胶宽','d_a','\\min('+s.bond+','+num(g.total)+')',u(v.bond,'mm')),
+ fx('侧向刚度','k_a=E_s d_a/(3t_s)',s.Es+'\\times '+num(v.bond)+'/(3\\times '+s.seal+')',u(c.k,'N/mm^2',5)),
+ fx('临界弯矩','M_{cr}^{\\pm}=\\frac{0.95}{\\pi^2L}\\left[y_2k_aL^3+\\sqrt{y_2^2k_a^2L^6+\\pi^2k_aL^4G_gJ_{eff}+\\pi^4y_2^2k_aL^2EI_{y,eff}+\\pi^6EI_{y,eff}G_gJ_{eff}}\\right]','y_{2,+}=h/2,\\quad y_{2,-}=-h/2',u(c.Mplus/1e6,'kN\\cdot m')+'\\ ;\\ '+u(c.Mminus/1e6,'kN\\cdot m'))
+ );
+ else bRows.push(fx('临界弯矩','M_{cr}=\\frac{C_1\\pi^2EI_{y,eff}}{L^2}\\left[C_2y_1+\\sqrt{(C_2y_1)^2+\\frac{G_gJ_{eff}L^2}{EI_{y,eff}\\pi^2}}\\right]','C_1=1.15,\\ C_2=0.47,\\ y_{1,+}=-h/2,\\ y_{1,-}=h/2',u(c.Mplus/1e6,'kN\\cdot m')+'\\ ;\\ '+u(c.Mminus/1e6,'kN\\cdot m')));
+ bRows.push(
+ fx('控制弯矩','M_{cr}=\\min(M_{cr}^+,M_{cr}^-)','\\min('+num(c.Mplus/1e6)+','+num(c.Mminus/1e6)+')',u(c.Mcr/1e6,'kN\\cdot m')),
+ fx('长细比','\\bar\\lambda_b=\\sqrt{\\frac{W_x(1.667f_{b,S})}{M_{cr}}}','f_{b,S}='+ff[2],num(st.lambdaB)),
+ fx('中间系数','\\Phi_b=\\frac{1+0.45(\\bar\\lambda_b-0.15)+\\bar\\lambda_b^2}{2}','\\bar\\lambda_b='+num(st.lambdaB),num(st.phiB)),
+ fx('稳定系数','\\chi_b=\\min\\left(1,\\frac{1}{\\Phi_b+\\sqrt{\\Phi_b^2-\\bar\\lambda_b^2}}\\right)','\\Phi_b='+num(st.phiB),num(st.chiB)),
+ fx('弯扭利用比','\\mu_b=\\frac{M_d}{\\chi_bW_xf_{b,S}}','\\chi_b='+num(st.chiB)+',\\ f_{b,S}='+ff[2],comparison(st.muB,1))
+ );
+ rows.push({title:'弯扭稳定',note:'T/CECS 1099-2022 第5.3.6～5.3.7条；'+(c.k>0?'连续可靠胶缝侧向支撑按A.0.3，减片有效胶宽不大于剩余截面宽度。':'不计侧向约束，按A.0.1，满跨均布荷载、跨中无侧向支点。')+'端部需有可靠抗扭约束；吊式不计轴拉对稳定的有利作用。',rows:bRows});
+ if(s.mode==='seated'){
+ const cr=[];
+ if(c.k>0)cr.push(
+ fx('半波参数','n_1=\\max\\left(\\frac{L}{\\pi}\\sqrt[4]{\\frac{k_a}{EI_{y,eff}}},1\\right)','k_a='+num(c.k,5),num(c.halfWave)),
+ fx('辅助量','a_1=(L/(n_1\\pi))^2',s.L+'^2/('+num(c.halfWave)+'\\pi)^2',u(c.a,'mm^2')),
+ fx('极回转','i_0^2=(I_x+I_{y,full})/A','('+num(g.Ix,0)+'+'+num(c.IyFull,0)+')/'+num(g.A,0),u(c.i02,'mm^2')),
+ fx('扭转项','N_\\omega=(G_gJ_{eff}+a_1k_ah^2/4)/i_0^2','G_g='+R.Gglass,u(c.Nw/1000,'kN')),
+ fx('弯曲项','N_y=EI_{y,eff}/a_1+a_1k_a','E='+R.E,u(c.Ny/1000,'kN')),
+ fx('临界轴力','N_{cr}=\\frac{N_\\omega+N_y-\\sqrt{(N_\\omega-N_y)^2+k_a^2h^2a_1^2/i_0^2}}{2}','N_\\omega='+num(c.Nw/1000)+',\\ N_y='+num(c.Ny/1000),u(c.Ncr/1000,'kN'))
+ );else cr.push(fx('临界轴力','N_{cr}=\\pi^2EI_{y,eff}/L^2','\\pi^2\\times '+R.E+'\\times '+num(c.Iy,0)+'/'+s.L+'^2',u(c.Ncr/1000,'kN')));
+ cr.push(
+ fx('长细比','\\bar\\lambda_c=\\sqrt{\\frac{A(1.667f_{b,L})}{N_{cr}}}','f_{b,L}='+ff[3],num(st.lambdaC)),
+ fx('中间系数','\\Phi_c=\\frac{1+0.97(\\bar\\lambda_c-0.63)+\\bar\\lambda_c^2}{2}','\\bar\\lambda_c='+num(st.lambdaC),num(st.phiC)),
+ fx('稳定系数','\\chi_c=\\min\\left(1,\\frac{1}{\\Phi_c+\\sqrt{\\Phi_c^2-\\bar\\lambda_c^2}}\\right)','\\Phi_c='+num(st.phiC),num(st.chiC)),
+ fx('轴压比','\\mu_N=\\frac{N_d}{\\chi_cAf_{b,L}}','\\chi_c='+num(st.chiC),comparison(st.muN,0.5)),
+ fx('短期指数','\\eta_{5.5.2}=\\mu_N^{1.5}+\\mu_b^{1.5}',num(st.muN)+'^{1.5}+'+num(st.muB)+'^{1.5}',comparison(st.etaCode,1)),
+ fx('混合包络','\\eta_{mix}=\\mu_N+\\mu_b^{1.5}',num(st.muN)+'+'+num(st.muB)+'^{1.5}',comparison(st.etaMixed,1))
+ );
+ rows.push({title:'轴压与压弯稳定',note:'T/CECS 1099-2022 第5.4.2、5.5.1～5.5.2条；临界力按'+(c.k>0?'B.0.1～B.0.2':'5.4.3')+'。轴项用长期强度与长期缺陷系数，弯项用短期值；另保留原书 μN+μb^1.5 的混合持荷包络，在 μN≤0.5 内比两项均取1.5次方更严格。',rows:cr});
+ }
+ return rows;
+}
+function renderSteps(r){
+ const prev=[...document.querySelectorAll('#'+prefix+'fxSteps details')].map(d=>d.open);
+ $('fxSteps').innerHTML=sections(r).map((p,i)=>'<details class="fxstep"'+((prev[i]??i===0)?' open':'')+'><summary>'+(i+1)+' '+p.title+'</summary><div class="fxbody"><p class="fxnote">'+p.note+'</p>'+p.rows.map(q=>'<div class="fxl"><span class="fxtag">'+q.tag+'</span><div class="fx fx-sym">'+tex2html(q.sym)+'</div><div class="fx">'+tex2html(q.sub)+'<span class="fxeq"> = </span><span class="fxres">'+tex2html(q.result)+'</span></div></div>').join('')+'</div></details>').join('');
+}
+function renderOutput(){
+ try{
+ const r=R.compute(s),v=r.result;lastResult=r;
+ const meta='<p class="rib-result-note">配置 '+s.n+' 片 − 1 片 = <b>'+v.n+' 片参与计算</b></p>';
+ if(v.empty){
+  $('status').innerHTML=meta+'<p class="ng">'+v.reason+'，无法计算利用率。</p>';
+  $('properties').innerHTML='';
+ }else{
+  const metrics=[
+   ['强度利用率',v.etaStrength,'≤ 1.00'],
+   ['挠度利用率',v.etaDefl,f(v.defl)+' / '+f(v.lim)+' mm'],
+   ['弯扭稳定利用率',v.st.muB,'≤ 1.00'],
+   ...(s.mode==='seated'?[
+    ['轴压限值利用率',v.st.muN/.5,'μN = '+f(v.st.muN,3)+'，限值 0.50'],
+    ['压弯稳定利用率',v.st.eta,'≤ 1.00']
+   ]:[])
+  ];
+  $('status').innerHTML=meta+'<div class="rib-utilization">'+metrics.map(([label,value,note])=>'<div class="item"><div class="k">'+label+'</div><div class="v '+(value<=1?'ok':'ng')+'">'+f(value,3)+'</div><div class="sub">'+note+'</div></div>').join('')+'</div>';
+  $('properties').innerHTML=[['剩余总厚度',f(v.g.total)+' mm'],['剩余玻璃面积',f(v.g.A)+' mm²'],['Ix',f(v.g.Ix/1e4)+' cm⁴'],['Wx',f(v.g.Wx/1e3)+' cm³']].map(([k,val])=>'<div><span>'+k+'</span><b>'+val+'</b></div>').join('');
+ }
+ $('loads').innerHTML='<table><tbody>'+[['风主导 / 地震主导',f(r.load.pWind,3)+' / '+f(r.load.pEarth,3)+' kPa'],['控制设计面荷载',f(r.load.pd,3)+' kPa'],['地震标准面荷载',f(r.load.Ek,3)+' kPa'],['轴力 '+(s.mode==='hanging'?'（拉）':'（压）'),f(r.load.N/1000)+' kN'],['弯矩 / 水平反力',f(r.load.M/1e6)+' kN·m / '+f(r.load.Rh/1000)+' kN']].map(([k,val])=>'<tr><td>'+k+'</td><td>'+val+'</td></tr>').join('')+'</tbody></table>';
+ $('export').disabled=false;renderSteps(r);
+ }catch(e){
+ lastResult=null;$('status').innerHTML='<b class="ng">输入需要修正</b><p>'+esc(e.message)+'</p>';
+ for(const id of['properties','loads','fxSteps'])$(id).innerHTML='';
+ $('export').disabled=true;
+ }
+}
+function render(){renderInputs();renderOutput();}
+document.addEventListener('change',e=>{
+ if(integrated&&!e.target.closest('#rib-inputs'))return;
+ const key=e.target.dataset.key;if(!key)return;
+ s[key]=e.target.type==='number'?(e.target.value.trim()===''?null:Number(e.target.value)):e.target.value;
+ if(key==='n')s.n=Number(s.n);
+ render();
+});
+$('expand').onclick=()=>document.querySelectorAll('#'+prefix+'fxSteps details').forEach(d=>d.open=true);
+$('collapse').onclick=()=>document.querySelectorAll('#'+prefix+'fxSteps details').forEach(d=>d.open=false);
+if(!integrated)$('print').onclick=()=>window.print();
+let printOpen=null;
+window.addEventListener('beforeprint',()=>{
+ if(integrated&&!document.body.classList.contains('rib-mode'))return;
+ printOpen=[...document.querySelectorAll('#'+prefix+'fxSteps details')].map(d=>{const old=d.open;d.open=true;return old;});
+});
+window.addEventListener('afterprint',()=>{
+ if(!printOpen)return;
+ document.querySelectorAll('#'+prefix+'fxSteps details').forEach((d,i)=>d.open=printOpen[i]);
+ printOpen=null;
+});
+function exportLatex(){
+ if(!lastResult)return '';
+ return ['% 玻璃肋 1.3.2；仅验算减去一片后的截面，全设计荷载。','% 端部可靠抗扭；侧向支撑取决于连续可靠胶缝；连接及胶缝强度另行验算。','% 减片刚度采用指定的 n-1 等厚重组模型，胶片模量所有持荷时间共用。','\\section{玻璃肋计算}','支承：'+(s.mode==='hanging'?'吊式':'坐式')+'；荷载口径：'+(s.profile==='national'?'国标':'粤标')+'；胶片：'+s.inter+'，指定模量 '+s.G+' MPa。','配置 '+s.n+' 片，减去1片后按 '+lastResult.result.n+' 片计算。本章验算'+(lastResult.ok?'满足':'不满足')+'。',...sections(lastResult).flatMap(p=>['\\subsection{'+p.title+'}',p.note,...p.rows.map(q=>'\\['+q.sym+'\\qquad '+q.sub+'='+q.result+'\\]')])].join('\n\n');
+}
+$('export').onclick=()=>{const tx=exportLatex();if(!tx)return;const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([tx],{type:'text/plain;charset=utf-8'}));a.download='glass-rib.tex';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);};
+globalThis.RibPreview={state:s,render,sections,exportLatex,getResult:()=>lastResult};render();
+})();
+</script>
+<script id="glass-rib-mode">(function(){
+ const byId=id=>document.getElementById(id),button=byId('glassRibBtn');
+ let active=false;
+ const h1=document.querySelector('.topbar h1');
+ function activateRib(on){
+  if(on===active)return;
+  active=on;
+  document.body.classList.toggle('rib-mode',on);
+  if(on)document.body.classList.remove('m-basic');
+  else document.body.classList.toggle('m-basic',byId('modeSw').getAttribute('aria-checked')==='false');
+  byId('metal-inputs').hidden=on;byId('metal-outputs').hidden=on;
+  byId('rib-inputs').hidden=!on;byId('rib-outputs').hidden=!on;
+  byId('metal-footer').hidden=on;byId('rib-footer').hidden=!on;
+  byId('rib-export').hidden=!on;
+  button.setAttribute('aria-pressed',String(on));
+  h1.textContent=on?'立柱计算 · 玻璃肋':'立柱（竖梃）承载力计算';
+  document.title=on?'立柱计算 · 玻璃肋':'立柱（竖梃）承载力计算';
+  if(on)RibPreview.render();
+ }
+ button.addEventListener('click',()=>activateRib(!active));
+ ['modeSw','lblBasic','lblAdv'].forEach(id=>byId(id).addEventListener('click',()=>activateRib(false)));
+ if(location.hash==='#glass-rib')activateRib(true);
+ window.addEventListener('hashchange',()=>activateRib(location.hash==='#glass-rib'));
+})();</script>
 </body>
 </html>
