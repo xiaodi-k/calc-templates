@@ -464,7 +464,7 @@
             <span class="unit">kPa</span>
           </div>
           <div class="row" style="margin-top:-4px">
-            <button class="ghost mini" id="pickBtn" style="flex:1">按城市查表（GB 50009 表 E.5）</button>
+            <button class="ghost mini" id="pickBtn" style="flex:1">按城市查表</button>
           </div>
           <p class="hint" id="pickInfo" style="margin-top:-2px"></p>
 
@@ -498,11 +498,23 @@
       <div class="card">
         <h2>构件与分区</h2>
         <div class="body">
+<div class="row"><label for="basis">依据规范</label><select id="basis" style="flex:1"><option value="national" selected>全国</option><option value="guangdong">广东</option></select></div>
           <div class="row">
             <label for="preset">位置</label>
             <select id="preset" style="flex:1 1 auto"></select>
           </div>
+
           <p class="hint" id="presetHint"></p>
+          <div id="gdFields" hidden>
+            <div class="grid2 height-area">
+              <div><label for="buildingH">建筑总高 H（m）</label><input id="buildingH" type="number" value="60" min="0" step="1" /></div>
+              <div id="podiumWrap"><label for="podiumH">裙楼高度 H₀（m）</label><input id="podiumH" type="number" value="0" min="0" step="1" /></div>
+            </div>
+            <div class="row"><label for="w50">50 年基本风压</label><input id="w50" type="number" value="0.45" min="0.3" step="0.05" /><span class="unit">kPa</span></div>
+            <div class="row"><label for="typhoon">台风条件</label><select id="typhoon" style="flex:1"><option value="auto">按 50 年风压分档</option><option value="yes">其他易受台风影响地区</option></select></div>
+            <p class="hint">50 年风压仅用于阵风系数分档。手填基本风压默认按 50 年同步；修改本项后独立保留。查表会分别填入所选重现期风压和 50 年风压。</p>
+            <p class="hint" id="gdRuleHint"></p>
+          </div>
         </div>
       </div>
 
@@ -531,7 +543,7 @@
               <div class="row" style="margin-bottom:0"><input type="number" id="inn" value="0.2" step="0.05" min="0" /></div>
             </div>
           </div>
-          <p class="hint">墙面·边角区按 GB 50009 表 8.3.3 取 +1.0 / −1.4；封闭建筑内压按第 8.3.5 条取 ±0.2。输入框填写绝对值，工况组合由程序按不利方向装配。</p>
+          <p class="hint" id="coefHint"></p>
           <p class="hint" id="custTag" hidden style="color:var(--in);font-weight:700">当前体型系数已偏离分区默认值。</p>
         </div>
       </div>
@@ -573,22 +585,22 @@
           <div class="item">
             <div class="k">未折减 · 正风压（向内）</div>
             <div class="v posv" id="outPP">—</div>
-            <div class="sub">直接承受风荷载的面板</div>
+            <div class="sub" id="labelPP">直接承受风荷载的面板</div>
           </div>
           <div class="item">
             <div class="k">未折减 · 负风压（向外）</div>
             <div class="v negv" id="outPN">—</div>
-            <div class="sub">直接承受风荷载的面板</div>
+            <div class="sub" id="labelPN">直接承受风荷载的面板</div>
           </div>
           <div class="item">
             <div class="k">面积折减后 · 正风压</div>
             <div class="v posv" id="outRP">—</div>
-            <div class="sub">符合折减条件的支承构件</div>
+            <div class="sub" id="labelRP">符合折减条件的支承构件</div>
           </div>
           <div class="item">
             <div class="k">面积折减后 · 负风压</div>
             <div class="v negv" id="outRN">—</div>
-            <div class="sub">符合折减条件的支承构件</div>
+            <div class="sub" id="labelRN">符合折减条件的支承构件</div>
           </div>
         </div>
         <p class="hint" style="padding:0 16px 14px;margin:0" id="floorHint"></p>
@@ -624,27 +636,25 @@
         <h2>规范依据</h2>
         <div class="body">
           <table>
-            <thead><tr><th>规范</th><th>条文</th><th>内容（摘录）</th></tr></thead>
+            <thead><tr><th>规范</th><th>条文</th><th>适用规则</th></tr></thead>
             <tbody id="srcBody"></tbody>
           </table>
-          <p class="hint">说明：μz 本页采用连续幂律表达式与各类地面的高度上下限；规范表格经过舍入，两者可能有微小差别。</p>
+          <p class="hint" id="tableHint"></p>
         </div>
       </div>
     </div>
   </main>
 
   <footer>
-    基本风压：可按城市查 GB 50009—2012 表 E.5（10 / 50 / 100 年重现期），填入时执行 0.30 kPa 下限；低于 50 年的取值需另有适用依据。
-    μ<sub>z</sub> 按幂律式 c(Z/10)^(2α) 连续计算，Z 为各类地面粗糙度的有效高度范围夹持值。
-    β<sub>gz</sub> 取原阵风系数表达式与 GB 55001—2021 第 4.6.5 条第 2 款下限 1+0.7/√μz 的较大值。
-    面积折减只折减外压 μ<sub>sl</sub>，内压保持不变；墙面 η₂₅ = 0.8，屋面（含采光顶）|μ| > 1 时取 0.6、其余取 1.0。
-    玻璃幕墙另执行 JGJ 102—2003 第 5.3.2 条的 1.0 kPa 绝对值下限；采光顶、雨篷不套用。
-    结果为风荷载标准值，未乘荷载分项系数；正值向内、负值向外，1 kPa = 1 kN/m²。
+    全国采用 GB 50009—2012；广东采用 DBJ/T 15-101—2022，并执行 GB 55001—2021 的围护结构放大系数下限。
+    基本风压不低于 0.30 kPa；采用低于 50 年重现期须另有依据。面积折减只作用于外压，适用范围随所选规范显示。
+    预设针对封闭矩形建筑；复杂体型、显著相互干扰及需要风洞试验的项目应另行确定。
+    结果为标准值，未乘荷载分项系数；正值向内、负值向外，1 kPa = 1 kN/m²。
     <span class="ver" id="verLine"></span>
   </footer>
 
   <dialog id="dlg">
-    <div class="dlg-head">基本风压查表 · GB 50009—2012 表 E.5</div>
+    <div class="dlg-head" id="lookupTitle">基本风压查表</div>
     <div class="dlg-body">
       <div class="dl">
         <label for="pvSel">省 / 自治区 / 直辖市</label>
@@ -654,6 +664,7 @@
         <label for="ctSel">城市 / 台站</label>
         <select id="ctSel"></select>
       </div>
+<div class="dl" id="districtWrap" hidden><label for="districtSel">区县 / 岛屿（采用规范原地名）</label><select id="districtSel"></select></div>
       <div class="dl">
         <label>重现期 R</label>
         <div class="seg" id="rpSeg"></div>
@@ -899,7 +910,7 @@ function f3(v) { return isFinite(v) ? v.toFixed(3) : '—'; }
 function sgn(v) { return (v < 0 ? '−' : '+') + Math.abs(v).toFixed(3); }
 
 /* ---------- 读输入 ---------- */
-function readInput() {
+function nationalReadInput() {
   return {
     w0:   document.getElementById('w0').value,
     z:    document.getElementById('z').value,
@@ -916,7 +927,7 @@ function readInput() {
   };
 }
 
-function validate(a) {
+function nationalValidate(a) {
   var errs = [];
   var lst = [['w0', '基本风压', true], ['z', '计算高度', true], ['area', '从属面积', true],
              ['ep', '正风外压系数', true], ['en', '负风外压系数', true],
@@ -944,7 +955,7 @@ function areaReduction(a, at25) {
   return 1 + (at25 - 1) * Math.log10(a) / 1.4;
 }
 
-function compute(a) {
+function nationalCompute(a) {
   var t = TERR[a.terr], p = PRESET[a.preset];
   var z = Number(a.z), A = Number(a.area), w0 = Number(a.w0);
   var ep = Number(a.ep), en = Number(a.en), ip = Number(a.ip), inn = Number(a.inn);
@@ -984,7 +995,7 @@ function compute(a) {
 /* =================================================================
    分步公式
 ================================================================= */
-function steps(a, r) {
+function nationalSteps(a, r) {
   var t = r.t, p = r.p, T = [];
   var ep = n6(r.ep), en = n6(r.en), ip = n6(r.ip), inn = n6(r.inn), A = n6(r.A);
 
@@ -1110,7 +1121,7 @@ var SOURCES = [
   ['GB 50009—2012', '第 8.3.4 条', '当从属面积不大于 1 m² 时折减系数取 1.0；大于或等于 25 m² 时，墙面取 0.8，局部体型系数绝对值大于 1.0 的屋面区域取 0.6；其间采用对数插值。'],
   ['JGJ 102—2003', '第 5.3.2 条', '玻璃幕墙的风荷载标准值应按下式计算，并且不应小于 1.0 kN/m²：w_k = βgz·μs·μz·w₀。']
 ];
-function drawSources() {
+function nationalDrawSources() {
   E.srcBody.innerHTML = SOURCES.map(function (r) {
     return '<tr><td>' + r[0] + '</td><td>' + r[1] + '</td><td style="text-align:left">' + r[2] + '</td></tr>';
   }).join('');
@@ -1137,7 +1148,7 @@ function renderFx(a, r, errs) {
 
 var terrKey = 'B';
 
-function refresh() {
+function nationalRefresh() {
   var a = readInput();
   var errs = validate(a);
 
@@ -1153,7 +1164,7 @@ function refresh() {
   E.presetHint.textContent = PRESET[a.preset].kind === 'roof'
     ? '采光顶沿用 ≤5° 平缓屋面示例，坡度与分区需按项目确认；不套用玻璃幕墙 1.0 kPa 下限。'
     : '墙面分区按 GB 50009—2012 表 8.3.3；套用 JGJ 102—2003 第 5.3.2 条的 1.0 kPa 绝对值下限。';
-  var p0 = PRESET[a.preset];
+  var p0 = defaultPreset(a);
   var isCus = ['ep', 'en', 'ip', 'inn'].some(function (k, i) {
     return Number(a[k]) !== [p0.ep, p0.en, p0.ip, p0.inn][i];
   });
@@ -1196,22 +1207,180 @@ function refresh() {
   renderFx(a, r, errs);
 }
 
+/* DBJ/T 15-101-2022: table 7.2.1, 7.3.1, 7.5.16-1/-2. */
+var GD_CITIES={"广州":[["从化区",0.25,0.45,0.55],["花都区",0.25,0.45,0.55],["增城区",0.3,0.5,0.6],["黄埔区",0.3,0.5,0.65],["番禺区",0.3,0.55,0.7],["南沙区",0.35,0.6,0.7],["其他",0.3,0.5,0.6]],"深圳":[["光明区",0.35,0.65,0.7],["福田区",0.45,0.75,0.9],["罗湖区",0.45,0.75,0.9],["南山区",0.45,0.75,0.9],["盐田区",0.45,0.75,0.9],["其他",0.45,0.7,0.8]],"珠海":[["香洲区",0.5,0.8,0.95],["金湾区",0.5,0.85,1],["斗门区",0.5,0.8,0.95],["横琴岛",0.5,0.85,1]],"佛山":[["顺德区",0.3,0.6,0.7],["其他",0.3,0.5,0.6]],"韶关":[["乐昌市",0.2,0.3,0.35],["南雄市",0.2,0.3,0.35],["仁化县",0.2,0.3,0.35],["始兴县",0.2,0.3,0.35],["翁源县",0.2,0.3,0.35],["新丰县",0.2,0.35,0.45],["乳源县",0.2,0.3,0.35],["其他",0.2,0.35,0.45]],"湛江":[["雷州市",0.45,0.75,0.9],["廉江市",0.35,0.65,0.75],["吴川市",0.5,0.8,0.95],["遂溪县",0.45,0.75,0.9],["徐闻县",0.45,0.75,0.9],["东海岛",0.65,0.9,1.05],["南三岛",0.5,0.85,1],["硇洲岛",0.75,0.95,1.1],["其他",0.5,0.8,0.95]],"肇庆":[["高要区",0.3,0.5,0.6],["四会市",0.25,0.4,0.5],["广宁县",0.2,0.3,0.35],["德庆县",0.2,0.3,0.35],["封开县",0.2,0.3,0.35],["怀集县",0.2,0.3,0.35],["其他",0.3,0.5,0.6]],"江门":[["台山市",0.35,0.6,0.65],["开平市",0.35,0.6,0.75],["鹤山市",0.35,0.55,0.65],["上川岛",0.75,1.05,1.2],["下川岛",0.75,0.95,1.1],["恩平市",0.3,0.6,0.7],["其他",0.35,0.6,0.65]],"茂名":[["高州市",0.35,0.6,0.7],["信宜市",0.35,0.6,0.7],["化州市",0.35,0.65,0.75],["电白县",0.45,0.7,0.8],["其他",0.35,0.6,0.7]],"汕尾":[["陆河县",0.3,0.5,0.6],["海丰县",0.45,0.75,0.9],["陆丰市",0.45,0.75,0.9],["其他",0.5,0.85,1]],"惠州":[["惠东县",0.35,0.6,0.7],["惠阳区",0.35,0.6,0.7],["博罗县",0.3,0.5,0.6],["龙门县",0.2,0.35,0.45],["其他",0.35,0.55,0.6]],"梅州":[["兴宁市",0.2,0.3,0.35],["梅县区",0.2,0.3,0.35],["平远县",0.2,0.3,0.35],["蕉岭县",0.2,0.3,0.35],["大埔县",0.25,0.4,0.45],["丰顺县",0.25,0.4,0.45],["五华县",0.2,0.3,0.35],["其他",0.2,0.3,0.35]],"汕头":[["南澳县",0.5,0.8,0.95],["濠江区",0.5,0.85,1],["其他",0.5,0.8,0.95]],"河源":[["东源县",0.2,0.3,0.35],["和平县",0.2,0.3,0.35],["龙川县",0.2,0.3,0.35],["紫金县",0.2,0.3,0.35],["连平县",0.2,0.3,0.35],["其他",0.2,0.3,0.35]],"阳江":[["阳春市",0.3,0.55,0.6],["阳东区",0.35,0.65,0.8],["阳西县",0.4,0.7,0.8],["海陵岛",0.5,0.8,0.95],["其他",0.45,0.75,0.9]],"清远":[["英德市",0.2,0.3,0.35],["连州市",0.2,0.3,0.35],["佛冈县",0.2,0.3,0.35],["阳山县",0.2,0.3,0.35],["连南县",0.2,0.3,0.35],["清新区",0.2,0.3,0.35],["连山县",0.2,0.3,0.35],["其他",0.2,0.3,0.35]],"东莞":[["沙田镇",0.35,0.6,0.75],["长安镇",0.35,0.65,0.8],["虎门镇",0.35,0.65,0.8],["凤岗镇",0.35,0.65,0.8],["未列地区（按分区图手动确定）",null,null,null]],"中山":[["石岐区",0.35,0.65,0.8],["小榄镇",0.3,0.6,0.7],["坦洲镇",0.5,0.8,0.95],["未列地区（按分区图手动确定）",null,null,null]],"潮州":[["饶平县",0.4,0.7,0.85],["潮安县",0.45,0.75,0.9],["其他",0.35,0.65,0.75]],"揭阳":[["普宁市",0.35,0.65,0.75],["揭东县",0.35,0.65,0.75],["揭西县",0.3,0.5,0.6],["惠来县",0.45,0.75,0.9],["其他",0.35,0.65,0.75]],"云浮":[["罗定市",0.2,0.3,0.35],["新兴县",0.25,0.45,0.5],["郁南县",0.2,0.3,0.35],["云安县",0.2,0.35,0.45],["其他",0.2,0.35,0.45]]};
+var GD_HEIGHTS=[5,10,15,20,30,40,50,60,70,80,90,100,150,200,250,300,350,400,450,500,550];
+var GD_MU=[[1.09,1,0.65,0.51],[1.28,1,0.65,0.51],[1.42,1.13,0.65,0.51],[1.52,1.23,0.74,0.51],[1.67,1.39,0.88,0.51],[1.79,1.52,1,0.6],[1.89,1.62,1.1,0.69],[1.97,1.71,1.2,0.77],[2.05,1.79,1.28,0.84],[2.12,1.87,1.36,0.91],[2.18,1.93,1.43,0.98],[2.23,2,1.5,1.04],[2.46,2.25,1.79,1.33],[2.64,2.46,2.03,1.58],[2.78,2.63,2.24,1.81],[2.91,2.77,2.43,2.02],[2.91,2.91,2.6,2.22],[2.91,2.91,2.76,2.4],[2.91,2.91,2.91,2.58],[2.91,2.91,2.91,2.74],[2.91,2.91,2.91,2.91]];
+var GD_LOW=[[1.65,1.7,2.05,2.4],[1.6,1.7,2.05,2.4],[1.57,1.66,2.05,2.4],[1.55,1.63,1.99,2.4],[1.53,1.59,1.9,2.4],[1.51,1.57,1.85,2.29],[1.49,1.55,1.81,2.2],[1.48,1.54,1.78,2.14],[1.48,1.52,1.75,2.09],[1.47,1.51,1.73,2.04],[1.46,1.5,1.71,2.01],[1.46,1.5,1.69,1.98],[1.43,1.47,1.63,1.87],[1.42,1.45,1.59,1.79],[1.41,1.43,1.57,1.74],[1.4,1.42,1.54,1.7],[1.4,1.41,1.53,1.67],[1.4,1.41,1.51,1.64],[1.4,1.41,1.5,1.62],[1.4,1.41,1.5,1.6],[1.4,1.41,1.5,1.59]];
+var GD_HIGH=[[1.78,1.84,2.26,2.68],[1.72,1.84,2.26,2.68],[1.69,1.79,2.26,2.68],[1.66,1.76,2.18,2.68],[1.63,1.71,2.08,2.68],[1.61,1.68,2.02,2.54],[1.59,1.66,1.97,2.44],[1.58,1.64,1.93,2.37],[1.57,1.63,1.9,2.31],[1.56,1.61,1.87,2.25],[1.55,1.6,1.85,2.21],[1.55,1.59,1.83,2.17],[1.52,1.56,1.76,2.04],[1.5,1.54,1.71,1.95],[1.49,1.52,1.68,1.89],[1.48,1.5,1.65,1.84],[1.48,1.49,1.63,1.81],[1.48,1.49,1.61,1.77],[1.48,1.49,1.6,1.75],[1.48,1.49,1.6,1.72],[1.48,1.49,1.6,1.7]];
+
+/* Regional defaults remain separate from user coefficient overrides. */
+var w50Linked = true, manualCoefficients = {};
+function el(id) { return document.getElementById(id); }
+function readInput() {
+  var a=nationalReadInput();
+  ['basis','buildingH','podiumH','w50','typhoon'].forEach(function(k){ a[k]=el(k).value; });
+  return a;
+}
+function defaultPreset(a) {
+  var p=Object.assign({},PRESET[a.preset]);
+  if(a.basis==='guangdong') {
+    p.inn=.3;
+    if(a.preset==='wall-edge') p.en=Number(a.buildingH)<45?2:1.4;
+    if(a.preset==='roof-edge') { p.ep=0; p.en=2; }
+    if(a.preset==='roof-main') { p.ep=.2; p.en=1.2; }
+  }
+  return p;
+}
+function applyPreset(reset) {
+  if(reset) manualCoefficients={};
+  var p=defaultPreset(readInput());
+  ['ep','en','ip','inn'].forEach(function(k){if(!manualCoefficients[k]) el(k).value=p[k];});
+}
+function validate(a) {
+  var errs=nationalValidate(a);
+  if(a.basis!=='guangdong') return errs;
+  ['buildingH','w50'].concat(PRESET[a.preset].kind==='wall'?['podiumH']:[]).forEach(function(k){
+    if(String(a[k]).trim()===''||!isFinite(Number(a[k]))) errs.push('请填写有效的'+({buildingH:'建筑总高',podiumH:'裙楼高度',w50:'50 年基本风压'}[k]));
+  });
+  if(Number(a.w50)<.3) errs.push('50 年基本风压不得小于 0.30 kPa（广东第 7.2.1 条）。');
+  if(Number(a.buildingH)<=0||Number(a.buildingH)>=200) errs.push('本页广东预设适用于建筑总高 0＜H＜200 m；超出范围须另行确定风荷载。');
+  if(Number(a.z)>Number(a.buildingH)) errs.push('计算高度不得超过建筑总高。');
+  if(PRESET[a.preset].kind==='wall'&&(Number(a.podiumH)<0||Number(a.podiumH)>Number(a.buildingH))) errs.push('裙楼高度应在 0 与建筑总高之间。');
+  return errs.map(function(x){return x.replace('GB 50009—2012 第 8.1.2 条','DBJ/T 15-101—2022 第 7.2.1 条');});
+}
+/* Linear interpolation between adjacent tabulated heights; no extrapolation. */
+function tableAt(rows,z,terrain) {
+  var c='ABCD'.indexOf(terrain), i=0;
+  while(i<GD_HEIGHTS.length-1&&GD_HEIGHTS[i+1]<z)i++;
+  if(z<=GD_HEIGHTS[0]) return rows[0][c];
+  if(i===GD_HEIGHTS.length-1) return rows[i][c];
+  var f=(z-GD_HEIGHTS[i])/(GD_HEIGHTS[i+1]-GD_HEIGHTS[i]);
+  return rows[i][c]+f*(rows[i+1][c]-rows[i][c]);
+}
+function compute(a) {
+  var r=nationalCompute(a);
+  if(a.basis!=='guangdong') return r;
+  var high=Number(a.w50)>=.5||a.typhoon==='yes', gust=high?GD_HIGH:GD_LOW;
+  var Z=Math.max(r.z,r.t.zmin);
+  var h=r.p.kind==='wall'&&Number(a.buildingH)>=45?Math.max(Number(a.buildingH)/3,Number(a.podiumH),r.t.zmin):r.t.zmin;
+  var ZN=Math.max(Z,h);
+  r.Z=Z; r.ZN=ZN; r.h=h; r.clipped=false; r.high=high;
+  r.mu=tableAt(GD_MU,Z,a.terr); r.muN=tableAt(GD_MU,ZN,a.terr);
+  r.betaBase=tableAt(gust,Z,a.terr); r.betaBaseN=tableAt(gust,ZN,a.terr);
+  r.betaLower=1+.7/Math.sqrt(r.mu); r.betaLowerN=1+.7/Math.sqrt(r.muN);
+  r.beta=Math.max(r.betaBase,r.betaLower); r.betaN=Math.max(r.betaBaseN,r.betaLowerN);
+  r.q=r.beta*r.mu*r.w0*r.kt*r.kd; r.qN=r.betaN*r.muN*r.w0*r.kt*r.kd;
+  r.rawP=r.q*(r.ep+r.ip); r.rawN=r.qN*(r.en+r.inn);
+  r.redP=r.q*(r.etaP*r.ep+r.ip); r.redN=r.qN*(r.etaN*r.en+r.inn);
+  var floor=function(v){return r.useFloor?Math.max(1,v):v;};
+  r.PP=floor(r.rawP); r.PN=floor(r.rawN); r.RP=floor(r.redP); r.RN=floor(r.redN);
+  r.floorHit=r.useFloor&&[r.rawP,r.rawN,r.redP,r.redN].some(function(v){return v<1;});
+  return r;
+}
+function interpolationLine(symbol,rows,z,terrain) {
+  var i=0,c='ABCD'.indexOf(terrain);
+  while(i<GD_HEIGHTS.length-1&&GD_HEIGHTS[i+1]<z)i++;
+  if(z<=5||i===GD_HEIGHTS.length-1||z===GD_HEIGHTS[i]) return symbol+'='+n6(tableAt(rows,z,terrain));
+  return symbol+'='+n6(rows[i][c])+'+\\frac{'+n6(z)+'-'+GD_HEIGHTS[i]+'}{'+GD_HEIGHTS[i+1]+'-'+GD_HEIGHTS[i]+'}('+n6(rows[i+1][c])+'-'+n6(rows[i][c])+')='+n6(tableAt(rows,z,terrain));
+}
+function steps(a,r) {
+  if(a.basis!=='guangdong') return nationalSteps(a,r);
+  var g=r.high?GD_HIGH:GD_LOW, table=r.high?'7.5.16-2':'7.5.16-1';
+  var roof=r.p.kind==='roof';
+  return [
+    {t:'计算条件与广东规范',d:'DBJ/T 15-101—2022；'+(pick?pick.prov+' · '+pick.city+' · '+pick.period+' 年重现期':'基本风压手动输入'),
+     f:['w_0='+n6(r.w0)+'\\quad\\mathrm{kPa},\\quad w_{50}='+n6(Number(a.w50))+'\\quad\\mathrm{kPa}',
+        'H='+n6(Number(a.buildingH))+'\\quad\\mathrm{m},\\quad z='+n6(r.z)+'\\quad\\mathrm{m},\\quad A='+n6(r.A)+'\\quad\\mathrm{m^2}'],
+     note:'w₀ 用于荷载；w₅₀ 仅用于阵风系数分档。'+(pick&&pick.period<50?'本次重现期低于 50 年，采用须另有依据。':'')+(pick&&pick.mapNote?' '+pick.mapNote:'')},
+    {t:'正、负风压计算高度',d:'表 7.5.3：45≤H＜200 m 的墙面仅在计算负风压时执行最低高度 h。',
+     f:['Z_+=\\max(z,z_0)='+n6(r.Z)+'\\quad\\mathrm{m}',
+        r.p.kind==='wall'&&Number(a.buildingH)>=45?'h=\\max(H/3,H_0,z_0)=\\max('+n6(Number(a.buildingH)/3)+','+n6(Number(a.podiumH))+','+r.t.zmin+')='+n6(r.h)+'\\quad\\mathrm{m}':'h=z_0='+r.t.zmin+'\\quad\\mathrm{m}',
+        'Z_-=\\max(z,h)='+n6(r.ZN)+'\\quad\\mathrm{m}'],
+     note:roof?'屋面查表参考；本页未以阵风系数表最大值替代第 7.5.17 条要求的风压系数极值。':'H＜45 m：边角区外压 −2.0；45≤H＜200 m：−1.4。大面区 −1.0。'},
+    {t:'风压高度变化系数',d:'按广东表 7.3.1；表间高度采用线性插值。',
+     f:[interpolationLine('\\mu_+',GD_MU,r.Z,a.terr),interpolationLine('\\mu_-',GD_MU,r.ZN,a.terr)],
+     note:a.terr+' 类地面；正负工况分别查表。'},
+    {t:'阵风系数与参考风压',d:'采用表 '+table+'；'+(r.high?'50 年风压≥0.5 kPa 或另属易受台风影响地区。':'50 年风压＜0.5 kPa，且未指定为其他易受台风影响地区。'),
+     f:[interpolationLine('\\beta_{0+}',g,r.Z,a.terr),interpolationLine('\\beta_{0-}',g,r.ZN,a.terr),
+        '\\beta_+=\\max(\\beta_{0+},1+0.7/\\sqrt{\\mu_+})='+n6(r.beta),
+        '\\beta_-=\\max(\\beta_{0-},1+0.7/\\sqrt{\\mu_-})='+n6(r.betaN),
+        'q_+=\\beta_+\\mu_+w_0k_tk_d='+n6(r.beta)+'\\times'+n6(r.mu)+'\\times'+n6(r.w0)+'\\times'+n6(r.kt)+'\\times'+n6(r.kd)+'='+n6(r.q)+'\\quad\\mathrm{kPa}',
+        'q_-=\\beta_-\\mu_-w_0k_tk_d='+n6(r.betaN)+'\\times'+n6(r.muN)+'\\times'+n6(r.w0)+'\\times'+n6(r.kt)+'\\times'+n6(r.kd)+'='+n6(r.qN)+'\\quad\\mathrm{kPa}'],
+     note:'同时执行 GB 55001 第 4.6.5 条放大系数下限；围护结构 k_d 默认取 1.0。'},
+    {t:'外压与内压组合',d:'封闭建筑内压按第 7.5.13 条：正外压工况 −0.2，负外压工况 +0.3；高级选项可覆盖。',
+     f:['w_{k+}^{(0)}=q_+(C_{pe+}-C_{pi+})='+n6(r.q)+'['+n6(r.ep)+'-(-'+n6(r.ip)+')]=+'+n6(r.rawP)+'\\quad\\mathrm{kPa}',
+        'w_{k-}^{(0)}=q_-(C_{pe-}-C_{pi-})='+n6(r.qN)+'[-'+n6(r.en)+'-(+'+n6(r.inn)+')]=-'+n6(r.rawN)+'\\quad\\mathrm{kPa}'],
+     note:roof?'预设为封闭矩形建筑双坡屋面 α≤5° 的分区包络：边缘 Ra/Rb 取 +0/−2.0，大面 Rc/Rd/Re 取 +0.2/−1.2。不同坡度、开敞雨篷等不适用。':'表 7.5.3 的 Sa / Sb 分区由实际平面尺寸确认；本页不自动判定分区范围。'},
+    {t:'面积折减（仅外压）',d:'第 7.5.10 条：直接承受风荷载的围护构件及其连接进行强度设计时可采用。',
+     f:['\\eta(A)=\\begin{cases}1,&A\\leq1\\\\1+(\\eta_{25}-1)\\log_{10}(A)/1.4,&1<A<25\\\\\\eta_{25},&A\\geq25\\end{cases}',
+        '\\eta_{25+}='+n6(r.limP)+',\\quad\\eta_{25-}='+n6(r.limN)+',\\quad\\eta_+='+n6(r.etaP)+',\\quad\\eta_-='+n6(r.etaN),
+        'w_{k+}^{(A)}='+n6(r.q)+'['+n6(r.etaP)+'\\times'+n6(r.ep)+'+'+n6(r.ip)+']=+'+n6(r.redP)+'\\quad\\mathrm{kPa}',
+        'w_{k-}^{(A)}=-'+n6(r.qN)+'['+n6(r.etaN)+'\\times'+n6(r.en)+'+'+n6(r.inn)+']=-'+n6(r.redN)+'\\quad\\mathrm{kPa}'],
+     note:'不得将此强度设计折减直接用于挠度验算；内压保持不变。'},
+    {t:roof?'查表参考结果（极值待核定）':'最终风荷载标准值',d:r.useFloor?'四种结果分别执行玻璃幕墙 1.0 kPa 绝对值下限。':'本次不采用玻璃幕墙 1.0 kPa 下限。',
+     f:['w_{k+}=+'+f3(r.PP)+'\\quad\\mathrm{kPa},\\quad w_{k-}=-'+f3(r.PN)+'\\quad\\mathrm{kPa}',
+        'w_{k+A}=+'+f3(r.RP)+'\\quad\\mathrm{kPa},\\quad w_{k-A}=-'+f3(r.RN)+'\\quad\\mathrm{kPa}'],
+     note:roof?'第 7.5.17 条的风压系数极值应按项目专项资料核定；以上为阵风系数法查表参考，不表示已完成极值核定。':'标准值未乘荷载分项系数。'}
+  ];
+}
+
+function drawSources() {
+  if(el('basis').value!=='guangdong') {nationalDrawSources();return;}
+  var rows=[
+    ['DBJ/T 15-101—2022','7.2.1、7.2.2、表 7.2.1、附录 E','按地区及重现期确定基本风压；广州、深圳、东莞、中山需按分区图核定。沿海、海岛结合具体位置与附录图确定，且不低于表值。'],
+    ['DBJ/T 15-101—2022','表 7.3.1','风压高度变化系数按地面类别查表，本页表间高度线性插值。'],
+    ['DBJ/T 15-101—2022','表 7.5.3','封闭矩形建筑墙面 Sa / Sb 默认值随 H＜45 或 45≤H＜200 分档；高层墙面负压最低计算高度为 max(H/3,H₀,z₀)。'],
+    ['DBJ/T 15-101—2022','7.5.13','封闭建筑不利内压：正外压对应 −0.2；负外压对应 +0.3。'],
+    ['DBJ/T 15-101—2022','7.5.16、表 7.5.16-1/-2','按 50 年基本风压 0.5 kPa 分档；其他易受台风影响地区同样采用表 7.5.16-2。'],
+    ['DBJ/T 15-101—2022','7.5.10','直接受风围护构件及连接的强度设计可按从属面积折减外压；本条折减不直接用于挠度。'],
+    ['DBJ/T 15-101—2022','7.5.17','屋面、采光顶等竖向风荷载宜采用风压系数极值。本页屋面查表结果仅作参考，未自动完成极值核定。'],
+    ['DBJ/T 15-101—2022','7.2.3、7.1.3','围护结构风向影响系数宜取 1.0；复杂、超高、超大跨或明显干扰情形需按规定另行确定。'],
+    ['GB 55001—2021','4.6.5 第 2 款','围护结构风荷载放大系数不低于 1+0.7/√μz。'],
+    ['JGJ 102—2003','5.3.2','玻璃幕墙风荷载标准值绝对值不低于 1.0 kPa；本页自动模式仅对墙面启用。']
+  ];
+  E.srcBody.innerHTML=rows.map(function(r){return '<tr><td>'+r[0]+'</td><td>'+r[1]+'</td><td style="text-align:left">'+r[2]+'</td></tr>';}).join('');
+}
+function refresh() {
+  var a=readInput(),gd=a.basis==='guangdong',roof=PRESET[a.preset].kind==='roof';
+  el('gdFields').hidden=!gd;
+  el('podiumWrap').hidden=roof||Number(a.buildingH)<45;
+  drawSources();
+  nationalRefresh();
+  el('tableHint').textContent=gd?'广东 μz 与阵风系数均按规范表值，表间高度线性插值；全国模式保留原连续幂律算法。':'全国 μz 采用连续幂律；规范表格经过舍入，两者可能有微小差别。';
+  el('coefHint').textContent=gd?'广东封闭建筑内压：正外压对应 −0.2，负外压对应 +0.3。输入绝对值；切换规范或分区恢复默认系数。':'全国封闭建筑内压取 ±0.2。输入绝对值；切换规范或分区恢复默认系数。';
+  ['labelPP','labelPN'].forEach(function(id){el(id).textContent=gd?(roof?'查表参考 · 极值待核定':'未折减参考 / 挠度用'):'直接承受风荷载的面板';});
+  ['labelRP','labelRN'].forEach(function(id){el(id).textContent=gd?(roof?'强度折减参考 · 极值待核定':'围护构件及连接强度用'):'符合折减条件的支承构件';});
+  if(!gd)return;
+  E.terHint.textContent=TERR[a.terr].d+'；广东表 7.3.1、7.5.16 按高度查表。';
+  E.presetHint.textContent=roof?'封闭矩形建筑双坡屋面 ≤5° 分区包络；Ra/Rb 边缘 +0/−2.0，Rc/Rd/Re 大面 +0.2/−1.2。查表参考，尚须核定第 7.5.17 条的风压系数极值。':'按广东表 7.5.3 的 Sa 边角 / Sb 大面分区；分区宽度由实际建筑尺寸确认。';
+  el('gdRuleHint').textContent='广东 DBJ/T 15-101—2022。'+(roof?'本页未将阵风系数最大值等同于风压系数极值。':'H≥45 m 时，仅负风压采用 max(z,H/3,H₀,z₀) 计算。')+' 台风条件和分区应按项目确认。';
+  if(validate(a).length)return;
+  var r=compute(a);
+  function pair(x,y,unit){return n6(x)+(Math.abs(x-y)>1e-9?' / '+n6(y):'')+(unit?' '+unit:'');}
+  E.kZ.textContent=pair(r.Z,r.ZN,'m'); E.kMu.textContent=pair(r.mu,r.muN);
+  E.kQ.textContent=pair(r.q,r.qN,'kPa'); E.kBeta.textContent=pair(r.beta,r.betaN); E.kBL.textContent=pair(r.betaLower,r.betaLowerN);
+  E.floorHint.textContent+=' 参数并列时依次为正 / 负风压。阵风系数采用表 '+(r.high?'7.5.16-2':'7.5.16-1')+'。'+(roof?'采光顶结果为查表参考，尚未完成风压系数极值核定。':'面积折减值仅用于符合第 7.5.10 条的强度设计。');
+}
+el('basis').addEventListener('change',function(){
+  pick=null;E.pickInfo.textContent='规范已切换；当前基本风压保留为手动输入。';
+  applyPreset(true);refresh();
+});
+el('buildingH').addEventListener('input',function(){applyPreset(false);refresh();});
+el('podiumH').addEventListener('input',refresh);
+el('w50').addEventListener('input',function(){w50Linked=false;refresh();});
+el('typhoon').addEventListener('change',refresh);
+
 /* ---------- 事件 ---------- */
 ['w0', 'z', 'area', 'ep', 'en', 'ip', 'inn', 'kt', 'kd'].forEach(function (id) {
   document.getElementById(id).addEventListener('input', function () {
-    if (id === 'w0') { pick = null; E.pickInfo.textContent = ''; }
+    if (id === 'w0') { pick = null; E.pickInfo.textContent = ''; if (w50Linked) document.getElementById('w50').value = this.value; }
+    if (['ep','en','ip','inn'].indexOf(id)>=0) manualCoefficients[id]=true;
     refresh();
   });
 });
 document.getElementById('floorMode').addEventListener('change', refresh);
-document.getElementById('preset').addEventListener('change', function () {
-  var p = PRESET[this.value];
-  document.getElementById('ep').value = p.ep;
-  document.getElementById('en').value = p.en;
-  document.getElementById('ip').value = p.ip;
-  document.getElementById('inn').value = p.inn;
-  refresh();
-});
+document.getElementById('preset').addEventListener('change', function () { applyPreset(true); refresh(); });
 
 Array.prototype.forEach.call(E.terSeg.querySelectorAll('button'), function (b) {
   b.addEventListener('click', function () {
@@ -1248,63 +1417,61 @@ document.getElementById('pvSel').innerHTML = PROVS.map(function (p) {
   return '<option value="' + p + '">' + p + '</option>';
 }).join('');
 
+
 var rp = 50;
+function isGDLookup(){return E.pvSel.value==='广东';}
+function gdCity(){return Object.keys(GD_CITIES)[Number(E.ctSel.value)];}
 function fillCities() {
-  var pv = document.getElementById('pvSel').value;
-  var rows = STATIONS[pv];
-  document.getElementById('ctSel').innerHTML = rows.map(function (r, i) {
-    return '<option value="' + i + '">' + r[0] + '</option>';
-  }).join('');
+  var gd=isGDLookup(),rows=gd?Object.keys(GD_CITIES).map(function(s){return [s];}):STATIONS[E.pvSel.value];
+  el('districtWrap').hidden=!gd;
+  el('lookupTitle').textContent=gd?'基本风压 · 广东表 7.2.1':'基本风压 · GB 50009 表 E.5';
+  E.ctSel.innerHTML=rows.map(function(r,i){return '<option value="'+i+'">'+r[0]+'</option>';}).join('');
+  fillDistricts();
+}
+function fillDistricts(){
+  if(isGDLookup())el('districtSel').innerHTML=GD_CITIES[gdCity()].map(function(r,i){return '<option value="'+i+'">'+r[0]+'</option>';}).join('');
   fillPeriods();
 }
-function curRow() {
-  var pv = document.getElementById('pvSel').value;
-  return STATIONS[pv][Number(document.getElementById('ctSel').value)];
+function curRow(){
+  return isGDLookup()?GD_CITIES[gdCity()][Number(el('districtSel').value)]:STATIONS[E.pvSel.value][Number(E.ctSel.value)];
 }
-function fillPeriods() {
-  var row = curRow();
-  var html = '';
-  [10, 50, 100].forEach(function (R, idx) {
-    var v = row[idx + 1];
-    html += '<button type="button" data-r="' + R + '"' + (v === null ? ' disabled' : '') +
-            (R === rp && v !== null ? ' class="on"' : '') + '>' + R + ' 年<small>' +
-            (v === null ? '原表无' : v.toFixed(2) + ' kPa') + '</small></button>';
-  });
-  document.getElementById('rpSeg').innerHTML = html;
-  Array.prototype.forEach.call(document.getElementById('rpSeg').querySelectorAll('button'), function (b) {
-    b.addEventListener('click', function () {
-      if (b.disabled) return;
-      rp = Number(b.getAttribute('data-r'));
-      fillPeriods();
-      showNote();
-    });
+function fillPeriods(){
+  var row=curRow();
+  E.rpSeg.innerHTML=[10,50,100].map(function(R,idx){
+    var v=row[idx+1];
+    return '<button type="button" data-r="'+R+'"'+(v===null?' disabled':'')+(R===rp&&v!==null?' class="on"':'')+'>'+R+' 年<small>'+(v===null?'原表无':v.toFixed(2)+' kPa')+'</small></button>';
+  }).join('');
+  Array.prototype.forEach.call(E.rpSeg.querySelectorAll('button'),function(b){
+    b.addEventListener('click',function(){if(b.disabled)return;rp=Number(b.getAttribute('data-r'));fillPeriods();});
   });
   showNote();
 }
-function showNote() {
-  var row = curRow(), pv = document.getElementById('pvSel').value;
-  var v = row[{ 10: 1, 50: 2, 100: 3 }[rp]];
-  var key = pv + '|' + row[0];
-  E.stNote.textContent = (STATION_NOTES[key] || '') +
-    (v === null ? '该台站原表无 ' + rp + ' 年风压。' : '');
-  E.stPick.textContent = v === null ? '原表无该项'
-    : pv + ' · ' + row[0] + '，R=' + rp + ' 表列 ' + v.toFixed(2) + ' kPa，采用 max(' + v.toFixed(2) + ', 0.30) = ' +
-      Math.max(0.3, v).toFixed(2) + ' kPa';
-  E.dlgOk.disabled = v === null;
+function gdMapNote(){
+  return (['广州','深圳','东莞','中山'].indexOf(gdCity())>=0?'该市须按附录 E.5 基本风压分区图核定；表值仅供查阅。 ':'')+'沿海、海岛须结合具体位置及附录图确定，且不低于表值。';
 }
-document.getElementById('pvSel').addEventListener('change', fillCities);
-document.getElementById('ctSel').addEventListener('change', function () { fillPeriods(); });
-E.dlgCancel.addEventListener('click', function () { E.dlg.close(); });
-E.dlgOk.addEventListener('click', function () {
-  var row = curRow(), pv = document.getElementById('pvSel').value;
-  var v = row[{ 10: 1, 50: 2, 100: 3 }[rp]];
-  if (v === null) return;
-  pick = { prov: pv, city: row[0], period: rp, table: v };
-  document.getElementById('w0').value = Math.max(0.3, v).toFixed(2);
-  E.pickInfo.textContent = '已采用：' + pv + ' · ' + row[0] + '，' + rp + ' 年重现期，表列 ' +
-                           v.toFixed(2) + ' kPa' + (v < 0.3 ? '（低于 0.30，已取 0.30）' : '');
-  E.dlg.close();
-  refresh();
+function showNote(){
+  var row=curRow(),pv=E.pvSel.value,gd=isGDLookup(),v=row[{10:1,50:2,100:3}[rp]];
+  E.stNote.textContent=gd?'采用后自动切换广东。'+gdMapNote():(STATION_NOTES[pv+'|'+row[0]]||'');
+  if(v===null)E.stNote.textContent+='该地区未列此项，请按规范确定后手动输入。';
+  E.stPick.textContent=v===null?'原表无该项':pv+' · '+(gd?gdCity()+' · ':'')+row[0]+'，R='+rp+' 表列 '+v.toFixed(2)+' kPa；采用 '+Math.max(.3,v).toFixed(2)+' kPa';
+  E.dlgOk.disabled=v===null;
+}
+E.pvSel.addEventListener('change',fillCities);
+E.ctSel.addEventListener('change',fillDistricts);
+el('districtSel').addEventListener('change',fillPeriods);
+E.dlgCancel.addEventListener('click',function(){E.dlg.close();});
+E.dlgOk.addEventListener('click',function(){
+  var row=curRow(),gd=isGDLookup(),v=row[{10:1,50:2,100:3}[rp]];
+  if(v===null)return;
+  var basis=gd?'guangdong':'national',changed=el('basis').value!==basis;
+  el('basis').value=basis;
+  pick={prov:E.pvSel.value,city:(gd?gdCity()+' · ':'')+row[0],period:rp,table:v,mapNote:gd?gdMapNote():''};
+  E.w0.value=Math.max(.3,v).toFixed(2);
+  el('w50').value=row[2]===null?'':Math.max(.3,row[2]).toFixed(2);
+  w50Linked=rp===50;
+  if(changed)applyPreset(true);
+  E.pickInfo.textContent='已采用：'+pick.prov+' · '+pick.city+'，'+rp+' 年，'+(gd?'广东表 7.2.1':'全国表 E.5')+'，表列 '+v.toFixed(2)+' kPa。'+pick.mapNote;
+  E.dlg.close();refresh();
 });
 E.pickBtn.addEventListener('click', function () {
   E.dlgOk.disabled = false;
@@ -1315,7 +1482,7 @@ fillCities();
 
 drawSources();
 refresh();
-document.getElementById('verLine').textContent = '版本 1.2.1 · 2026-10-24 16:03';
+document.getElementById('verLine').textContent = '版本 1.3.1 · 2026-10-25 15:36';
 </script>
 </body>
 </html>
