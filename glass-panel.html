@@ -344,6 +344,17 @@
       .fxbody { padding-left: 0; overflow: visible; }
       .fx-frac { vertical-align: middle; }
     }
+    .us-review { grid-column: 1 / -1; padding:12px; border-left:3px solid #b48226; background:#fff8e9; font-size:12px; line-height:1.7; }
+    .us-review ul { margin:6px 0 0; padding-left:18px; }
+    #standardCard select { min-width:0; }
+    #usOptions details { margin-top:12px; }
+    body.astm-mode #flexTable, body.astm-mode #strTable { overflow-x:auto; }
+    @media screen and (max-width:600px) { body.astm-mode .kv { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+    @media print {
+      #standardCard > .body { display:block; }
+      #usOptions details { display:block !important; }
+      #usOptions details > summary { display:block; }
+    }
   </style>
   <style>
     /* ===== 本页新增：图示（平面图 / 断面图 / 受力简图） ===== */
@@ -419,6 +430,39 @@
           <span class="ios-lbl" id="lblAdv">高级</span>
         </div>
       </div>
+
+  <div class="card" id="standardCard" hidden>
+    <h2>设计规范</h2>
+    <div class="body">
+      <div class="row"><label for="standard">计算依据</label><select id="standard">
+        <option value="JGJ">国标 · JGJ 102-2003</option>
+        <option value="ASTM">美标 · ASTM E1300</option>
+      </select></div>
+      <div id="usOptions" hidden>
+        <p class="hint">依据版本：<b>ASTM E1300-16，附录 X6 / X7 独立应力法</b>。采用你提供的 3 秒许用应力，不按厚度分档；本页不执行 NFL 图表法。</p>
+        <div class="row"><label for="edgeFinish">边缘加工</label><select id="edgeFinish">
+          <option value="seamed">Seamed · 倒棱边</option><option value="polished">Polished · 抛光边</option><option value="cut">Clean cut · 切割边</option>
+        </select></div>
+        <div class="row"><label for="thicknessBasis">厚度口径</label><select id="thicknessBasis">
+          <option value="table">输入公称厚度 → 表 4 最小厚度</option><option value="minimum">直接输入已确认的最小厚度</option>
+        </select></div>
+        <p class="hint">表 4 无 15 mm 档；16 mm 公称厚度对应 15.09 mm 最小厚度。直接输入时应填保证的最小值，不能填未扣公差的公称值。</p>
+        <details open><summary>长期侧向荷载与夹层</summary>
+          <div class="row"><label for="longQ">长期均布压力 Q<sub>L</sub></label><input id="longQ" type="number" min="0" value="0" step="0.1"><span class="unit">kPa</span></div>
+          <div class="row"><label for="loadDuration">Q<sub>L</sub> 持续时间</label><select id="loadDuration"></select></div>
+          <p class="hint">Q<sub>L</sub> 为与风同向的不利侧向压力，按 1.0Q<sub>L</sub> 计算；不是竖直玻璃的自重。长期许用应力采用短期值 × 表 X4.1 系数的工程折减，未将其作为 ASTM 直接给出的长期应力表。</p>
+          <div class="row"><label for="gShort">夹层 G · 风 / 3 秒</label><input id="gShort" type="number" min="0" value="0" step="0.1"><span class="unit">MPa</span></div>
+          <div class="row"><label for="gLong">夹层 G · Q<sub>L</sub></label><input id="gLong" type="number" min="0" value="0" step="0.1"><span class="unit">MPa</span></div>
+          <p class="hint">PVB / SGP 均默认 G = 0（不计耦合）。有厂家温度—持续时间数据时再输入对应 G；两片夹层按 X9，逐片计算应力有效厚度。三片及以上仅支持 G = 0。</p>
+        </details>
+        <details><summary>风荷载口径与适用范围</summary>
+          <p class="hint">输入未折减的 ASCE 7 C&amp;C 风压 <b>W</b>。按本项目指定：强度用 <b>1.0W</b>，面板风挠度用 <b>0.42W</b>。IBC 2024 §2404.1 的竖直玻璃强度比较为 0.6W，本页按你的要求保留更保守的 1.0W。若资料已是 ASD 或 SLS 压力，应先核对并还原输入口径。</p>
+          <p class="hint">0.42W 与 L/限值分母是项目面板挠度设置，并非 E1300 的统一面板限值；不能用来代替支承框架的 0.6W 挠度校核。中国地震组合不参与美标计算。竖向自重仅展示；本页未计算地震、雪荷载组合、冲击、孔边局部应力或破碎后性能。</p>
+          <p class="hint">采用线弹性板 / 梁分析，不套用 JGJ 大挠度 η。大变形、中空耦合及长期应力外推列为需复核；完整 E1300 承载力校核应按相应图表或专项分析完成。</p>
+        </details>
+      </div>
+    </div>
+  </div>
 
       <div class="card">
         <h2>幕墙玻璃形式</h2>
@@ -593,7 +637,7 @@
   </main>
 
   <footer>
-    统一为「分组 → 组内」两级分配模型：<code>.</code> 为夹胶（同组），<code>+</code> 为中空腔（分组）。
+    <span id="cnFooter">    统一为「分组 → 组内」两级分配模型：<code>.</code> 为夹胶（同组），<code>+</code> 为中空腔（分组）。
     弯矩系数 m、挠度系数 μ 按宽长比 a/b 插值，折减系数 η 按 θ = w·L⁴/(E·t⁴) 插值，均取规范附录表线性插值。
     四边简支取中部强度、对边简支和四点支承取边缘强度；PVB 层不计剪切传递（不计入等效厚度），
     SGP 夹层等效厚度按 DG/TJ 08-56-2019 上海地标 第 11.2.8 条计算。单位制 mm / N / MPa。
@@ -602,7 +646,8 @@
     <br>图示：面板尺寸与支承平面图（红色虚线为支承边）、玻璃配置断面图（自室外至室内，标各组实际总厚度、
     t 各片玻璃厚、ts 胶片厚、空气层 A，均可在图上直接改）、荷载受力简图（自重 Dead Load 与
     风荷载 Wind Load，地震与冲击荷载不在图中表示）。
-    <span class="ver">版本 1.17.6 · 2026-10-25 20:37</span>
+    </span><span id="usFooter" hidden>ASTM E1300-16 附录 X6 / X7 独立应力分析；采用表 4 最小厚度、X9 两片夹层有效厚度。强度 1.0W、面板风挠度 0.42W 为项目设置。长期应力按表 X4.1 系数作工程折减，非规范直接给出的长期应力表。非 NFL 图表校核；适用条件及需复核项详见计算书。</span>
+    <span class="ver">版本 1.18.6 · 2026-10-27</span>
   </footer>
 
 <script>
@@ -735,6 +780,7 @@ function buildGroups(struct, ts, types) {
         support('four'|'two'|'pt4'), span(mm), hole(mm), interlayer('PVB'|'SGP'), tv(mm) }
    内部单位：mm / N / MPa，面荷载 N/mm² */
 function calcGlass(p) {
+  if (p.standard === 'ASTM') return calcGlassASTM(p);
   const a = p.a, b = p.b, E = p.E, nu = p.nu;
   const gN = p.gammaG * 1e-6;          // kN/m³ → N/mm³
   const wk = p.wk / 1000;              // kPa  → N/mm²
@@ -848,10 +894,159 @@ function calcGlass(p) {
            pt4: pt4, hole: hole, aPt: aPt, bPt: bPt,
            tv: p.tv, G: G_INTER[p.interlayer] };
 }
+/* ASTM E1300-16: independent linear stress analysis, not the NFL chart method.
+   X6.2 / X7.1: 3 s allowable stresses (MPa). X4.1 converts LOAD resistance;
+   scaling these stresses by X4 factors is an explicit conservative application
+   assumption for this linear model, not a published long-term stress table.
+   Do not apply Table 1 GTF or Chinese strength/eta factors on top of this branch. */
+const ASTM_SURFACE = { AN: 23.3, HS: 46.6, FT: 93.1 };
+const ASTM_EDGE = {
+  cut: { AN: 16.6, HS: null, FT: null },
+  seamed: { AN: 18.3, HS: 36.5, FT: 73.0 },
+  polished: { AN: 20.0, HS: 36.5, FT: 73.0 }
+};
+const ASTM_MIN_T = { 2:1.80, 2.5:2.16, 2.7:2.59, 3:2.92, 4:3.78,
+  5:4.57, 6:5.56, 8:7.42, 10:9.02, 12:11.91, 16:15.09, 19:18.26,
+  22:21.44, 25:24.61 };
+const ASTM_DURATION = [
+  ['3s','3 秒',1], ['10s','10 秒',0.93], ['60s','60 秒',0.83],
+  ['10m','10 分钟',0.72], ['60m','60 分钟',0.64], ['12h','12 小时',0.55],
+  ['24h','24 小时',0.53], ['7d','1 周',0.47], ['30d','30 天',0.43],
+  ['1y','1 年',0.36], ['over1y','超过 1 年',0.31]
+];
+function astmAllowable(type, edge, duration) {
+  const row = ASTM_DURATION.find(x => x[0] === duration);
+  if (!row || !ASTM_EDGE[edge] || !ASTM_SURFACE[type]) throw Error('ASTM 材料或持续时间无效。');
+  const f = ASTM_EDGE[edge][type];
+  return { surface: ASTM_SURFACE[type] * row[2], edge: f === null ? null : f * row[2],
+    factor: row[2], duration: row[1] };
+}
+const ASTM_PLATE_CACHE = new Map();
+/* Navier solution: uniform pressure, rectangular plate, four simply supported
+   edges. N odd terms in each axis, grid on a symmetric quadrant. Principal
+   bending moments include twisting; edge stress is checked separately. */
+function astmPlateCoefficients(aspect, nu, terms = 25, grid = 24) {
+  const key = [aspect,nu,terms,grid].join(':');
+  if (ASTM_PLATE_CACHE.has(key)) return ASTM_PLATE_CACHE.get(key);
+  let mu = 0, bm = 0, bmEdge = 0;
+  const modes = [];
+  const termsY = Math.ceil(terms / aspect);
+  for (let i=0;i<terms;i++) for (let j=0;j<termsY;j++) {
+    const m=2*i+1, n=2*j+1, den=(m*m+n*n*aspect*aspect)**2;
+    mu += 16/Math.PI**6 * (-1)**(i+j)/(m*n*den);
+    modes.push({m,n, mx:16/Math.PI**4*(m*m+nu*n*n*aspect*aspect)/(m*n*den),
+      my:16/Math.PI**4*(nu*m*m+n*n*aspect*aspect)/(m*n*den),
+      xy:-16*(1-nu)*aspect/Math.PI**4/den});
+  }
+  const sin = [], cos = [];
+  for (let x=0;x<=grid;x++) {
+    sin[x]=[]; cos[x]=[];
+    for (let i=0;i<termsY;i++) {
+      sin[x][2*i+1]=Math.sin((2*i+1)*Math.PI*x/(2*grid));
+      cos[x][2*i+1]=Math.cos((2*i+1)*Math.PI*x/(2*grid));
+    }
+  }
+  for (let x=0;x<=grid;x++) for (let y=0;y<=grid;y++) {
+    let mx=0,my=0,xy=0;
+    for (const t of modes) {
+      const ss=sin[x][t.m]*sin[y][t.n];
+      mx+=t.mx*ss; my+=t.my*ss; xy+=t.xy*cos[x][t.m]*cos[y][t.n];
+    }
+    const principal=Math.abs((mx+my)/2)+Math.hypot((mx-my)/2,xy);
+    bm=Math.max(bm,principal);
+    if (x===0 || y===0) bmEdge=Math.max(bmEdge,principal);
+  }
+  const result={mu,bm,bmEdge};
+  if (ASTM_PLATE_CACHE.size>32) ASTM_PLATE_CACHE.clear();
+  ASTM_PLATE_CACHE.set(key,result);
+  return result;
+}
+function calcGlassASTM(p) {
+  if (!['four','two'].includes(p.support))
+    throw Error('ASTM 模式暂不计算四点支承孔边应力：需包含孔洞、接触和大变形的独立分析；国标模式仍可使用原四点支承算法。');
+  if (![p.a,p.b,p.E,p.gammaG,p.defDiv,p.span].every(x=>Number.isFinite(x)&&x>0) ||
+      !Number.isFinite(p.nu) || p.nu<0 || p.nu>=0.5 ||
+      ![p.wk,p.longQ,p.gShort,p.gLong].every(x=>Number.isFinite(x)&&x>=0))
+    throw Error('请检查美标输入：尺寸、E、限值分母应为正数；0 ≤ ν < 0.5；W、长期荷载和夹层 G 不得为负。');
+  if (!['table','minimum'].includes(p.thicknessBasis)) throw Error('请选择玻璃厚度口径。');
+  const longAllow = astmAllowable('AN',p.edge,p.duration);
+  const two = p.support==='two', L=two?p.span:Math.min(p.a,p.b), L4=L**4;
+  if (!two && Math.min(p.a,p.b)/Math.max(p.a,p.b)<0.1) throw Error('当前 Navier 解经验证的长短边比范围为 1–10；该超长面板需另行分析。');
+  const coeff=two?{bm:1/8,bmEdge:1/8,mu:5/384}:astmPlateCoefficients(Math.min(p.a,p.b)/Math.max(p.a,p.b),p.nu);
+  const issues=[];
+  const original = p.groups.map(g=>({plies:g.plies.map(q=>{
+    const t=p.thicknessBasis==='minimum'?q.t:ASTM_MIN_T[q.t];
+    if (!Number.isFinite(t)||t<=0) throw Error('公称厚度 '+q.t+' mm 不在 ASTM E1300-16 表 4 中；请选择表内厚度（如 16 mm），或切换为已确认的最小厚度输入，不能按 15 mm 自动代替 16 mm。');
+    if (astmAllowable(q.type,p.edge,'3s').edge===null)
+      throw Error(q.type+' 的 Clean cut（切割边）在表 X7.1 为 N/A；请选择实际采用的倒棱或抛光边。');
+    return {t, nominal:q.t, type:q.type};
+  })}));
+  if (!original.length || original.some(g=>!g.plies.length)) throw Error('玻璃构造不能为空。');
+  if (original.length>1) issues.push('中空组间按等挠度刚度比分配，尚未验证密封腔耦合、气候荷载及整樘破坏概率；结果为独立应力分析参考，不能替代 E1300 的 IG 校核。');
+  if (p.wk+p.longQ>15) issues.push('侧向总压力超过 E1300-16 的 15 kPa 范围，需专项分析。');
+  if (p.longQ>0 && longAllow.factor!==1)
+    issues.push('长期许用应力采用短期值 × 表 X4.1 系数的工程折减；X4 原文针对荷载承载力，尤其热处理玻璃及边缘需复核此假定。');
+  const solve=(pressure,G)=>{
+    const groups=original.map(g=>({plies:g.plies.map(q=>({...q}))}));
+    for (const g of groups) {
+      const ts=g.plies.map(q=>q.t);
+      g.sumC=ts.reduce((s,t)=>s+t**3,0);
+      g.sg=G>0&&ts.length>1;
+      if (g.sg && ts.length!==2) throw Error('ASTM X9 仅用于两片夹层；三片及以上请将对应夹层 G 设为 0（不计剪切耦合）或另行分析，不能逐次套用两片公式。');
+      g.lam=g.sg?laminatePair(ts[0],ts[1],p.tv,G,p.E,L):null;
+      // X9.6-X9.8: use the uncapped formula and each ply's own effective stress thickness.
+      g.teW=g.sg?g.lam.teW0:Math.cbrt(g.sumC);
+    }
+    const sum=groups.reduce((s,g)=>s+g.teW**3,0);
+    for (const g of groups) {
+      g.share=g.teW**3/sum; g.amp=1; g.Wke=pressure/1000*g.share;
+      const D=p.E*g.teW**3/(12*(two?1:1-p.nu*p.nu));
+      const def=coeff.mu*g.Wke*L4/D;
+      g.flex={D,def};
+      g.plies.forEach((q,i)=>{
+        q.Wk=g.sg?g.Wke:g.Wke*q.t**3/g.sumC;
+        q.tEff=g.sg?(i===0?g.lam.t1e:g.lam.t2e):q.t;
+        q.sigma=6*coeff.bm*q.Wk*L**2/q.tEff**2;
+        q.sigmaEdge=6*coeff.bmEdge*q.Wk*L**2/q.tEff**2;
+      });
+    }
+    return groups;
+  };
+  if (original.some(g=>g.plies.length>1) && (!Number.isFinite(p.tv)||p.tv<=0)) throw Error('夹层厚度必须为正数。');
+  const groups=solve(p.wk,p.gShort), longGroups=solve(p.longQ,p.gLong), flat=[];
+  let large=false;
+  groups.forEach((g,gi)=>{
+    const gl=longGroups[gi];
+    g.flex.windService=0.42*g.flex.def;
+    g.flex.long=gl.flex.def;
+    g.flex.total=g.flex.windService+gl.flex.def;
+    g.flex.ratio=g.flex.total/(L/p.defDiv);
+    const slender=Math.max(g.flex.def/g.teW,gl.flex.def/gl.teW);
+    if (slender>0.5) large=true; // application screening threshold, not an ASTM limit
+    g.plies.forEach((q,ji)=>{
+      const ql=gl.plies[ji], short=astmAllowable(q.type,p.edge,'3s'), long=astmAllowable(q.type,p.edge,p.duration);
+      q.long=ql; q.shortAllow=short; q.longAllow=long;
+      q.surfaceRatio=q.sigma/short.surface+ql.sigma/long.surface;
+      q.edgeRatio=q.sigmaEdge/short.edge+ql.sigmaEdge/long.edge;
+      q.ratio=Math.max(q.surfaceRatio,q.edgeRatio);
+      flat.push({gi,ji,q});
+    });
+  });
+  if (flat.some(f=>![f.q.sigma,f.q.sigmaEdge,f.q.ratio,f.q.long.sigma].every(Number.isFinite)) ||
+      groups.some(g=>![g.teW,g.flex.def,g.flex.total,g.flex.ratio].every(Number.isFinite)))
+    throw Error('输入超出数值计算范围，请检查尺寸、刚度及荷载单位。');
+  if (large) issues.push('全幅 W 或长期荷载的线性挠度 / 等效厚度 > 0.5：触发本程序的大变形复核提示；需非线性分析确认，不能用国标 η 替代。0.5 是程序提示阈值，并非 ASTM 限值。');
+  return {us:true, groups,longGroups,flat,nG:groups.length,L,defLim:L/p.defDiv,
+    ...coeff,ab:Math.min(p.a,p.b)/Math.max(p.a,p.b),two,pt4:false,
+    Gk:original.flatMap(g=>g.plies).reduce((s,q)=>s+q.nominal,0)*p.gammaG*1e-6,
+    issues, longFactor:longAllow.factor, longDuration:longAllow.duration};
+}
+
 /* ===== 计算核心结束 ===== */
 /* ===== 计算核心导出（供 Node 测试用） ===== */
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { calcGlass: calcGlass, buildGroups: buildGroups,
+  module.exports = { calcGlassASTM, astmAllowable, astmPlateCoefficients, ASTM_DURATION, ASTM_MIN_T,
+                     calcGlass: calcGlass, buildGroups: buildGroups,
                      CONFIGS: CONFIGS, linterp: linterp, fgOf: fgOf,
                      AR: AR, BMY: BMY, MUY: MUY, TH: TH, ETAY: ETAY, FG: FG,
                      PT4_AR: PT4_AR, PT4_BM: PT4_BM, PT4_MU: PT4_MU };
@@ -993,13 +1188,16 @@ function tex2html(src) {
   let mode = 'basic';
 
   const el = {};
-  ['cfg', 'cfgHint', 'ig', 'E', 'nu', 'gg',
+  ['standardCard','standard','usOptions','edgeFinish','thicknessBasis','longQ','loadDuration','gShort','gLong',
+   'cfg', 'cfgHint', 'ig', 'E', 'nu', 'gg',
    'defdiv', 'gG', 'gw', 'gE', 'psE', 'psw', 'printBtn', 'fxOpen', 'fxClose',
    'support', 'spanSide', 'spanRow', 'spanHint', 'hole', 'holeRow',
    'modeSw', 'lblBasic', 'lblAdv', 'supportRow', 'matBox',
    'supTop', 'supBot',
    'planFig', 'planCap', 'sectionFig', 'sectionHint', 'loadFig', 'loadCap']
     .forEach(id => { el[id] = document.getElementById(id); });
+
+  el.loadDuration.innerHTML=ASTM_DURATION.map(d=>'<option value="'+d[0]+'"'+(d[0]==='30d'?' selected':'')+'>'+d[1]+' · Kd = '+d[2]+'</option>').join('');
 
   const f0 = x => x.toFixed(0);
   const f2 = x => x.toFixed(2);
@@ -1405,7 +1603,7 @@ function tex2html(src) {
          '" stroke="#1f9ae0" stroke-width="1.3"/>';
     const labelX = tail + 12, midY = (y0 + y1) / 2;
     o += '<text x="' + f1(labelX) + '" y="' + f1(midY - 24) +
-         '" font-size="11" font-weight="600" fill="#287cad">风荷载 Wk</text>';
+         '" font-size="11" font-weight="600" fill="#287cad">风荷载 ' + (isASTM() ? 'W' : 'Wk') + '</text>';
     o += foBox(labelX, midY - 13, 110, 28,
       foInp('wk', GSRAW.wk, 62) + '<i>kPa</i>');
     o += '<text x="' + f1(labelX) + '" y="' + f1(midY + 31) +
@@ -1422,6 +1620,7 @@ function tex2html(src) {
 
   /* 联动显示：胶片厚度只对 SGP 起作用（PVB 时置灰）、支承边（仅对边），并给出取值口径提示 */
   function syncOptions() {
+    syncStandard();
     const two = el.support.value === 'two';
     const pt4 = el.support.value === 'pt4';
     const sgp = GS.inter === 'SGP';
@@ -1477,6 +1676,7 @@ function tex2html(src) {
       '自重 Dead Load 沿板面竖向向下，风荷载 Wind Load 垂直板面水平作用。' +
       '上、下端支座可分别选 Roller（滑动，三角形左侧加横线）或 PIN（固定）；' +
       '风荷载 Wk 直接在图中修改；面板尺寸在上方尺寸图设置。地震作用与冲击荷载不在本图中表示。';
+    syncASTMHints();
   }
 
   function readInputs() {
@@ -1495,6 +1695,10 @@ function tex2html(src) {
     const span = two ? (el.spanSide.value === 'a' ? Math.min(A, B) : Math.max(A, B))
                : Math.min(A, B);
     return {
+      standard: isASTM() ? 'ASTM' : 'JGJ',
+      edge: el.edgeFinish.value, thicknessBasis: el.thicknessBasis.value,
+      longQ: num('longQ'), duration: el.loadDuration.value,
+      gShort: num('gShort'), gLong: num('gLong'),
       a: A, b: B,
       groups: buildGroups(struct, ts, types),
       wk: GS.wk,
@@ -1507,6 +1711,7 @@ function tex2html(src) {
   }
 
   function valid(p) {
+    if (p.standard === 'ASTM') return true; // ASTM core provides specific validation messages.
     const ts = p.groups.flatMap(g => g.plies.map(q => q.t));
     const positive = [p.a, p.b, p.wk, p.E, p.nu, p.gammaG, p.defDiv,
                       p.gG, p.gw, p.gE].concat(ts);
@@ -1839,12 +2044,16 @@ function tex2html(src) {
   /* ===== 三张图重绘 =====
      图上输入框在重绘时会被换掉，焦点会丢 —— 所以先记下当前聚焦的是哪个
      data-fg，重绘后按名字找回来，并把光标位置也还原。 */
+  let drawingFigures = false;
   function renderFigures(r) {
+    if (drawingFigures) return;
+    drawingFigures = true;
+    try {
     const act = document.activeElement;
-    let key = null, pos = null;
+    let key = null, pos = null, end = null, direction = null;
     if (act && act !== document.body && act.getAttribute) {
       key = act.getAttribute('data-fg');
-      if (key) { try { pos = act.selectionStart; } catch (e) { pos = null; } }
+      if (key) { try { pos = act.selectionStart; end = act.selectionEnd; direction = act.selectionDirection; } catch (e) { pos = null; } }
     }
 
     el.planFig.innerHTML = drawPlan();
@@ -1855,13 +2064,98 @@ function tex2html(src) {
       const n = document.querySelector('[data-fg="' + key + '"]');
       if (n) {
         n.focus();
-        if (pos !== null) { try { n.setSelectionRange(pos, pos); } catch (e) {} }
+        if (pos !== null) { try { n.setSelectionRange(pos, end === null ? pos : end, direction || "none"); } catch (e) {} }
       }
     }
+    } finally { drawingFigures = false; }
+  }
+
+  function isASTM() { return mode === 'adv' && el.standard.value === 'ASTM'; }
+  let cnWindFactor = null;
+  function syncStandard() {
+    const us=isASTM();
+    document.body.classList.toggle('astm-mode',us);
+    el.standardCard.hidden=mode==='basic';
+    el.usOptions.hidden=!us;
+    if (us && cnWindFactor===null) { cnWindFactor=el.gw.value; el.gw.value='1.0'; }
+    if (!us && cnWindFactor!==null) { el.gw.value=cnWindFactor; cnWindFactor=null; }
+    el.gw.disabled=us;
+    ['ig','gG','gE','psE','psw'].forEach(id=>{
+      const field=el[id];
+      (id==='ig'?field.closest('.row'):field.parentElement.parentElement).hidden=us;
+    });
+    document.querySelector('label[for="defdiv"]').textContent=us?'项目挠度限值分母':'挠度限值分母';
+    document.getElementById('cnFooter').hidden=us;
+    document.getElementById('usFooter').hidden=!us;
+    document.querySelectorAll('.inputs input:not([data-fg]), .inputs select:not([data-fg])').forEach(e=>{ e.dataset.lastValue=e.value; });
+  }
+  function syncASTMHints() {
+    if (!isASTM()) return;
+    const cfg=getCurrentConfig();
+    el.cfgHint.textContent=cfg.note+'（共 '+totalPlies(cfg.struct)+' 片 / '+cfg.struct.length+' 组）。ASTM 独立应力分析：采用所选厚度口径及本页输入的夹层 G。';
+    el.spanHint.textContent=el.support.value==='pt4'
+      ?'四点支承：美标需另行分析孔边局部应力，本页不提供此工况的美标通过结论。'
+      :'四边简支采用 Navier 线弹性板解；对边采用单向简支梁条带。均检查大面及边缘应力，不使用 JGJ 大挠度折减。挠度限值为项目输入。';
+    el.sectionHint.textContent='断面从室外至室内；各片 t 可在图中修改。'+
+      (el.thicknessBasis.value==='table'?'图中为公称厚度，计算按表 4 转为最小厚度。':'图中 t 须为已确认的最小厚度。')+
+      '夹层 PVB / SGP 的计算刚度由本页 G 输入决定。';
+    el.loadCap.textContent='风荷载 W 在图中修改：强度 1.0W，风挠度 0.42W。另输入的长期压力 QL 按 1.0QL，与风取同向不利组合。自重沿板面向下，仅作示意。';
+  }
+  function renderASTM(p,r) {
+    const maxF=Math.max(...r.groups.map(g=>g.flex.ratio));
+    const maxS=Math.max(...r.flat.map(f=>f.q.ratio));
+    const status=r.issues.length?'需复核':'本页计算项';
+    document.getElementById('verdict').innerHTML=
+      '<div class="item"><div class="k">ASTM E1300-16 · 独立应力法</div><div class="v">'+status+'</div><div class="sub">非 NFL 图表校核</div></div>'+
+      '<div class="item"><div class="k">挠度利用率</div><div class="v">'+f3(maxF)+'</div><div class="sub">'+badge(maxF)+' · 0.42W + QL</div></div>'+
+      '<div class="item"><div class="k">应力组合利用率</div><div class="v">'+f3(maxS)+'</div><div class="sub">'+badge(maxS)+' · 大面 / 边缘控制</div></div>';
+    const kv=[['规范','ASTM E1300-16 X6 / X7'],['风压 W',N(p.wk)+' kPa'],['强度风压 1.0W',N(p.wk)+' kPa'],
+      ['面板风挠度压力 0.42W',f3(0.42*p.wk)+' kPa'],['长期压力 QL',N(p.longQ)+' kPa'],
+      ['长期持续时间',r.longDuration],['长期工程折减系数',N(r.longFactor)],['项目挠度限值 L/'+N(p.defDiv),f2(r.defLim)+' mm'],
+      ['计算跨度 L',N(r.L)+' mm'],['E / ν',N(p.E)+' MPa / '+N(p.nu)],['夹层 G · 风 / 长期',N(p.gShort)+' / '+N(p.gLong)+' MPa'],['夹层厚度',N(p.tv)+' mm'],['大面弯矩系数',r.bm.toFixed(5)],['边缘弯矩系数',r.bmEdge.toFixed(5)],
+      ['边缘加工',el.edgeFinish.options[el.edgeFinish.selectedIndex].text],['自重（沿板面，仅展示）',K3(r.Gk)+' kPa']];
+    document.getElementById('basic').innerHTML=kv.map(x=>'<div><div class="k">'+x[0]+'</div><div class="v">'+x[1]+'</div></div>').join('')+
+      (r.issues.length?'<div class="us-review"><b>需复核的计算条件</b><ul>'+r.issues.map(x=>'<li>'+x+'</li>').join('')+'</ul></div>':'');
+    let fh='<table><thead><tr><th>组</th><th>h有效 · 风 / 长期<br>mm</th><th>风压分配 W<br>kPa</th><th>0.42W 挠度<br>mm</th><th>QL 挠度<br>mm</th><th>合计<br>mm</th><th>合计 / 限值</th></tr></thead><tbody>';
+    r.groups.forEach((g,i)=>{fh+='<tr><td>'+(i+1)+'</td><td class="num">'+f2(g.teW)+' / '+f2(r.longGroups[i].teW)+'</td><td class="num">'+K3(g.Wke)+'</td><td class="num">'+f2(g.flex.windService)+'</td><td class="num">'+f2(g.flex.long)+'</td><td class="num">'+f2(g.flex.total)+'</td>'+ratioCell(g.flex.ratio)+'</tr>';});
+    document.getElementById('flexTable').innerHTML=fh+'</tbody></table><p class="hint">挠度按上述项目压力与限值比较；不代表支承框架、边部嵌入量或中空密封性能已通过。</p>';
+    let sh='<table><thead><tr><th>片</th><th>类型</th><th>输入 → 计算厚度<br>mm</th><th>位置</th><th>σW / σL<br>MPa</th><th>许用 · 3 秒 / 长期<br>MPa</th><th>Σ(σ / 许用)</th></tr></thead><tbody>';
+    r.flat.forEach((f,i)=>{
+      const q=f.q;
+      [['大面',q.sigma,q.long.sigma,q.shortAllow.surface,q.longAllow.surface,q.surfaceRatio],['边缘',q.sigmaEdge,q.long.sigmaEdge,q.shortAllow.edge,q.longAllow.edge,q.edgeRatio]].forEach(row=>{
+        sh+='<tr><td>'+(i+1)+'</td><td>'+q.type+'</td><td class="num">'+N(q.nominal)+' → '+N(q.t)+'</td><td>'+row[0]+'</td><td class="num">'+f2(row[1])+' / '+f2(row[2])+'</td><td class="num">'+f2(row[3])+' / '+f2(row[4])+'</td>'+ratioCell(row[5])+'</tr>';
+      });
+    });
+    document.getElementById('strTable').innerHTML=sh+'</tbody></table><p class="hint">同向作用采用应力利用率相加；X4.1 系数只作用于长期许用值一次。未再叠加 Table 1 GTF；未套用中国风震组合。长期值为本程序工程折减值。</p>';
+    const c=r.flat.reduce((a,b)=>a.q.ratio>=b.q.ratio?a:b).q;
+    const ref='ASTM E1300-16（本地提供版本），X6.2 / 表 X7.1 / 表 X4.1 / 表 4 / X9。';
+    renderSteps([
+      {t:'依据与荷载口径',n:ref+' W 采用未折减的 ASCE C&C 风压。按项目要求强度 1.0W（高于 IBC 2024 §2404.1 的 0.6W 比较水平），风挠度 0.42W。这里计算的是玻璃面板。',L:[
+        fxl('强度','q_W=1.0W','1.0\\times '+N(p.wk),N(p.wk)+'\\ \\mathrm{kPa}'),
+        fxl('风挠度','q_{W,def}=0.42W','0.42\\times '+N(p.wk),f3(0.42*p.wk)+'\\ \\mathrm{kPa}')]},
+      {t:'最小厚度、夹层与分配',n:'公称厚度按表 4 换算；直接最小厚度输入时不重复扣减。两片夹层采用 X9.1–X9.8，每片独立应力有效厚度；G = 0 时为完全分层极限。中空按各组弯曲刚度比作近似分配，未计中国外片 1.1。G 必须对应实际温度与持续时间。',L:r.groups.flatMap((g,i)=>[
+        fxl('组 '+(i+1),'\\lambda_i=\\frac{h_{i,w}^{3}}{Σ h_{j,w}^{3}}','\\frac{'+f2(g.teW)+'^3}{'+r.groups.map(x=>f2(x.teW)+'^3').join('+')+'}',f4(g.share)),
+        fxl('组 '+(i+1),'h_{w,W} \\ / \\ h_{w,L}',f2(g.teW)+' \\ / \\ '+f2(r.longGroups[i].teW),f2(g.teW)+' \\ / \\ '+f2(r.longGroups[i].teW)+'\\ \\mathrm{mm}')])},
+      {t:'面板挠度',n:(r.two?'单向条带 I = h³/12，D = EI，μ = 5/384。':'Navier 双正弦级数线弹性板解，D = Eh³/[12(1−ν²)]。')+' 不采用 JGJ η；若全幅压力的线性挠度 / 有效厚度 > 0.5，提示复核大变形（程序阈值）。',L:r.groups.map((g,i)=>
+        fxl('组 '+(i+1),'f=0.42 f_W+f_L', '0.42\\times '+f2(g.flex.def)+'+'+f2(g.flex.long),f2(g.flex.total)+'\\ \\mathrm{mm}'))},
+      {t:'短期许用与长期折减',n:'短期值不按厚度分档。大面取 X6.2；边缘取 X7.1。X4.1 原文是荷载承载力持续时间系数，本程序在线性模型中采用 f长期 = Kd × f3秒 的保守工程假定，尤其热处理与边缘长期值应复核；不把 Table 1 的 GTF 当作应力系数。',L:[
+        fxl('控制片大面','f_{L,s}=K_d f_{3s,s}',N(r.longFactor)+'\\times '+N(c.shortAllow.surface),f3(c.longAllow.surface)+'\\ \\mathrm{MPa}'),
+        fxl('控制片边缘','f_{L,e}=K_d f_{3s,e}',N(r.longFactor)+'\\times '+N(c.shortAllow.edge),f3(c.longAllow.edge)+'\\ \\mathrm{MPa}')]},
+      {t:'大面与边缘分别校核',n:'线弹性解取主弯矩（包括扭矩）对应的最大拉应力；边缘单独扫描。应力 = 6m q L² / hσ²；每片分别校核。同向风与长期压力采用利用率相加，若超过 1 显示 NG；数值 OK 不消除上方列出的需复核条件。',L:[
+        fxl('控制片大面','R_s=\\frac{\\sigma_{W,s}}{f_{3s,s}}+\\frac{\\sigma_{L,s}}{f_{L,s}}','\\frac{'+f2(c.sigma)+'}{'+N(c.shortAllow.surface)+'}+\\frac{'+f2(c.long.sigma)+'}{'+f3(c.longAllow.surface)+'}',f3(c.surfaceRatio)),
+        fxl('控制片边缘','R_e=\\frac{\\sigma_{W,e}}{f_{3s,e}}+\\frac{\\sigma_{L,e}}{f_{L,e}}','\\frac{'+f2(c.sigmaEdge)+'}{'+N(c.shortAllow.edge)+'}+\\frac{'+f2(c.long.sigmaEdge)+'}{'+f3(c.longAllow.edge)+'}',f3(c.edgeRatio))]}
+    ]);
   }
 
   /* ===== 输出渲染 ===== */
+  let renderQueued = false;
   function render() {
+    if (renderQueued) return;
+    renderQueued = true;
+    // Finish focus/input/change dispatch before replacing SVG input nodes.
+    queueMicrotask(() => { renderQueued = false; renderNow(); });
+  }
+  function renderNow() {
     const p = readInputs();
     if (!valid(p)) {
       ['verdict', 'basic', 'flexTable', 'strTable', 'fxSteps']
@@ -1869,8 +2163,17 @@ function tex2html(src) {
       renderFigures(null);
       return;
     }
-    const r = calcGlass(p);
+    let r;
+    try { r = calcGlass(p); }
+    catch (error) {
+      ['basic','flexTable','strTable','fxSteps'].forEach(id=>document.getElementById(id).innerHTML='');
+      document.getElementById('verdict').innerHTML='<div class="item"><div class="k">未完成计算</div><p id="calcError" role="alert"></p></div>';
+      document.getElementById('calcError').textContent=error.message;
+      renderFigures(null);
+      return;
+    }
     renderFigures(r);
+    if (r.us) { renderASTM(p,r); return; }
 
     /* 结论：取各组挠度、各片强度的最大比值 */
     let maxF = 0, maxFg = 1;
@@ -1980,13 +2283,13 @@ function tex2html(src) {
   let prevOpen = null;
   window.addEventListener('beforeprint', () => {
     prevOpen = [];
-    document.querySelectorAll('#fxSteps .fxstep').forEach(d => {
+    document.querySelectorAll('#fxSteps .fxstep, #usOptions details').forEach(d => {
       prevOpen.push(d.open); d.open = true;
     });
   });
   window.addEventListener('afterprint', () => {
     if (!prevOpen) return;
-    document.querySelectorAll('#fxSteps .fxstep').forEach((d, i) => {
+    document.querySelectorAll('#fxSteps .fxstep, #usOptions details').forEach((d, i) => {
       d.open = prevOpen[i] !== undefined ? prevOpen[i] : true;
     });
     prevOpen = null;
@@ -1994,11 +2297,17 @@ function tex2html(src) {
 
   el.printBtn.addEventListener('click', () => window.print());
 
-  ['ig', 'E', 'nu', 'gg', 'defdiv', 'gG', 'gw', 'gE', 'psE', 'psw',
+  ['standard','edgeFinish','thicknessBasis','longQ','loadDuration','gShort','gLong',
+   'ig', 'E', 'nu', 'gg', 'defdiv', 'gG', 'gw', 'gE', 'psE', 'psw',
    'support', 'spanSide', 'hole', 'supTop', 'supBot']
     .forEach(id => {
       const e = document.getElementById(id);
-      const fn = () => { syncOptions(); render(); };
+      e.dataset.lastValue = e.value;
+      const fn = () => {
+        if (e.value === e.dataset.lastValue) return;
+        e.dataset.lastValue = e.value;
+        syncOptions(); render();
+      };
       e.addEventListener('input', fn);
       e.addEventListener('change', fn);
     });
@@ -2008,6 +2317,8 @@ function tex2html(src) {
   /* 输入过程中只记原文、不重算 —— 让用户可以敲完整再生效；
      等回车或失焦（change）时才落定并重画几何。 */
   function onFigEdit(e, commit) {
+    // Removing a focused SVG input may synchronously emit change; do not re-enter drawing.
+    if (drawingFigures) return;
     const t = e.target;
     if (!t || !t.getAttribute) return;
     const k = t.getAttribute('data-fg');
@@ -2049,7 +2360,7 @@ function tex2html(src) {
       GSRAW.wk = t.value;
       if (!commit) return;
       const v = Number(t.value);
-      if (t.value.trim() !== '' && isFinite(v) && v > 0) {
+      if (t.value.trim() !== '' && isFinite(v) && (isASTM() ? v >= 0 : v > 0)) {
         GS.wk = v;
         GSRAW.wk = t.value.trim();
       } else {
