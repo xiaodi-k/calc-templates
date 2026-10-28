@@ -1,0 +1,37 @@
+name: 反馈箱 · 意见与改进建议
+description: 提交使用需求、问题或更好的改动方式，与成员和管理员一起讨论。
+title: "[反馈] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢你的反馈！请在标题中概括需求，下方填写具体意见。
+        留言与回复会公开显示在计算模板首页的反馈箱中；请勿提交项目保密信息。
+        提交后，成员与管理员可在本条留言下继续回复。返回首页点击“刷新留言”即可查看。
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: 意见或改进建议
+      description: 第一行会显示在首页折叠列表中。请说明你的实际需求、遇到的问题或建议的改法。
+      placeholder: |
+        希望增加……，因为在……场景下需要……
+        建议改为……，这样可以……
+    validations:
+      required: true
+  - type: dropdown
+    id: calculator
+    attributes:
+      label: 涉及模板
+      options:
+        - 首页 / 通用功能
+        - 幕墙围护结构风荷载计算
+        - 玻璃面板计算
+        - 立柱（竖梃）承载力计算
+        - 横梁计算
+        - 玻璃肋计算
+        - 新模板 / 其他需求
+  - type: textarea
+    id: context
+    attributes:
+      label: 补充信息
+      description: 可选，补充操作步骤、页面版本、截图或期望的效果。

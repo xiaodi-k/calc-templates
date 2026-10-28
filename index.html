@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>计算模板</title>
+  <link rel="stylesheet" href="feedback.css" />
   <style>
     :root {
       --bg: #f6f7fb;
@@ -82,13 +83,38 @@
 <body>
   <div class="wrap">
     <h1>计算模板</h1>
-    <p class="sub" id="count"></p>
+    <div class="home-meta"><p class="sub" id="count"></p><a href="#feedback">意见与建议 ↓</a></div>
 
     <ul id="list"></ul>
     <div class="empty" id="empty" hidden>
       还没有模板。<br />
       在本文件的 <code>calcs</code> 数组里加一条，这里就会出现。
     </div>
+
+    <section class="feedback" id="feedback" aria-labelledby="feedback-title">
+      <div class="feedback-heading">
+        <div>
+          <h2 id="feedback-title">反馈箱 <span id="feedback-count"></span></h2>
+          <p>缺少什么功能，哪里可以更好？欢迎留下你的需求和改进建议。</p>
+        </div>
+        <a class="feedback-button primary" id="feedback-new" href="https://github.com/xiaodi-k/calc-templates/issues/new?template=feedback.yml" target="_blank" rel="noopener noreferrer">提出意见 ↗</a>
+      </div>
+      <div class="feedback-guide">
+        <span>点击留言展开全部对话，成员与管理员都可参与回复。</span>
+        <span>阅读无需登录；发表和回复将在 GitHub 新窗口中完成，需登录 GitHub。留言公开可见。</span>
+      </div>
+      <div class="feedback-toolbar">
+        <span>最新留言在前 · 日期按北京时间显示</span>
+        <button class="feedback-button" id="feedback-refresh" type="button">刷新留言</button>
+      </div>
+      <p class="feedback-status" id="feedback-status" role="status" aria-live="polite">正在加载留言…</p>
+      <div id="feedback-list" aria-label="反馈留言列表"></div>
+      <noscript><p>请启用 JavaScript 查看留言，或通过下方链接在 GitHub 阅读和回复。</p></noscript>
+      <div class="feedback-footer">
+        <span>提交后回到此页，点击「刷新留言」即可查看。</span>
+        <a href="https://github.com/xiaodi-k/calc-templates/issues" target="_blank" rel="noopener noreferrer">在 GitHub 查看 / 管理 ↗</a>
+      </div>
+    </section>
 
     <div class="rule">
       <b>版本号怎么来的</b><br />
@@ -220,5 +246,6 @@ function render() {
 
 render();
 </script>
+<script src="feedback.js" defer></script>
 </body>
 </html>
