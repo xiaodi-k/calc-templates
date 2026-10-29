@@ -1,0 +1,341 @@
+
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>内片玻璃防撞 · FEM Demo</title>
+<style>
+:root{--bg:#f3f5f9;--ink:#17243a;--muted:#68788c;--blue:#2f6feb;--line:#dde4ee;--card:#fff;--amber:#975d12}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;font-size:14px}
+button,input,select{font:inherit}button,a,input,select{touch-action:manipulation}a{color:var(--blue);text-decoration:none}
+header{max-width:1280px;margin:auto;padding:25px 24px 15px}nav{display:flex;gap:20px;font-size:13px;margin-bottom:22px}
+.titleline{display:flex;gap:16px;align-items:center;flex-wrap:wrap}h1{font-size:27px;letter-spacing:-.6px;margin:0}h2{font-size:15px;margin:0}p{line-height:1.7}
+.badge{border:1px solid #edcf93;border-radius:6px;background:#fff8e8;color:var(--amber);font-size:11px;letter-spacing:1px;padding:6px 9px;font-weight:700}
+.subtitle{color:var(--muted);margin:10px 0}.notice{border-left:3px solid #d69b37;background:#fff9eb;padding:10px 14px;border-radius:0 8px 8px 0;font-size:12px;color:#775423}
+main{max-width:1280px;margin:0 auto;display:grid;grid-template-columns:330px minmax(0,1fr);gap:20px;padding:0 24px 32px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:13px;box-shadow:0 4px 14px #15244104;margin-bottom:14px;overflow:hidden}.head{padding:16px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}.head small{color:var(--muted);font-size:11px;letter-spacing:1.3px}.body{padding:16px 18px}
+label{display:block;color:#506078;font-size:12px;margin:0 0 6px}input[type=number],select{width:100%;min-width:0;border:1px solid #cfd9e8;border-radius:7px;background:#fafcff;color:#2456a0;padding:9px 10px;outline:none}input:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 3px #2f6feb12}.grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}.field{margin-bottom:13px}.hint{font-size:11.5px;color:var(--muted);line-height:1.65;margin:10px 0 0}.inline{display:flex;align-items:center;gap:8px;font-size:12px}.inline input{accent-color:var(--blue)}
+button{border:1px solid var(--line);border-radius:7px;padding:8px 12px;background:white;color:var(--ink);cursor:pointer}button:hover{border-color:#8fa9d3;background:#f7faff}button:disabled{opacity:.5;cursor:wait}.primary{background:var(--blue);border-color:var(--blue);color:white;font-weight:600}.primary:hover{background:#245bcb;color:white}.actions{display:flex;gap:8px;flex-wrap:wrap}.actions .primary{flex:1}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:14px}.stat{padding:15px;background:#fff;border:1px solid var(--line);border-radius:11px}.stat label{font-size:11px}.stat strong{display:block;font-size:25px;letter-spacing:-.7px;font-variant-numeric:tabular-nums}.stat small{font-size:11px;color:var(--muted);line-height:1.7}.stat .unit{font-size:12px;color:var(--muted);margin-left:4px}
+.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid var(--line)}.tabs{display:flex;background:#eff3f9;border-radius:8px;padding:3px}.tabs button{background:transparent;border:0;padding:7px 12px;font-size:12px}.tabs button.on{background:white;color:var(--blue);box-shadow:0 2px 5px #16375e14}.spacer{flex:1}.status{font-size:12px;color:#45715d}.stage{background:linear-gradient(135deg,#fcfdff,#f4f8fc);position:relative;min-height:300px}.stage svg{display:block;width:100%;height:auto;max-height:610px}.legend{position:absolute;left:22px;bottom:24px;font-size:10px;color:#62748b;pointer-events:none}.gradient{width:140px;height:7px;border-radius:4px;background:linear-gradient(90deg,#2459a7,#2fbbbe,#9eddba,#f6ce68,#e67844,#b62f42);margin:6px 0}.ends{display:flex;justify-content:space-between}.plotfoot{padding:10px 16px;border-top:1px solid var(--line);display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:11px;color:var(--muted)}input[type=range]{width:120px;accent-color:var(--blue)}.plotfoot output{min-width:32px}.probe{padding:8px 16px;background:#f9fbff;border-top:1px solid var(--line);font-size:12px;color:#536880;min-height:34px}
+.alert{background:#fff7e7;color:#875c22;border:1px solid #edd9af;border-radius:8px;padding:10px 13px;font-size:12px;line-height:1.6;margin-bottom:12px}.error{background:#fff1f1;color:#a32e39;border-color:#efc8cc}.facts{display:grid;grid-template-columns:1fr 1fr;gap:9px;font-size:12px}.facts div{display:flex;justify-content:space-between;gap:12px;padding-bottom:7px;border-bottom:1px solid #edf0f5}.facts span{color:var(--muted)}.facts b{font-weight:500;font-variant-numeric:tabular-nums}
+details{border-top:1px solid var(--line);padding:14px 18px;font-size:12px;line-height:1.8}summary{cursor:pointer;font-weight:600}details p{color:var(--muted)}.formula{background:#f4f7fb;padding:10px 14px;border-radius:7px;font-family:Georgia,"Times New Roman",serif;font-size:16px;overflow:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}th,td{text-align:right;padding:8px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}th:first-child,td:first-child{text-align:left}th{color:var(--muted);font-weight:500}.tablewrap{overflow:auto;margin-top:12px}
+footer{max-width:1280px;margin:auto;padding:0 24px 35px;color:#8794a4;font-size:12px;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}[hidden]{display:none!important}
+@media(max-width:900px){main{grid-template-columns:285px minmax(0,1fr);gap:12px;padding:0 14px 24px}header{padding:22px 14px 12px}.stats{gap:6px}.stat{padding:10px}.stat strong{font-size:22px}.toolbar{padding:10px}.facts{grid-template-columns:1fr}}
+@media(max-width:690px){main{grid-template-columns:1fr}.inputs{display:grid;grid-template-columns:1fr 1fr;gap:10px}.inputs .card{margin:0}.inputs .controls{grid-column:1/-1}h1{font-size:22px}.body{padding:13px}.grid{gap:9px}.stage svg{min-height:350px}.stat strong{font-size:23px}}
+@media(max-width:430px){.inputs{display:block}.inputs .card{margin-bottom:10px}.stats{gap:5px}.stat strong{font-size:21px}}
+@media print{nav,.actions,.controls,.toolbar,button{display:none!important}body{background:white}main{display:block}.inputs{display:none}.card{break-inside:avoid;box-shadow:none}.stage svg{max-height:430px}.notice{display:block}details{display:block}}
+</style></head><body>
+<header><nav><a href="developing.html">← developing</a><a href="index.html">计算模板</a></nav>
+<div class="titleline"><h1>内片玻璃 · 防撞有限元</h1><span class="badge">DEVELOPING / DEMO 01</span></div>
+<p class="subtitle">从输入到网格、求解与云图，全部在浏览器本地完成。</p>
+<p class="notice">普通幕墙内片的局部等效静力演示。演示荷载不代表上海地标或 IBC；不覆盖防坠落栏板、动态撞击、破碎、夹胶或中空腔共同作用。</p></header>
+<main>
+<aside class="inputs">
+<section class="card"><div class="head"><h2>玻璃与支承</h2><small>MODEL</small></div><div class="body">
+<div class="grid field"><div><label for="width">板宽（mm）</label><input id="width" type="number" min="200" max="6000" step="50" value="1500"></div><div><label for="height">板高（mm）</label><input id="height" type="number" min="200" max="6000" step="50" value="2400"></div></div>
+<div class="grid field"><div><label for="thickness">单片厚度（mm）</label><input id="thickness" type="number" min="4" max="40" step="1" value="12"></div><div><label for="bottom">玻璃底 / 完成面（mm）</label><input id="bottom" type="number" step="50" value="0"></div></div>
+<div class="field"><label for="support">支承条件</label><select id="support"><option value="simple">四边连续简支</option><option value="two">左右两边简支 · 上下自由</option><option value="clamped">四边连续固支</option></select></div>
+<div class="grid"><div><label for="elastic">E（MPa）</label><input id="elastic" type="number" value="72000" step="1000"></div><div><label for="poisson">泊松比 ν</label><input id="poisson" type="number" value="0.22" step="0.01" min="0" max="0.48"></div></div>
+<p class="hint">仅计算单片内侧玻璃。简支允许法向转动，固支限制转动；不计框架弹性、面内膜效应及局部接触压痕。</p></div></section>
+<section class="card"><div class="head"><h2>局部作用</h2><small>DEMO LOAD</small></div><div class="body">
+<div class="grid field"><div><label for="load">标准作用 Pₖ（kN）</label><input id="load" type="number" value="1" min="0.01" max="10" step="0.1"></div><div><label for="factor">分项系数 γ</label><input id="factor" type="number" value="1.5" min="0.01" max="3" step="0.1"></div></div>
+<div class="grid field"><div><label for="dynamic">等效放大系数 κ</label><input id="dynamic" type="number" value="1" min="0.01" max="3" step="0.1"></div><div><label for="loadHeight">作用点 / 完成面（mm）</label><input id="loadHeight" type="number" value="1100" step="50"></div></div>
+<div class="field"><label for="xPercent">横向位置（板宽百分比）</label><input id="xPercent" type="number" value="50" min="0" max="100" step="5"></div>
+<div class="grid"><div><label for="patchW">接触区宽（mm）</label><input id="patchW" type="number" value="100" min="20" step="10"></div><div><label for="patchH">接触区高（mm）</label><input id="patchH" type="number" value="100" min="20" step="10"></div></div>
+<p class="hint">P = Pₖ × γ × κ，均布于接触区并垂直玻璃。默认居中、完成面以上 1.1 m。κ 是演示静力倍率，不表示已经模拟冲击过程。</p></div></section>
+<section class="card controls"><div class="head"><h2>网格与计算</h2><small>SOLVER</small></div><div class="body">
+<div class="field"><label for="mesh">自动网格 · 目标沿长边划分</label><select id="mesh"><option value="12">粗 / 12</option><option value="24" selected>中 / 24</option><option value="36">细 / 36</option><option value="64">超细 / 64</option></select></div>
+<div class="actions"><button id="run" class="primary">重新计算</button><button id="reset">恢复演示值</button></div>
+<label class="inline" style="margin-top:12px"><input id="auto" type="checkbox" checked>修改输入后自动计算</label>
+<p class="hint">自动生成近似正方形单元；接触区按实际边界积分，不随网格吸附到节点。</p></div></section>
+</aside>
+<div class="outputs">
+<div id="error" class="alert error" role="alert" hidden></div>
+<div class="stats">
+<div class="stat"><label>最大挠度 · 等效设计力</label><strong><span id="maxW">—</span><span class="unit">mm</span></strong><small id="wLocation">等待求解</small></div>
+<div class="stat"><label>双表面最大主拉应力</label><strong><span id="maxS">—</span><span class="unit">MPa</span></strong><small id="sLocation">单元内采样包络</small></div>
+<div class="stat"><label>等效设计力 P</label><strong><span id="designP">—</span><span class="unit">kN</span></strong><small id="wRatio">线性薄板模型</small></div>
+</div>
+<div id="modelWarning" class="alert" hidden></div>
+<section class="card"><div class="toolbar">
+<div class="tabs" role="group" aria-label="云图类型"><button id="tabW" class="on" aria-pressed="true">挠度云图</button><button id="tabS" aria-pressed="false">主拉应力</button></div>
+<div class="spacer"></div><label class="inline" style="margin:0"><input id="meshLines" type="checkbox" checked>网格</label>
+<button id="view">正视图</button><span id="status" class="status" role="status" aria-live="polite">准备模型…</span></div>
+<div class="stage"><svg id="plot" viewBox="0 0 760 610" role="img" aria-label="玻璃有限元云图"><text x="380" y="300" text-anchor="middle" fill="#68788c">正在准备有限元模型…</text></svg>
+<div id="legend" class="legend" hidden><span id="legendTitle">挠度 / mm</span><div class="gradient"></div><div class="ends"><span>0</span><span id="legendMax">—</span></div></div></div>
+<div class="probe" id="probe">将鼠标移到板面查看局部计算值。</div>
+<div class="plotfoot"><label for="gain" style="margin:0">变形显示倍率</label><input id="gain" type="range" min="0" max="80" value="25" step="1"><output id="gainValue">25×</output><span>虚线为原形；颜色及数值为实际计算值。</span></div>
+</section>
+<section class="card"><div class="head"><h2>计算记录</h2><small>CHECK & TRACE</small><span class="spacer"></span><button id="download" disabled>导出结果 JSON</button></div><div class="body">
+<div class="facts"><div><span>单元 / 节点</span><b id="meshInfo">—</b></div><div><span>自由度（未约束）</span><b id="dofInfo">—</b></div><div><span>接触压力</span><b id="pressureInfo">—</b></div><div><span>总支座反力</span><b id="reactionInfo">—</b></div><div><span>合力平衡误差</span><b id="balanceInfo">—</b></div><div><span>求解耗时</span><b id="timeInfo">—</b></div></div>
+<p class="hint">这是静力数值结果，不输出“满足 / 不满足”。真实项目的荷载组合、强度限值、挠度限值与冲击试验要求尚未接入。</p>
+</div>
+<details open><summary>网格收敛 · 用加密验证数值稳定性</summary><p>对同一模型计算三档网格，同时比较挠度和应力。挠度收敛不代表局部应力已经收敛。</p><button id="converge" disabled>运行三档网格对比</button><div class="tablewrap" id="convergence"></div></details>
+<details><summary>模型、方程与验证边界</summary>
+<p>Kirchhoff–Love 线弹性薄板；BFS 矩形 C¹ 单元，每节点 4 个自由度，单元内双三次插值。实际组装刚度矩阵，使用带状 Cholesky 求解。刚度用 4×4 高斯积分；荷载仅在单元与接触区重叠部分积分。</p>
+<div class="formula">D = Et³ / [12(1 − ν²)] &nbsp; · &nbsp; K u = F &nbsp; · &nbsp; P = Pₖ γ κ</div>
+<p>应力取玻璃上下两个表面的主拉应力包络。对每单元 5×5 点采样取最大值，不用跨单元平滑掩盖应力峰值；最大值仍须网格收敛复核。未计算横向剪切变形、面内膜效应、接触应力、玻璃破坏或夹层剪切传递。</p>
+<p>若挠度 / 厚度超过 0.5，会提示超出本 demo 的小挠度筛查范围；0.5 是演示筛查阈值，不是规范限值。可调整输入观察线性解，但不能据此作工程结论。</p>
+<p>独立对照：四边简支板的 Navier 级数解，使用相同有限面积局部荷载；另用均布荷载方板基准、荷载 / 厚度缩放与镜像对称测试。默认模型不会读取其他计算模板的风荷载或组合。</p>
+<p><a href="https://doi.org/10.1186/s40323-020-00164-3" target="_blank" rel="noopener">BFS 单元方法参考 ↗</a> · 尚未与商业有限元软件交叉验收。</p>
+</details></section>
+</div></main>
+<footer><span>developing · 独立研发演示，不作为正式计算模板</span><span>版本 1.1.1 · 2026-10-29</span></footer>
+<script id="fem-core">
+/* BFS rectangular C1 Kirchhoff plate, 4 DOFs/node: w, dw/dx, dw/dy, d2w/dxdy.
+   Units: mm, N, MPa. 4x4 Gauss integration exactly integrates polynomial stiffness.
+   Original implementation. Reference: https://doi.org/10.1186/s40323-020-00164-3 */
+const PlateFEM=(()=>{
+ const G=[.06943184420297371,.33000947820757187,.6699905217924281,.9305681557970262];
+ const W=[.17392742256872692,.32607257743127307,.32607257743127307,.17392742256872692];
+ function h(s,L){
+  return [
+   [1-3*s*s+2*s*s*s,(-6*s+6*s*s)/L,(-6+12*s)/(L*L)],
+   [L*(s-2*s*s+s*s*s),1-4*s+3*s*s,(-4+6*s)/L],
+   [3*s*s-2*s*s*s,(6*s-6*s*s)/L,(6-12*s)/(L*L)],
+   [L*(-s*s+s*s*s),-2*s+3*s*s,(-2+6*s)/L]
+  ];
+ }
+ function shape(s,t,hx,hy){
+  const X=h(s,hx),Y=h(t,hy),N=[],B=[];
+  for(const [ix,iy] of [[0,0],[2,0],[2,2],[0,2]])for(const [dx,dy] of [[0,0],[1,0],[0,1],[1,1]]){
+   const x=X[ix+dx],y=Y[iy+dy];N.push(x[0]*y[0]);B.push([x[2]*y[0],x[0]*y[2],2*x[1]*y[1]]);
+  }return {N,B};
+ }
+ function validate(p){
+  for(const k of ['a','b','t','E','nu','force','gamma','impact','cx','cy','pw','ph','nx','ny'])if(!Number.isFinite(p[k]))throw Error('输入必须是有效数字：'+k);
+  if(p.a<200||p.b<200||p.a>6000||p.b>6000)throw Error('演示板宽、高范围为 200–6000 mm。');
+  if(p.t<4||p.t>40)throw Error('单片厚度范围为 4–40 mm。');
+  if(p.E<1000||p.E>100000||p.nu<0||p.nu>=.49)throw Error('材料参数超出演示范围。');
+  if(p.force<=0||p.force>10000||p.gamma<=0||p.gamma>3||p.impact<=0||p.impact>3)throw Error('荷载应为 0–10 kN，两个系数应大于 0 且不超过 3。');
+  if(p.pw<20||p.ph<20||p.cx-p.pw/2<0||p.cx+p.pw/2>p.a||p.cy-p.ph/2<0||p.cy+p.ph/2>p.b)throw Error('接触区至少 20×20 mm，且必须完整位于玻璃内；请检查作用高度和玻璃底标高。');
+  if(!Number.isInteger(p.nx)||!Number.isInteger(p.ny)||p.nx<2||p.ny<2||p.nx>40||p.ny>64)throw Error('网格超出演示规模。');
+  if(!['simple','two','clamped'].includes(p.support))throw Error('不支持此支承形式。');
+ }
+ function solve(p){
+  validate(p);const start=Date.now(),hx=p.a/p.nx,hy=p.b/p.ny,nd=4*(p.nx+1)*(p.ny+1);
+  const bw=4*(p.nx+2)+3,stride=bw+1,K=new Float64Array(nd*stride),F=new Float64Array(nd),fixed=new Uint8Array(nd);
+  const D=p.E*p.t**3/(12*(1-p.nu*p.nu)),ke=new Float64Array(256);
+  for(let u=0;u<4;u++)for(let v=0;v<4;v++){
+   const B=shape(G[u],G[v],hx,hy).B,w=W[u]*W[v]*hx*hy*D;
+   for(let i=0;i<16;i++)for(let j=0;j<16;j++)ke[i*16+j]+=w*(B[i][0]*B[j][0]+B[i][1]*B[j][1]+p.nu*(B[i][0]*B[j][1]+B[i][1]*B[j][0])+(1-p.nu)/2*B[i][2]*B[j][2]);
+  }
+  const force=p.force*p.gamma*p.impact,pressure=force/(p.pw*p.ph);
+  const xL=p.cx-p.pw/2,xR=p.cx+p.pw/2,yL=p.cy-p.ph/2,yR=p.cy+p.ph/2;
+  function ids(i,j){const nodes=[j*(p.nx+1)+i,j*(p.nx+1)+i+1,(j+1)*(p.nx+1)+i+1,(j+1)*(p.nx+1)+i];return nodes.flatMap(n=>[4*n,4*n+1,4*n+2,4*n+3]);}
+  for(let j=0;j<p.ny;j++)for(let i=0;i<p.nx;i++){
+   const id=ids(i,j);
+   for(let k=0;k<16;k++)for(let l=0;l<16;l++)if(id[k]>=id[l])K[id[k]*stride+id[k]-id[l]]+=ke[k*16+l];
+   const xa=Math.max(xL,i*hx),xb=Math.min(xR,(i+1)*hx),ya=Math.max(yL,j*hy),yb=Math.min(yR,(j+1)*hy);
+   if(xb>xa&&yb>ya)for(let u=0;u<4;u++)for(let v=0;v<4;v++){
+    const N=shape((xa+(xb-xa)*G[u]-i*hx)/hx,(ya+(yb-ya)*G[v]-j*hy)/hy,hx,hy).N;
+    const wt=pressure*(xb-xa)*(yb-ya)*W[u]*W[v];
+    for(let k=0;k<16;k++)F[id[k]]+=N[k]*wt;
+   }
+  }
+  for(let j=0;j<=p.ny;j++)for(let i=0;i<=p.nx;i++){
+   const n=4*(j*(p.nx+1)+i),vert=i===0||i===p.nx,horiz=j===0||j===p.ny;
+   // w=0 along vertical edges also requires tangential derivative wy=0; similarly wx on horizontal edges.
+   if(vert){fixed[n]=1;fixed[n+2]=1;}
+   if(horiz&&p.support!=='two'){fixed[n]=1;fixed[n+1]=1;}
+   if(p.support==='clamped'&&(vert||horiz))for(let k=0;k<4;k++)fixed[n+k]=1;
+  }
+  const A=K.slice(),rhs=F.slice(),scale=new Float64Array(nd);
+  for(let i=0;i<nd;i++)scale[i]=fixed[i]?1:1/Math.sqrt(K[i*stride]);
+  for(let i=0;i<nd;i++){
+   if(fixed[i])rhs[i]=0;else rhs[i]*=scale[i];
+   for(let d=0;d<=Math.min(bw,i);d++){const j=i-d;A[i*stride+d]=fixed[i]||fixed[j]?(i===j?1:0):A[i*stride+d]*scale[i]*scale[j];}
+  }
+  // Symmetric band Cholesky, diagonally equilibrated to accommodate derivative DOF units.
+  for(let i=0;i<nd;i++)for(let j=Math.max(0,i-bw);j<=i;j++){
+   let s=A[i*stride+i-j];for(let k=Math.max(0,i-bw,j-bw);k<j;k++)s-=A[i*stride+i-k]*A[j*stride+j-k];
+   if(i===j){if(!(s>1e-12))throw Error('刚度矩阵奇异或病态，请调整模型。');A[i*stride]=Math.sqrt(s);}
+   else A[i*stride+i-j]=s/A[j*stride];
+  }
+  const q=new Float64Array(nd);
+  for(let i=0;i<nd;i++){let s=rhs[i];for(let j=Math.max(0,i-bw);j<i;j++)s-=A[i*stride+i-j]*q[j];q[i]=s/A[i*stride];}
+  for(let i=nd-1;i>=0;i--){let s=q[i];for(let j=i+1;j<=Math.min(nd-1,i+bw);j++)s-=A[j*stride+j-i]*q[j];q[i]=s/A[i*stride];}
+  for(let i=0;i<nd;i++)q[i]*=scale[i];
+  const internal=new Float64Array(nd);
+  for(let i=0;i<nd;i++)for(let d=0;d<=Math.min(bw,i);d++){const j=i-d,v=K[i*stride+d];internal[i]+=v*q[j];if(d)internal[j]+=v*q[i];}
+  let reaction=0,res=0,ref=0;
+  for(let i=0;i<nd;i++){if(fixed[i]&&i%4===0)reaction+=internal[i]-F[i];if(!fixed[i]){res+=((internal[i]-F[i])*scale[i])**2;ref+=(F[i]*scale[i])**2;}}
+  const result={p:{...p},q:Array.from(q),hx,hy,nd,free:nd-fixed.reduce((a,b)=>a+b,0),force,pressure,reaction,balance:Math.abs(reaction+force)/force,residual:Math.sqrt(res/Math.max(ref,1e-30)),ms:0,wmax:0,smax:0,wpos:[0,0],spos:[0,0]};
+  // Recover element-side stress independently; do not average across element boundaries.
+  for(let j=0;j<p.ny;j++)for(let i=0;i<p.nx;i++)for(let v=0;v<=4;v++)for(let u=0;u<=4;u++){
+   const x=(i+u/4)*hx,y=(j+v/4)*hy,r=evaluate(result,x,y,i,j);
+   if(Math.abs(r.w)>result.wmax){result.wmax=Math.abs(r.w);result.wpos=[x,y];}
+   if(r.stress>result.smax){result.smax=r.stress;result.spos=[x,y];}
+  }
+  result.ms=Date.now()-start;
+  if(!Number.isFinite(result.smax)||result.residual>1e-6||result.balance>1e-6)throw Error('数值平衡检查未通过，结果不予显示。');
+  return result;
+ }
+ function evaluate(r,x,y,ei,ej){
+  const p=r.p,i=ei===undefined?Math.min(p.nx-1,Math.max(0,Math.floor(x/r.hx))):ei,j=ej===undefined?Math.min(p.ny-1,Math.max(0,Math.floor(y/r.hy))):ej;
+  const sh=shape((x-i*r.hx)/r.hx,(y-j*r.hy)/r.hy,r.hx,r.hy),nodes=[j*(p.nx+1)+i,j*(p.nx+1)+i+1,(j+1)*(p.nx+1)+i+1,(j+1)*(p.nx+1)+i];
+  let w=0,kx=0,ky=0,kxy=0;for(let n=0;n<4;n++)for(let k=0;k<4;k++){let a=4*n+k,q=r.q[4*nodes[n]+k];w+=sh.N[a]*q;kx+=sh.B[a][0]*q;ky+=sh.B[a][1]*q;kxy+=sh.B[a][2]*q;}
+  const c=-p.E*p.t/(2*(1-p.nu*p.nu)),sx=c*(kx+p.nu*ky),sy=c*(ky+p.nu*kx),tau=c*(1-p.nu)/2*kxy;
+  const av=(sx+sy)/2,rad=Math.hypot((sx-sy)/2,tau),stress=Math.max(Math.abs(av+rad),Math.abs(av-rad));
+  return {w,stress,sx,sy,tau};
+ }
+ // Independent Navier series: simply-supported plate under a rectangular uniformly-loaded patch.
+ function navier(p,x,y,terms=101){
+  const D=p.E*p.t**3/(12*(1-p.nu*p.nu)),P=p.force*p.gamma*p.impact,pressure=P/(p.pw*p.ph);
+  let w=0;
+  for(let m=1;m<=terms;m++)for(let n=1;n<=terms;n++){
+   const ax=m*Math.PI/p.a,by=n*Math.PI/p.b;
+   const ix=2*Math.sin(ax*p.cx)*Math.sin(ax*p.pw/2)/ax,iy=2*Math.sin(by*p.cy)*Math.sin(by*p.ph/2)/by;
+   const Q=4*pressure/(p.a*p.b)*ix*iy;
+   w+=Q*Math.sin(ax*x)*Math.sin(by*y)/(D*(ax*ax+by*by)**2);
+  }return w;
+ }
+ return {solve,evaluate,validate,navier,shape};
+})();
+if(typeof module!=='undefined')module.exports=PlateFEM;
+</script>
+<script id="fem-worker" type="text/plain">
+self.onmessage=function(e){
+ try{
+ const {task,p}=e.data;
+ if(task==='solve'){self.postMessage({ok:true,result:PlateFEM.solve(p)});return;}
+ const longest=Math.max(p.a,p.b),rows=[];
+ for(const target of [16,32,64]){
+  const a={...p,nx:Math.max(4,Math.min(40,Math.round(target*p.a/longest))),ny:Math.max(4,Math.min(64,Math.round(target*p.b/longest)))};
+  const r=PlateFEM.solve(a),atLoad=PlateFEM.evaluate(r,p.cx,p.cy).w;
+  const exact=p.support==='simple'?PlateFEM.navier(p,p.cx,p.cy):null;
+  rows.push({nx:a.nx,ny:a.ny,w:r.wmax,stress:r.smax,atLoad,exact,error:exact===null?null:Math.abs(atLoad/exact-1)*100,ms:r.ms});
+ }
+ self.postMessage({ok:true,rows});
+ }catch(err){self.postMessage({ok:false,error:err.message});}
+};
+</script><script>
+(()=>{
+'use strict';
+const $=id=>document.getElementById(id);
+const inputIds=['width','height','thickness','bottom','support','elastic','poisson','load','factor','dynamic','loadHeight','xPercent','patchW','patchH','mesh'];
+const defaults=Object.fromEntries(inputIds.map(id=>[id,$(id).value]));
+let result=null,mode='w',front=false,timer=null,worker=null,serial=0,busy=false;
+function fmt(n,d=3){return Number.isFinite(n)?n.toFixed(d):'—';}
+function mesh(a,b,target){return {nx:Math.max(4,Math.min(40,Math.round(target*a/Math.max(a,b)))),ny:Math.max(4,Math.min(64,Math.round(target*b/Math.max(a,b))))};}
+function read(){
+ function n(id){if($(id).value.trim()==='')throw Error('请填写所有输入项。');const v=Number($(id).value);if(!Number.isFinite(v))throw Error('请输入有效数字。');return v;}
+ const a=n('width'),b=n('height'),bottom=n('bottom'),level=n('loadHeight'),xp=n('xPercent');
+ if(xp<0||xp>100)throw Error('横向位置应在 0–100% 之间。');
+ const p={a,b,t:n('thickness'),E:n('elastic'),nu:n('poisson'),force:1000*n('load'),gamma:n('factor'),impact:n('dynamic'),cx:a*xp/100,cy:level-bottom,pw:n('patchW'),ph:n('patchH'),support:$('support').value,bottom,level,...mesh(a,b,n('mesh'))};
+ PlateFEM.validate(p);return p;
+}
+const metricIds=['maxW','maxS','designP','wLocation','sLocation','wRatio','meshInfo','dofInfo','pressureInfo','reactionInfo','balanceInfo','timeInfo'];
+function stop(){serial++;if(worker){worker.terminate();worker=null;}busy=false;}
+function clear(){
+ result=null;metricIds.forEach(id=>$(id).textContent='—');$('legend').hidden=true;$('modelWarning').hidden=true;$('download').disabled=true;$('converge').disabled=true;
+ $('plot').innerHTML='<text x="380" y="290" text-anchor="middle" fill="#738397" font-size="15">输入已更新 · 等待重新求解</text>';
+ $('convergence').innerHTML='';$('probe').textContent='当前没有可用的计算结果。';
+}
+function error(e){$('error').hidden=false;$('error').textContent=e.message||String(e);$('status').textContent='输入 / 求解未完成';}
+function changed(){clearTimeout(timer);stop();clear();$('error').hidden=true;$('status').textContent='待计算';try{read();if($('auto').checked)timer=setTimeout(run,450);}catch(e){error(e);}}
+function spawn(task,p,onDone){
+ stop();const id=serial;
+ const source=$('fem-core').textContent+
+$('fem-worker').textContent;
+ const url=URL.createObjectURL(new Blob([source],{type:'text/javascript'}));
+ try{worker=new Worker(url);}catch(e){URL.revokeObjectURL(url);error(new Error('此浏览器无法启动本地计算线程，请使用支持 Web Worker 的现代浏览器。'));return;}
+ URL.revokeObjectURL(url);busy=true;
+ worker.onmessage=e=>{if(id!==serial)return;worker.terminate();worker=null;busy=false;if(!e.data.ok){if(task==='solve')clear();error(new Error(e.data.error));$('converge').disabled=!result;return;}onDone(e.data);};
+ worker.onerror=e=>{if(id!==serial)return;stop();if(task==='solve')clear();error(new Error(e.message||'计算线程异常'));$('converge').disabled=!result;};
+ worker.postMessage({task,p});
+}
+function run(){clearTimeout(timer);let p;try{p=read();}catch(e){stop();clear();error(e);return;}clear();$('error').hidden=true;$('status').textContent='组装矩阵 · 求解中…';
+ spawn('solve',p,data=>{result=data.result;show();});
+}
+function show(){
+ const r=result,p=r.p;$('status').textContent='已计算 · '+r.ms+' ms';
+ $('maxW').textContent=fmt(r.wmax);$('maxS').textContent=fmt(r.smax,2);$('designP').textContent=fmt(r.force/1000);
+ $('wLocation').textContent='位置 '+r.wpos.map(v=>fmt(v,0)).join(' / ')+' mm';
+ $('sLocation').textContent='位置 '+r.spos.map(v=>fmt(v,0)).join(' / ')+' mm';
+ $('wRatio').textContent='挠度 / 厚度 = '+fmt(r.wmax/p.t,2);
+ $('meshInfo').textContent=p.nx+'×'+p.ny+' / '+((p.nx+1)*(p.ny+1));
+ $('dofInfo').textContent=r.free+' / '+r.nd;$('pressureInfo').textContent=fmt(r.pressure*1000,1)+' kPa';
+ $('reactionInfo').textContent=fmt(r.reaction/1000)+' kN';
+ $('balanceInfo').textContent=(r.balance*100).toExponential(2)+' %';$('timeInfo').textContent=r.ms+' ms';
+ const warnings=[];
+ if(r.wmax/p.t>.5)warnings.push('挠度 / 厚度超过 0.5：已超出演示的小挠度筛查范围，应进一步采用几何非线性分析。本图仍为线性解。');
+ if(r.hx>p.pw||r.hy>p.ph)warnings.push('接触区小于部分单元尺寸：作用力已按真实接触面积积分；局部应力请运行网格对比，不能仅凭挠度稳定判断收敛。');
+ $('modelWarning').hidden=!warnings.length;$('modelWarning').textContent=warnings.join(' ');
+ $('download').disabled=false;$('converge').disabled=false;draw();
+}
+const palette=[[36,89,167],[47,187,190],[158,221,186],[246,206,104],[230,120,68],[182,47,66]];
+function color(t){const x=Math.max(0,Math.min(1,t))*(palette.length-1),i=Math.min(palette.length-2,Math.floor(x)),u=x-i;return 'rgb('+palette[i].map((v,k)=>Math.round(v*(1-u)+palette[i+1][k]*u)).join(',')+')';}
+function draw(){
+ if(!result)return;const r=result,p=r.p,gain=Number($('gain').value),max=mode==='w'?r.wmax:r.smax;
+ const ax=front?1:.85,ay=front?0:.18,bx=front?0:.24,by=front?1:.88;
+ const extra=front?0:r.wmax*gain;
+ const scale=Math.min(500/(ax*p.a+ay*p.b+.65*extra),420/(by*p.b+bx*p.a+.25*extra));
+ const ox=(760-scale*(ax*p.a+ay*p.b+.65*extra))/2,oy=75+by*p.b*scale;
+ const proj=(x,y,w=0)=>[ox+scale*(ax*x+ay*y+(front?0:.65*w*gain)),oy+scale*(bx*x-by*y+(front?0:.25*w*gain))];
+ const pt=(x,y,deform=true)=>{const z=deform?PlateFEM.evaluate(r,x,y).w:0;return proj(x,y,z).map(v=>v.toFixed(2)).join(',');};
+ const boundary=[[0,0],[p.a,0],[p.a,p.b],[0,p.b]];
+ let svg='<title>玻璃'+(mode==='w'?'挠度':'双表面主拉应力')+'有限元云图</title><defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#b64e48"/></marker></defs>';
+ svg+='<polygon points="'+boundary.map(([x,y])=>pt(x,y,false)).join(' ')+'" fill="#e3eaf3" stroke="#aab7c8" stroke-width="1.2" stroke-dasharray="5 5"/>';
+ for(let j=0;j<p.ny*2;j++)for(let i=0;i<p.nx*2;i++){
+  const x=i*r.hx/2,y=j*r.hy/2,xc=x+r.hx/4,yc=y+r.hy/4,q=PlateFEM.evaluate(r,xc,yc);
+  const v=mode==='w'?Math.abs(q.w):q.stress;
+  svg+='<polygon data-x="'+xc+'" data-y="'+yc+'" points="'+[[x,y],[x+r.hx/2,y],[x+r.hx/2,y+r.hy/2],[x,y+r.hy/2]].map(([a,b])=>pt(a,b)).join(' ')+'" fill="'+color(v/max)+'" stroke="'+color(v/max)+'" stroke-width=".3"/>';
+ }
+ if($('meshLines').checked){
+  for(let i=0;i<=p.nx;i++){let pts=[];for(let j=0;j<=p.ny*2;j++)pts.push(pt(i*r.hx,j*r.hy/2));svg+='<polyline points="'+pts.join(' ')+'" fill="none" stroke="#173d64" stroke-opacity=".32" stroke-width=".65" pointer-events="none"/>';}
+  for(let j=0;j<=p.ny;j++){let pts=[];for(let i=0;i<=p.nx*2;i++)pts.push(pt(i*r.hx/2,j*r.hy));svg+='<polyline points="'+pts.join(' ')+'" fill="none" stroke="#173d64" stroke-opacity=".32" stroke-width=".65" pointer-events="none"/>';}
+ }
+ const edge=(a,b)=>{const pts=[];for(let i=0;i<=24;i++)pts.push(pt(a[0]+(b[0]-a[0])*i/24,a[1]+(b[1]-a[1])*i/24));return pts.join(' ');};
+ const edges=p.support==='two'?[[boundary[0],boundary[3]],[boundary[1],boundary[2]]]:boundary.map((b,i)=>[b,boundary[(i+1)%4]]);
+ for(const [a,b] of edges)svg+='<polyline points="'+edge(a,b)+'" fill="none" stroke="#183d66" stroke-width="'+(p.support==='clamped'?5:3)+'" pointer-events="none"/>';
+ const patch=[[p.cx-p.pw/2,p.cy-p.ph/2],[p.cx+p.pw/2,p.cy-p.ph/2],[p.cx+p.pw/2,p.cy+p.ph/2],[p.cx-p.pw/2,p.cy+p.ph/2]];
+ svg+='<polygon points="'+patch.map(([x,y])=>pt(x,y)).join(' ')+'" fill="#ffffff38" stroke="#a83936" stroke-width="1.7" pointer-events="none"/>';
+ const end=proj(p.cx,p.cy,PlateFEM.evaluate(r,p.cx,p.cy).w),sx=end[0]-70,sy=end[1]-32;
+ svg+='<line x1="'+sx+'" y1="'+sy+'" x2="'+end[0]+'" y2="'+end[1]+'" stroke="#b64e48" stroke-width="2.8" marker-end="url(#arrow)" pointer-events="none"/><text x="'+(sx-5)+'" y="'+(sy-9)+'" fill="#a63732" font-size="13" text-anchor="middle">P = '+fmt(r.force/1000,2)+' kN</text>';
+ const wh=proj(p.a/2,0),hh=proj(0,p.b/2);
+ svg+='<text x="'+wh[0]+'" y="'+(wh[1]+27)+'" text-anchor="middle" font-size="12" fill="#63758a">'+p.a+' mm</text><text x="'+(hh[0]-24)+'" y="'+hh[1]+'" text-anchor="middle" transform="rotate(-90 '+(hh[0]-24)+' '+hh[1]+')" font-size="12" fill="#63758a">'+p.b+' mm</text>';
+ const loc=mode==='w'?r.wpos:r.spos,peak=proj(loc[0],loc[1],PlateFEM.evaluate(r,...loc).w);
+ svg+='<circle cx="'+peak[0]+'" cy="'+peak[1]+'" r="4" fill="none" stroke="white" stroke-width="1.5" pointer-events="none"/>';
+ svg+='<text x="24" y="32" fill="#576c84" font-size="12">'+(front?'正视图 · 不显示面外位移':'固定斜视 · 变形 ×'+gain)+'</text><text x="24" y="52" fill="#8190a2" font-size="11">BFS '+p.nx+' × '+p.ny+' · '+(p.support==='simple'?'四边简支':p.support==='two'?'左右简支':'四边固支')+'</text>';
+ svg+='<text x="736" y="578" text-anchor="end" fill="#8190a2" font-size="11">深蓝边线为支承 · 红框为接触区 · 云图为插值采样</text>';
+ $('plot').innerHTML=svg;$('legend').hidden=false;$('legendTitle').textContent=mode==='w'?'挠度绝对值 / mm':'双表面主拉应力 / MPa';$('legendMax').textContent=fmt(max,2);
+ $('probe').textContent='坐标以玻璃左下角为原点；将鼠标移到板面查看局部值。';
+}
+$('plot').addEventListener('pointermove',e=>{
+ if(!result||!e.target.hasAttribute('data-x'))return;
+ const x=Number(e.target.getAttribute('data-x')),y=Number(e.target.getAttribute('data-y')),q=PlateFEM.evaluate(result,x,y);
+ $('probe').textContent='x '+fmt(x,0)+' / y '+fmt(y,0)+' mm　·　w '+fmt(q.w)+' mm　·　σ₁（双面包络）'+fmt(q.stress,2)+' MPa';
+});
+$('tabW').addEventListener('click',()=>setMode('w'));$('tabS').addEventListener('click',()=>setMode('stress'));
+function setMode(m){mode=m;$('tabW').classList.toggle('on',m==='w');$('tabS').classList.toggle('on',m!=='w');$('tabW').setAttribute('aria-pressed',String(m==='w'));$('tabS').setAttribute('aria-pressed',String(m!=='w'));draw();}
+$('view').addEventListener('click',()=>{front=!front;$('view').textContent=front?'斜视图':'正视图';draw();});
+$('gain').addEventListener('input',()=>{$('gainValue').textContent=$('gain').value+'×';draw();});
+$('meshLines').addEventListener('change',draw);
+inputIds.forEach(id=>$(id).addEventListener($(id).tagName==='SELECT'?'change':'input',changed));
+$('auto').addEventListener('change',()=>{if(!$('auto').checked)clearTimeout(timer);else if(!result)run();});
+$('run').addEventListener('click',run);
+$('reset').addEventListener('click',()=>{inputIds.forEach(id=>$(id).value=defaults[id]);$('auto').checked=true;run();});
+$('converge').addEventListener('click',()=>{
+ if(!result||busy)return;const p={...result.p};$('converge').disabled=true;$('convergence').textContent='正在分别求解三档网格…';$('status').textContent='网格收敛计算中…';
+ spawn('converge',p,data=>{
+ $('status').textContent='网格对比完成';$('converge').disabled=false;
+ let h='<table><thead><tr><th>网格</th><th>w 最大 / mm</th><th>σ₁ / MPa</th><th>挠度变化</th><th>应力变化</th></tr></thead><tbody>';
+ data.rows.forEach((r,i)=>{const prev=data.rows[i-1];h+='<tr><td>'+r.nx+' × '+r.ny+'</td><td>'+fmt(r.w)+'</td><td>'+fmt(r.stress,2)+'</td><td>'+(prev?fmt(Math.abs(r.w/prev.w-1)*100,2)+'%':'—')+'</td><td>'+(prev?fmt(Math.abs(r.stress/prev.stress-1)*100,2)+'%':'—')+'</td></tr>';});
+ h+='</tbody></table>';
+ const last=data.rows.at(-1);if(last.exact!==null)h+='<p class="hint">独立 Navier 级数对照（作用区中心）：'+fmt(last.exact,5)+' mm；最细网格同位置 '+fmt(last.atLoad,5)+' mm，差异 '+fmt(last.error,4)+'%。解析对照仅验证挠度，不代表应力或整个模型通过工程验收。</p>';
+ const prev=data.rows.at(-2),diff=Math.abs(last.stress/prev.stress-1)*100;
+ h+='<p class="hint">应力末两档变化 '+fmt(diff,2)+'%；这是数值变化指标，不是规范验收判据。上方云图仍为输入框所选网格。</p>';
+ $('convergence').innerHTML=h;result.convergence=data.rows;
+ });
+});
+$('download').addEventListener('click',()=>{
+ if(!result)return;
+ const data={demo:'inner-glass-impact-fem',version:'1.1.1',scope:'Linear elastic monolithic plate, demonstration only; not code compliance or dynamic impact.',created:new Date().toISOString(),units:'mm, N, MPa',...result};
+ const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download='inner-glass-fem-demo.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+});
+run();
+})();
+</script>
+</body></html>
