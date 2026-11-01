@@ -94,6 +94,26 @@
       width: auto; flex: 1 1 96px; min-width: 0;
     }
 
+    /* 截面图标：原生单选框保留方向键切换与读屏名称。 */
+    .section-options { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+    .section-option { position: relative; display: block; cursor: pointer; }
+    .section-option input {
+      position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+      overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0;
+    }
+    .section-icon {
+      display: flex; align-items: center; justify-content: center;
+      width: 44px; height: 44px; border: 1px solid var(--in-line); border-radius: 8px;
+      background: #fff; color: #657793;
+    }
+    .section-icon svg { display: block; width: 38px; height: 38px; }
+    .section-option:hover .section-icon { border-color: var(--in); color: var(--in); }
+    .section-option input:checked + .section-icon {
+      background: var(--in-soft); color: var(--in); border-color: var(--in);
+      box-shadow: inset 0 0 0 1px var(--in);
+    }
+    .section-option input:focus-visible + .section-icon { outline: 2px solid var(--in); outline-offset: 2px; }
+
     /* ===== 输入 / 输出 分区配色 ===== */
     .inputs, .outputs { min-width: 0; }
     .inputs {
@@ -514,7 +534,7 @@ body.rib-mode .ios-sw{opacity:.5}
           <span class="ios-lbl on" id="lblBasic">基础</span>
           <button type="button" class="ios-sw" id="modeSw"
                   role="switch" aria-checked="false"
-                  title="基础：圆管/箱型/T形 · Q355 或 6063-T6 · 单跨与双跨（地区、面板、地震按常规取值）　／　高级：12 种截面 · 17 种材料 · 单跨/双跨/悬臂/飞边悬臂 · 地区与系数全部可调"></button>
+                  title="基础：圆管/箱型/T形 · Q355 或 6063-T6 · 单跨与双跨（地区、面板、地震按常规取值）　／　高级：13 种截面 · 17 种材料 · 单跨/双跨/悬臂/飞边悬臂 · 地区与系数全部可调"></button>
           <span class="ios-lbl" id="lblAdv">高级</span>
           <button type="button" class="rib-toggle" id="glassRibBtn" aria-pressed="false" aria-controls="rib-inputs rib-outputs" title="切换玻璃肋计算；再次点击返回普通立柱">玻璃肋</button>
         </div>
@@ -524,10 +544,7 @@ body.rib-mode .ios-sw{opacity:.5}
       <div class="card">
         <h2>截面</h2>
         <div class="body">
-          <div class="row">
-            <label for="sec">型式</label>
-            <select id="sec" style="flex:1 1 auto"></select>
-          </div>
+          <div class="section-options" id="sec" role="radiogroup" aria-label="截面型式"></div>
           <div class="secprev" id="secPrev"></div>
           <p class="hint" id="secHint"></p>
         </div>
@@ -1295,7 +1312,7 @@ function tex2html(src) {
     dimRaw[k] = w;
   });
 
-  /* 下拉按模式重建：基础只给常用项，高级全开 */
+  /* 选项按模式重建：基础只给常用项，高级全开 */
   function fillOpts(sel, list, labelOf, valOf, cur) {
     sel.innerHTML = list.map(function (x) {
       const v = valOf(x);
@@ -1303,10 +1320,29 @@ function tex2html(src) {
     }).join('');
     sel.value = cur;   /* 显式同步，别只靠 selected 属性 */
   }
+  function sectionIcon(type) {
+    const defaults = {};
+    SECTIONS[type].dims.forEach(function (d) { defaults[d[0]] = d[2]; });
+    const geo = secGeo(type, defaults);
+    const scale = 34 / Math.max(geo.xmax - geo.xmin, geo.ymax - geo.ymin);
+    const cx = (geo.xmin + geo.xmax) / 2, cy = (geo.ymin + geo.ymax) / 2;
+    const path = geo.polys.map(function (poly) {
+      return poly.pts.map(function (p, i) {
+        return (i ? 'L' : 'M') + (24 + (p[0] - cx) * scale).toFixed(2) + ' ' +
+          (24 - (p[1] - cy) * scale).toFixed(2);
+      }).join(' ') + 'Z';
+    }).join(' ');
+    return '<svg viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path d="' + path +
+      '" fill="currentColor" fill-opacity=".16" fill-rule="evenodd" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>';
+  }
   function buildSecOptions() {
     const keys = (mode === 'basic') ? BASIC_SEC : Object.keys(SECTIONS);
     if (keys.indexOf(curType) < 0) curType = keys.indexOf('box') >= 0 ? 'box' : keys[0];
-    fillOpts(el.sec, keys, function (k) { return SECTIONS[k].name; }, function (k) { return k; }, curType);
+    el.sec.innerHTML = keys.map(function (k) {
+      return '<label class="section-option" title="' + SECTIONS[k].name + '">' +
+        '<input type="radio" name="section-type" value="' + k + '" aria-label="' + SECTIONS[k].name + '"' +
+        (k === curType ? ' checked' : '') + '><span class="section-icon">' + sectionIcon(k) + '</span></label>';
+    }).join('');
   }
   function buildMatOptions() {
     const list = (mode === 'basic') ? MATS.filter(function (m) { return BASIC_MAT.indexOf(m.id) >= 0; }) : MATS;
@@ -2515,6 +2551,15 @@ function tex2html(src) {
   }
 
   /* ---------- 直接在图上改尺寸 ---------- */
+  function commitSecDim(k) {
+    const raw = dimRaw[curType][k], v = parseFloat(raw);
+    if (isFinite(v) && v > 0) {
+      dimValues[curType][k] = v;
+      dimRaw[curType][k] = raw.trim();
+    } else {
+      dimRaw[curType][k] = String(dimValues[curType][k]);
+    }
+  }
   /* 输入过程中只记原文、不重算 —— 让用户可以敲完整再生效；
      等回车或失焦（change）时才落定并重画几何。 */
   function onSecEdit(e, commit) {
@@ -2524,14 +2569,7 @@ function tex2html(src) {
     if (!k) return;
     dimRaw[curType][k] = t.value;
     if (!commit) return;
-    const v = parseFloat(t.value);
-    const ok = isFinite(v) && v > 0;
-    if (ok) {
-      dimValues[curType][k] = v;
-      dimRaw[curType][k] = t.value.trim();   /* 保留用户敲的原样，别把 3.0 改成 3 */
-    } else {
-      dimRaw[curType][k] = String(dimValues[curType][k]);   /* 非法就退回上一次的合法值 */
-    }
+    commitSecDim(k);
     render();
   }
   function onBeamEdit(e, commit) {
@@ -2599,8 +2637,11 @@ function tex2html(src) {
   el.beamPrev.addEventListener('input', function (e) { onBeamEdit(e, false); });
   el.beamPrev.addEventListener('change', function (e) { onBeamEdit(e, true); });
 
-  el.sec.addEventListener('change', function () {
-    curType = el.sec.value;
+  el.sec.addEventListener('change', function (e) {
+    if (!e.target.matches('input[name="section-type"]') || !e.target.checked) return;
+    /* 某些浏览器点标签不会先触发尺寸框的 change；切换前落定旧截面的输入。 */
+    SECTIONS[curType].dims.forEach(function (d) { commitSecDim(d[0]); });
+    curType = e.target.value;
     render();
   });
   ['mat', 'form', 'B', 'reg', 'pm', 'pt', 'ig'].concat(OVERRIDE).forEach(function (id) {
@@ -2985,3 +3026,4 @@ globalThis.RibPreview={state:s,render,sections,exportLatex,getResult:()=>lastRes
 })();</script>
 </body>
 </html>
+
