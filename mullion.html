@@ -2551,6 +2551,15 @@ function tex2html(src) {
   }
 
   /* ---------- 直接在图上改尺寸 ---------- */
+  function commitSecDim(k) {
+    const raw = dimRaw[curType][k], v = parseFloat(raw);
+    if (isFinite(v) && v > 0) {
+      dimValues[curType][k] = v;
+      dimRaw[curType][k] = raw.trim();
+    } else {
+      dimRaw[curType][k] = String(dimValues[curType][k]);
+    }
+  }
   /* 输入过程中只记原文、不重算 —— 让用户可以敲完整再生效；
      等回车或失焦（change）时才落定并重画几何。 */
   function onSecEdit(e, commit) {
@@ -2560,14 +2569,7 @@ function tex2html(src) {
     if (!k) return;
     dimRaw[curType][k] = t.value;
     if (!commit) return;
-    const v = parseFloat(t.value);
-    const ok = isFinite(v) && v > 0;
-    if (ok) {
-      dimValues[curType][k] = v;
-      dimRaw[curType][k] = t.value.trim();   /* 保留用户敲的原样，别把 3.0 改成 3 */
-    } else {
-      dimRaw[curType][k] = String(dimValues[curType][k]);   /* 非法就退回上一次的合法值 */
-    }
+    commitSecDim(k);
     render();
   }
   function onBeamEdit(e, commit) {
@@ -2637,6 +2639,8 @@ function tex2html(src) {
 
   el.sec.addEventListener('change', function (e) {
     if (!e.target.matches('input[name="section-type"]') || !e.target.checked) return;
+    /* 某些浏览器点标签不会先触发尺寸框的 change；切换前落定旧截面的输入。 */
+    SECTIONS[curType].dims.forEach(function (d) { commitSecDim(d[0]); });
     curType = e.target.value;
     render();
   });
