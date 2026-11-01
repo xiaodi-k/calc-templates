@@ -20,6 +20,7 @@ function renderFiles(){
  selectedFiles.forEach((file,index)=>{const li=el("li","feedback-selected-file");const remove=button("移除",()=>{selectedFiles.splice(index,1);renderFiles();$("feedback-file-status").textContent="";});remove.setAttribute("aria-label","移除附件 "+file.name);remove.disabled=submitting;li.append(el("span","feedback-file-name",file.name+" · "+fileSize(file.size)),remove);ul.append(li);});
 }
 function clearFiles(){selectedFiles=[];$("feedback-files").value="";$("feedback-file-status").textContent="";renderFiles();}
+$("feedback-choose-files").addEventListener("click",()=>$("feedback-files").click());
 $("feedback-files").addEventListener("change",()=>{
  const incoming=Array.from($("feedback-files").files||[]);$("feedback-files").value="";
  const unique=incoming.filter(f=>!selectedFiles.some(x=>x.name===f.name&&x.size===f.size&&x.lastModified===f.lastModified));

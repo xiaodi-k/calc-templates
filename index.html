@@ -114,7 +114,8 @@
         <label>意见或回复<textarea id="feedback-body-input" maxlength="4000" rows="4" required placeholder="请描述您的问题或建议（至少2个字）"></textarea></label>
         <div class="feedback-upload">
           <label for="feedback-files">添加附件（可选）</label>
-          <input id="feedback-files" type="file" multiple accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.dwg,.dxf,.zip,.rar,.7z,.mcd,.xmcd,.xmcdz,.mcdx,.mct,.xmct,.mctx" aria-describedby="feedback-file-help feedback-file-status">
+          <button id="feedback-choose-files" class="feedback-button" type="button" aria-describedby="feedback-file-help feedback-file-status">选择文件</button>
+          <input id="feedback-files" type="file" multiple accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.dwg,.dxf,.zip,.rar,.7z,.mcd,.xmcd,.xmcdz,.mcdx,.mct,.xmct,.mctx" hidden>
           <p id="feedback-file-help">图片、PDF、Word、Excel、PPT、CAD、Mathcad、ZIP / RAR / 7Z；最多 3 个，每个不超过 5 MB。附件随留言公开。</p>
           <ul id="feedback-selected-files" aria-label="已选附件"></ul>
           <p id="feedback-file-status" role="status" aria-live="polite"></p>
