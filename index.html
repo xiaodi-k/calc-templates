@@ -102,27 +102,25 @@
 
     <section class="feedback" id="feedback" aria-labelledby="feedback-title">
       <div class="feedback-heading">
-        <div>
-          <h2 id="feedback-title">反馈箱 <span id="feedback-count"></span></h2>
-          <p>缺少什么功能，哪里可以更好？欢迎留下你的需求和改进建议。</p>
-        </div>
-        <a class="feedback-button primary" id="feedback-new" href="https://github.com/xiaodi-k/calc-templates/issues/new?template=feedback.yml" target="_blank" rel="noopener noreferrer">提出意见 ↗</a>
+        <div><h2 id="feedback-title">公开反馈箱 <span id="feedback-count"></span></h2>
+          <p>无需 GitHub 账号即可提出建议、查看讨论或参与回复。</p></div>
+        <button class="feedback-button primary" id="feedback-new" type="button">提出意见</button>
       </div>
-      <div class="feedback-guide">
-        <span>点击留言展开全部对话，成员与管理员都可参与回复。</span>
-        <span>阅读无需登录；发表和回复将在 GitHub 新窗口中完成，需登录 GitHub。留言公开可见。</span>
-      </div>
-      <div class="feedback-toolbar">
-        <span>最新留言在前 · 日期按北京时间显示</span>
-        <button class="feedback-button" id="feedback-refresh" type="button">刷新留言</button>
-      </div>
+      <div class="feedback-guide">公开留言对所有访客可见。昵称可以不填；请勿填写联系方式或其他隐私信息。<span>管理员回复会有独立标识。</span></div>
+      <form id="feedback-form" class="feedback-form" hidden>
+        <h3 id="feedback-form-title">发表新留言</h3>
+        <label>昵称（可选）<input id="feedback-nickname" maxlength="40" placeholder="匿名用户" autocomplete="nickname"></label>
+        <label id="feedback-title-field">主题<input id="feedback-subject" maxlength="120" placeholder="例如：希望增加某项计算功能"></label>
+        <label>意见或回复<textarea id="feedback-body-input" maxlength="4000" rows="4" required placeholder="请描述您的问题或建议（至少2个字）"></textarea></label>
+        <div id="feedback-turnstile"></div>
+        <p id="feedback-form-status" role="status"></p>
+        <div class="feedback-form-actions"><button class="feedback-button primary" id="feedback-submit" type="submit">提交</button><button class="feedback-button" id="feedback-cancel" type="button">取消</button></div>
+      </form>
+      <div class="feedback-toolbar"><span>最新留言在前 · 北京时间</span><button class="feedback-button" id="feedback-refresh" type="button">刷新留言</button></div>
       <p class="feedback-status" id="feedback-status" role="status" aria-live="polite">正在加载留言…</p>
-      <div id="feedback-list" aria-label="反馈留言列表"></div>
-      <noscript><p>请启用 JavaScript 查看留言，或通过下方链接在 GitHub 阅读和回复。</p></noscript>
-      <div class="feedback-footer">
-        <span>提交后回到此页，点击「刷新留言」即可查看。</span>
-        <a href="https://github.com/xiaodi-k/calc-templates/issues" target="_blank" rel="noopener noreferrer">在 GitHub 查看 / 管理 ↗</a>
-      </div>
+      <div id="feedback-list" aria-label="公开留言列表"></div>
+      <div class="feedback-footer"><span>原 GitHub Issues 留言不会删除，仍可查看历史记录。</span><a href="https://github.com/xiaodi-k/calc-templates/issues" target="_blank" rel="noopener noreferrer">历史留言 / GitHub 管理 ↗</a></div>
+      <details class="feedback-admin"><summary>管理员登录</summary><form id="feedback-admin-form"><input id="feedback-admin-email" type="email" autocomplete="username" placeholder="管理员邮箱" required><input id="feedback-admin-password" type="password" autocomplete="current-password" placeholder="密码" required><button class="feedback-button" type="submit">登录</button><button class="feedback-button" id="feedback-logout" type="button" hidden>退出登录</button><span id="feedback-admin-status" role="status"></span></form></details>
     </section>
 
     <div class="rule">
@@ -255,6 +253,8 @@ function render() {
 
 render();
 </script>
+<script src="feedback-config.js"></script>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
 <script src="feedback.js" defer></script>
 </body>
 </html>
