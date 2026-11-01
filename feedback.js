@@ -31,7 +31,7 @@ $("feedback-files").addEventListener("change",()=>{
 });
 function attachments(items,kind,messageId){
  const ul=el("ul","feedback-attachments");ul.setAttribute("aria-label","留言附件");
- for(const file of Array.isArray(items)?items:[]){if(!/^[0-9a-f-]{36}$/i.test(file.id))continue;const li=el("li");const link=el("a","feedback-attachment",file.name+" · "+fileSize(file.size));link.href=endpoint+"?kind="+kind+"&message="+encodeURIComponent(messageId)+"&attachment="+encodeURIComponent(file.id);link.target="_blank";link.rel="noopener noreferrer";link.setAttribute("aria-label","下载附件 "+file.name);li.append(link);ul.append(li);}
+ for(const file of Array.isArray(items)?items:[]){if(!/^[0-9a-f-]{36}$/i.test(file.id))continue;const li=el("li");const link=el("a","feedback-attachment",file.name+" · "+fileSize(file.size));link.href=endpoint+"?kind="+kind+"&message="+encodeURIComponent(messageId)+"&attachment="+encodeURIComponent(file.id);link.download=file.name;link.rel="noopener noreferrer";link.setAttribute("aria-label","下载附件 "+file.name);li.append(link);ul.append(li);}
  return ul;
 }
 function resetCaptcha(){if(widgetId!==null&&window.turnstile)window.turnstile.reset(widgetId);}
@@ -100,4 +100,3 @@ $("feedback-logout").addEventListener("click",()=>{authToken="";$("feedback-logo
 if(!base||!publishable){status.textContent="留言服务尚未配置。";$("feedback-new").disabled=true;return;}
 captchaReady();load();
 })();
-
