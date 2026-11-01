@@ -71,3 +71,17 @@
 .feedback-admin summary {cursor:pointer}
 #feedback-admin-form {display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 #feedback-admin-form input {max-width:210px}
+.feedback-upload {margin:14px 0;padding:14px;background:#f8faff;border:1px dashed #cbd5e1;border-radius:10px;min-width:0}
+.feedback-upload label {margin:0 0 8px}
+.feedback-upload input[type=file] {padding:0;border:0;background:transparent;max-width:100%;font-size:13px}
+.feedback-upload input::file-selector-button {padding:7px 12px;margin-right:10px;border:1px solid #cbd5e1;border-radius:7px;background:white;cursor:pointer}
+#feedback-file-help {font-size:12px;color:var(--muted);font-weight:400;margin:8px 0 0}
+#feedback-file-status {font-size:12px;color:#8a4b1c;margin:6px 0 0}
+#feedback-selected-files,.feedback-attachments {list-style:none;padding:0;margin:10px 0 0;display:grid;gap:7px}
+.feedback-selected-file {display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0}
+.feedback-file-name {overflow-wrap:anywhere;min-width:0;font-size:12px}
+.feedback-selected-file .feedback-button {flex:none;padding:4px 9px;font-size:12px}
+.feedback-attachment {display:block;padding:8px 11px;border:1px solid #dce5f8;background:#f7faff;border-radius:7px;font-size:12px;overflow-wrap:anywhere;text-decoration:none}
+.feedback-attachment::before {content:'附件 · ';color:var(--muted)}
+.feedback-attachment:hover {background:#edf2fc;text-decoration:underline}
+
