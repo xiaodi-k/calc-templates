@@ -3,5 +3,5 @@
 window.FEEDBACK_CONFIG = Object.freeze({
   supabaseUrl: "https://gpxjzihfgoxtwgiegmkt.supabase.co",
   publishableKey: "sb_publishable_dpC9uIVoSqfPwNctFmZqMg_A6LIhfmt",
-  turnstileSiteKey: ""
+  turnstileSiteKey: "0x4AAAAAAFu3MFuoW9GkBXFM"
 });
