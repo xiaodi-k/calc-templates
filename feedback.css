@@ -47,6 +47,10 @@
 .feedback-reply-status.is-error { color: #a63528; }
 .feedback-thread-actions { border-top: 1px solid #edf0f5; padding-top: 13px; display: flex; gap: 8px 12px; align-items: center; flex-wrap: wrap; }
 .feedback-thread-actions small { color: var(--muted); font-size: 12px; }
+.feedback-delete-button { color: #a63528; border-color: #e7c8c4; background: #fff; }
+.feedback-delete-button:hover { color: #8a261c; background: #fff3f1; border-color: #cf9a93; }
+.feedback-delete-button[hidden] { display: none !important; }
+.feedback-message-meta .feedback-delete-button { margin-left: auto; padding: 4px 8px; font-size: 12px; }
 .feedback-footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px 20px; font-size: 12px; color: var(--muted); margin-top: 16px; }
 @media (max-width: 520px) {
   .feedback-heading { flex-wrap: wrap; gap: 0 12px; }
@@ -84,4 +88,5 @@
 .feedback-attachment {display:block;padding:8px 11px;border:1px solid #dce5f8;background:#f7faff;border-radius:7px;font-size:12px;overflow-wrap:anywhere;text-decoration:none}
 .feedback-attachment::before {content:'附件 · ';color:var(--muted)}
 .feedback-attachment:hover {background:#edf2fc;text-decoration:underline}
+
 

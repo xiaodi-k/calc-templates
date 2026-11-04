@@ -24,7 +24,12 @@ create index if not exists feedback_replies_thread on public.feedback_replies(th
 alter table public.feedback_threads enable row level security;
 alter table public.feedback_replies enable row level security;
 create policy "Read visible threads" on public.feedback_threads for select to anon, authenticated using (not hidden);
-create policy "Read visible replies" on public.feedback_replies for select to anon, authenticated using (not hidden);
+create policy "Read visible replies" on public.feedback_replies for select to anon, authenticated using (
+  not hidden and exists (
+    select 1 from public.feedback_threads t
+    where t.id = feedback_replies.thread_id and not t.hidden
+  )
+);
 -- No insert/update/delete policies: only trusted backend can write.
 
 -- Browser clients can only read rows allowed by RLS.
@@ -33,3 +38,5 @@ grant select on table public.feedback_threads, public.feedback_replies to anon, 
 -- feedback-submit needs to insert and read the saved row; bypassing RLS does not grant table privileges.
 revoke truncate, references, trigger on table public.feedback_threads, public.feedback_replies from service_role;
 grant select, insert on table public.feedback_threads, public.feedback_replies to service_role;
+grant update (hidden) on public.feedback_threads, public.feedback_replies to service_role;
+
