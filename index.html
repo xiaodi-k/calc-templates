@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>计算模板</title>
-  <link rel="stylesheet" href="feedback.css?v=20261104-admin-delete" />
+  <link rel="stylesheet" href="feedback.css?v=20261104-admin-trash" />
   <style>
     :root {
       --bg: #f6f7fb;
@@ -128,7 +128,14 @@
       <p class="feedback-status" id="feedback-status" role="status" aria-live="polite">正在加载留言…</p>
       <div id="feedback-list" aria-label="公开留言列表"></div>
       <div class="feedback-footer"><span>原 GitHub Issues 留言不会删除，仍可查看历史记录。</span><a href="https://github.com/xiaodi-k/calc-templates/issues" target="_blank" rel="noopener noreferrer">历史留言 / GitHub 管理 ↗</a></div>
-      <details class="feedback-admin"><summary>管理员登录</summary><form id="feedback-admin-form"><input id="feedback-admin-email" type="email" autocomplete="username" placeholder="管理员邮箱" required><input id="feedback-admin-password" type="password" autocomplete="current-password" placeholder="密码" required><button class="feedback-button" type="submit">登录</button><button class="feedback-button" id="feedback-logout" type="button" hidden>退出登录</button><span id="feedback-admin-status" role="status"></span></form></details>
+      <details class="feedback-admin"><summary>管理员登录</summary><form id="feedback-admin-form"><input id="feedback-admin-email" type="email" autocomplete="username" placeholder="管理员邮箱" required><input id="feedback-admin-password" type="password" autocomplete="current-password" placeholder="密码" required><button class="feedback-button" type="submit">登录</button><button class="feedback-button" id="feedback-logout" type="button" hidden>退出登录</button><button class="feedback-button" id="feedback-trash-open" type="button" hidden>回收站</button><span id="feedback-admin-status" role="status"></span></form></details>
+<section id="feedback-trash" class="feedback-trash" aria-labelledby="feedback-trash-title" hidden>
+<div class="feedback-trash-header"><h3 id="feedback-trash-title">回收站 <span>仅管理员</span></h3><button class="feedback-button" id="feedback-trash-refresh" type="button">刷新</button><button class="feedback-button" id="feedback-trash-close" type="button">关闭</button></div>
+<p class="feedback-trash-note">查看和恢复已删除的留言、回复及附件。恢复留言不会恢复单独删除过的回复。</p>
+<div class="feedback-trash-tabs" role="group" aria-label="回收站分类"><button class="feedback-button primary" id="feedback-trash-thread" type="button" aria-pressed="true">已删除留言</button><button class="feedback-button" id="feedback-trash-reply" type="button" aria-pressed="false">已删除回复</button></div>
+<p id="feedback-trash-status" role="status" aria-live="polite"></p><div id="feedback-trash-list"></div>
+<div class="feedback-trash-pages"><button class="feedback-button" id="feedback-trash-prev" type="button" disabled>上一页</button><button class="feedback-button" id="feedback-trash-next" type="button" disabled>下一页</button></div>
+</section>
     </section>
 
     <div class="rule">
@@ -263,7 +270,7 @@ render();
 </script>
 <script src="feedback-config.js"></script>
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
-<script src="feedback.js?v=20261104-admin-delete" defer></script>
+<script src="feedback.js?v=20261104-admin-trash" defer></script>
 </body>
 </html>
 
