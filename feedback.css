@@ -88,5 +88,18 @@
 .feedback-attachment {display:block;padding:8px 11px;border:1px solid #dce5f8;background:#f7faff;border-radius:7px;font-size:12px;overflow-wrap:anywhere;text-decoration:none}
 .feedback-attachment::before {content:'附件 · ';color:var(--muted)}
 .feedback-attachment:hover {background:#edf2fc;text-decoration:underline}
+.feedback-trash[hidden],#feedback-trash-open[hidden]{display:none!important}
+.feedback-trash{margin-top:18px;padding:18px;border:1px solid #cbd5e1;border-radius:12px;background:#f8faff;min-width:0}
+.feedback-trash-header,.feedback-trash-tabs,.feedback-trash-pages{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.feedback-trash-header h3{margin:0 auto 0 0;font-size:17px}
+.feedback-trash-header h3 span{margin-left:8px;font-size:11px;font-weight:400;color:#64748b}
+.feedback-trash-note,.feedback-trash-context,#feedback-trash-status{font-size:12px;line-height:1.7;color:#64748b;overflow-wrap:anywhere}
+.feedback-trash-tabs{margin-top:14px}.feedback-trash-pages{justify-content:flex-end;margin-top:14px}
+.feedback-trash-item{margin-top:12px;padding:16px;border:1px solid #e2e8f0;border-radius:10px;background:#fff;min-width:0}
+.feedback-trash-item .feedback-subject{margin:10px 0;font-size:15px}
+.feedback-trash-item .feedback-body{white-space:pre-wrap;overflow-wrap:anywhere}
+.feedback-trash-replies{padding-left:14px;border-left:2px solid #dbe6f9}
+.feedback-trash-item .feedback-attachment{text-align:left;max-width:100%}
+@media(max-width:600px){.feedback-trash{padding:12px}.feedback-trash-item{padding:12px}.feedback-trash-replies{padding-left:8px}.feedback-trash-header h3{flex-basis:100%;margin-bottom:4px}}
 
 

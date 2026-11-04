@@ -144,16 +144,16 @@ async function cleanup(paths: string[]) {
     if (!r.ok) throw new Error("Cleanup failed");
   } catch { console.error("feedback-attachments: unpublished upload cleanup failed"); }
 }
-async function download(req: Request) {
+async function download(req: Request, privateTarget?: Record<string, unknown>) {
   const url = new URL(req.url);
-  const kind = url.searchParams.get("kind"), message = url.searchParams.get("message") || "", attachment = url.searchParams.get("attachment") || "";
+  const kind = privateTarget ? String(privateTarget.kind) : url.searchParams.get("kind"), message = privateTarget ? String(privateTarget.message_id) : url.searchParams.get("message") || "", attachment = privateTarget ? String(privateTarget.attachment_id) : url.searchParams.get("attachment") || "";
   if (!["thread","reply"].includes(kind || "") || !uuid.test(message) || !uuid.test(attachment)) throw new ClientError("附件地址无效");
   const table = kind === "thread" ? "feedback_threads" : "feedback_replies";
-  const rows = await db(table + "?id=eq." + message + "&hidden=eq.false&select=attachments" + (kind === "reply" ? ",thread_id" : "") + "&limit=1", "GET");
+  const rows = await db(table + "?id=eq." + message + (privateTarget ? "" : "&hidden=eq.false") + "&select=attachments" + (kind === "reply" ? ",thread_id" : "") + "&limit=1", "GET");
   const row = rows?.[0];
   const item = row?.attachments?.find((file: Attachment) => file.id === attachment);
   if (!item) throw new ClientError("附件不存在或留言已隐藏", 404);
-  if (kind === "reply") {
+  if (kind === "reply" && !privateTarget) {
     const parent = await db("feedback_threads?id=eq." + row.thread_id + "&hidden=eq.false&select=id&limit=1", "GET");
     if (!parent?.length) throw new ClientError("附件不存在或留言已隐藏", 404);
   }
@@ -167,6 +167,49 @@ async function download(req: Request) {
     "Access-Control-Expose-Headers": "Content-Disposition"
   } });
 }
+const threadFields = "id,nickname,title,body,created_at,hidden,attachments";
+const replyFields = "id,thread_id,nickname,body,is_admin,created_at,hidden,attachments";
+function target(data: Record<string, unknown>) {
+  const kind = data.kind, id = field(data.message_id,40);
+  if (!["thread","reply"].includes(String(kind)) || !uuid.test(id)) throw new ClientError("请选择有效的留言或回复");
+  return {kind, id, table: kind === "thread" ? "feedback_threads" : "feedback_replies"};
+}
+// Only reached after a fresh server-side admin identity check. No public RLS changes.
+async function trashList(data: Record<string, unknown>) {
+  const offset = data.offset ?? 0, pageSize = 20;
+  if (!Number.isSafeInteger(offset) || Number(offset) < 0 || Number(offset) > 1000000) throw new ClientError("分页参数无效");
+  if (!["thread","reply"].includes(String(data.kind))) throw new ClientError("回收站分类无效");
+  const isThread = data.kind === "thread", table = isThread ? "feedback_threads" : "feedback_replies";
+  const rows = await db(table + "?hidden=eq.true&select=" + (isThread ? threadFields : replyFields) + "&order=created_at.desc,id.desc&offset=" + offset + "&limit=" + (pageSize+1), "GET");
+  const items = rows.slice(0,pageSize);
+  if (!isThread && items.length) {
+    const ids = [...new Set(items.map((r: {thread_id:string})=>r.thread_id))];
+    const parents = await db("feedback_threads?select=id,title,hidden&id=in.(" + ids.join(",") + ")", "GET");
+    for (const item of items) item.thread = parents.find((t: {id:string})=>t.id === item.thread_id) || null;
+  }
+  return json({items,has_more:rows.length>pageSize,next_offset:Number(offset)+items.length});
+}
+async function trashReplies(data: Record<string, unknown>) {
+  const {id,kind}=target(data), offset=data.offset??0, pageSize=20;
+  if(kind!=="thread"||!Number.isSafeInteger(offset)||Number(offset)<0||Number(offset)>1000000)throw new ClientError("分页参数无效");
+  const parent=await db("feedback_threads?id=eq."+id+"&hidden=eq.true&select=id&limit=1","GET");
+  if(!parent?.length)throw new ClientError("留言已恢复或不存在，请刷新回收站",404);
+  const rows=await db("feedback_replies?thread_id=eq."+id+"&select="+replyFields+"&order=created_at.asc,id.asc&offset="+offset+"&limit="+(pageSize+1),"GET");
+  return json({items:rows.slice(0,pageSize),has_more:rows.length>pageSize,next_offset:Number(offset)+Math.min(rows.length,pageSize)});
+}
+async function restore(data: Record<string, unknown>) {
+  const {id,kind,table}=target(data);
+  if(kind==="reply"){
+    const rows=await db(table+"?id=eq."+id+"&select=thread_id&limit=1","GET");
+    if(!rows?.length)throw new ClientError("回复不存在",404);
+    const parents=await db("feedback_threads?id=eq."+rows[0].thread_id+"&hidden=eq.false&select=id&limit=1","GET");
+    if(!parents?.length)throw new ClientError("请先恢复所属留言，再恢复这条回复",409);
+  }
+  // Change exactly one flag. Independently deleted replies stay hidden.
+  const rows=await db(table+"?id=eq."+id+"&select=id","PATCH",{hidden:false});
+  if(!rows?.length)throw new ClientError("留言或回复不存在",404);
+  return json({ok:true,id});
+}
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers });
   if (!["GET","POST"].includes(req.method)) return json({ error: "Method not allowed" }, 405);
@@ -176,10 +219,14 @@ Deno.serve(async (req: Request) => {
     if (req.method === "GET") return await download(req);
     const { data, files } = await parseSubmission(req);
     const action = data.action;
-    if (action === "admin_status" || action === "delete") {
+    if (["admin_status","delete","trash_list","trash_replies","restore","trash_attachment"].includes(String(action))) {
       if (!await verifiedAdmin(req)) throw new ClientError("请使用管理员账号重新登录", 403);
       if (files.length) throw new ClientError("管理操作不能包含附件");
       if (action === "admin_status") return json({ok:true,is_admin:true});
+      if (action === "trash_list") return await trashList(data);
+      if (action === "trash_replies") return await trashReplies(data);
+      if (action === "restore") return await restore(data);
+      if (action === "trash_attachment") return await download(req,data);
       const kind = data.kind, messageId = field(data.message_id, 40);
       if (!["thread", "reply"].includes(String(kind)) || !uuid.test(messageId))
         throw new ClientError("请选择有效的留言或回复");
