@@ -176,6 +176,20 @@ Deno.serve(async (req: Request) => {
     if (req.method === "GET") return await download(req);
     const { data, files } = await parseSubmission(req);
     const action = data.action;
+    if (action === "admin_status" || action === "delete") {
+      if (!await verifiedAdmin(req)) throw new ClientError("请使用管理员账号重新登录", 403);
+      if (files.length) throw new ClientError("管理操作不能包含附件");
+      if (action === "admin_status") return json({ok:true,is_admin:true});
+      const kind = data.kind, messageId = field(data.message_id, 40);
+      if (!["thread", "reply"].includes(String(kind)) || !uuid.test(messageId))
+        throw new ClientError("请选择有效的留言或回复");
+      const table = kind === "thread" ? "feedback_threads" : "feedback_replies";
+      // One atomic update. Reply RLS also checks the parent, including replies
+      // submitted concurrently with deleting a thread. Repeating this is safe.
+      const rows = await db(table + "?id=eq." + messageId + "&select=id", "PATCH", {hidden:true});
+      if (!rows?.length) throw new ClientError("留言或回复不存在", 404);
+      return json({ok:true,id:messageId});
+    }
     if (action !== "thread" && action !== "reply") throw new ClientError("无效操作");
     const nickname = field(data.nickname,40) || "匿名用户", title = field(data.title,120), body = field(data.body,4000), threadId = field(data.thread_id,40);
     if (nickname.length>40 || body.length<2 || body.length>4000 || action==="thread"&&(title.length<2||title.length>120) || action==="reply"&&!uuid.test(threadId))
@@ -232,4 +246,5 @@ Deno.serve(async (req: Request) => {
     return json({error:"提交或下载失败，请稍后重试"},500);
   }
 });
+
 
