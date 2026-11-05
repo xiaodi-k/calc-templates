@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>压弯构件计算 · Demo</title>
+<link rel="stylesheet" href="steel-beam-column-demo.css?v=1.0.0">
+<script src="steel-beam-column-core.js?v=1.0.0" defer></script>
+<script src="steel-beam-column-demo.js?v=1.0.0" defer></script>
+</head>
+<body>
+<div class="page">
+  <header class="topbar"><a href="developing.html">← developing</a><h1>压弯构件计算</h1><span class="badge">DEMO 02</span><span class="spacer"></span><button id="print" class="quiet" type="button">打印计算书</button></header>
+  <p class="intro">钢构件在轴压力与双向弯矩共同作用下的截面强度和稳定验算。<span>GB 50017-2017 · v1.0.0 · 2026-11-05</span></p>
+  <main>
+    <aside class="inputs" aria-label="计算输入">
+      <form id="inputs" novalidate>
+        <section class="card"><h2>截面与材料 <span>INPUT 01</span></h2><div class="body">
+          <div class="section-options" role="group" aria-label="截面类型">
+            <label><input type="radio" name="section" value="chs"><span><svg viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="12"/><circle cx="18" cy="18" r="8"/></svg>圆管</span></label>
+            <label><input type="radio" name="section" value="shs"><span><svg viewBox="0 0 36 36" aria-hidden="true"><path d="M6 6H30V30H6ZM10 10V26H26V10Z"/></svg>方管</span></label>
+            <label><input type="radio" name="section" value="i" checked><span><svg viewBox="0 0 36 36" aria-hidden="true"><path d="M6 6H30V11H21V25H30V30H6V25H15V11H6Z"/></svg>工字钢</span></label>
+          </div>
+          <div id="sectionStage" class="section-stage"><svg id="sectionSvg" viewBox="0 0 360 245" role="img" aria-label="截面与主轴示意图"></svg><div id="dimensionInputs"></div></div>
+          <div class="grid2"><label class="field">材料<select id="grade"><option>Q235</option><option>Q345</option><option>Q390</option><option>Q420</option><option>Q460</option></select></label><label class="field">制造工艺<select id="process"><option value="rolled">轧制</option><option value="welded-flame">焊接 · 焰切边</option><option value="welded-cut">焊接 · 轧制/剪切边</option></select></label></div>
+          <p id="materialNote" class="hint"></p>
+          <p class="hint">按输入尺寸计算毛截面；工字形采用平行翼缘，方管与工字形按直角、无孔截面计算，不计圆角。</p>
+        </div></section>
+        <section class="card"><h2>内力与计算长度 <span>INPUT 02</span></h2><div class="body">
+          <label class="field">轴压力设计值 N<div class="input-unit"><input id="N" type="number" value="100" min="0" step="any"><span>kN</span></div></label>
+          <div class="grid2"><label class="field">弯矩设计值 Mx<div class="input-unit"><input id="Mx" type="number" value="50" step="any"><span>kN·m</span></div></label><label class="field">弯矩设计值 My<div class="input-unit"><input id="My" type="number" value="50" step="any"><span>kN·m</span></div></label></div>
+          <div class="grid2"><label class="field">绕 x 轴计算长度 Lx<div class="input-unit"><input id="Lx" type="number" value="2" min="0.01" step="any"><span>m</span></div></label><label class="field">绕 y 轴计算长度 Ly<div class="input-unit"><input id="Ly" type="number" value="2" min="0.01" step="any"><span>m</span></div></label></div>
+          <p class="hint">轴压取正；弯矩输入设计值，按绝对值包络验算，不再乘荷载分项系数。Lx、Ly 已包含计算长度系数。</p>
+          <details id="advanced"><summary>高级选项 · 等效弯矩系数</summary><div id="betaInputs" class="grid2">
+            <label class="field">绕 x 轴 · 平面内 βmx<input id="bmx" type="number" value="1" min="0.1" max="2" step="0.05"></label>
+            <label class="field">绕 x 轴 · 平面外 βtx<input id="btx" type="number" value="1" min="0.1" max="2" step="0.05"></label>
+            <label class="field">绕 y 轴 · 平面内 βmy<input id="bmy" type="number" value="1" min="0.1" max="2" step="0.05"></label>
+            <label class="field">绕 y 轴 · 平面外 βty<input id="bty" type="number" value="1" min="0.1" max="2" step="0.05"></label>
+          </div><p id="betaNote" class="hint">默认均匀弯矩，系数均为 1；其他弯矩分布按 8.2.1 核定。</p></details>
+          <button class="primary" type="submit">更新计算</button><button id="reset" class="quiet" type="button">恢复初始值</button>
+        </div></section>
+      </form>
+      <section class="scope"><h2>本 Demo 的计算范围</h2><p>等截面、双轴对称、非悬臂钢构件，静力设计。工字形的 Ly 同时作为受压翼缘侧向支承间距，端部抗扭约束、翘曲自由。</p><p>圆管采用同号等端弯矩（β = 1），适用于杆段内无很大横向力或集中弯矩的情况。方管按焊接箱形；不覆盖冷弯薄壁型钢、斜翼缘普通工字钢、孔洞、疲劳、扭矩和连接。</p><p>演示结果用于核对方法，尚未作为正式项目设计模板。</p></section>
+    </aside>
+    <div class="outputs" aria-label="计算输出">
+      <section class="card conclusion"><h2>验算结论 <span>RESULT</span></h2><div class="body"><div id="status" role="status" aria-live="polite"></div><div id="checks" class="checks"></div><div id="warnings"></div></div></section>
+      <div id="report"></div>
+    </div>
+  </main>
+  <footer>压弯构件计算 · Demo v1.0.0 · <a href="developing.html">返回演示目录</a><span>2026-11-05</span></footer>
+</div>
+</body></html>
