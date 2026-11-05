@@ -260,3 +260,4 @@ function tex2html(src) {
   $('print').addEventListener('click',()=>window.print());
   buildOptions();dimensionInputs();update();
 })();
+

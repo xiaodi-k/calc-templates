@@ -68,4 +68,3 @@ for(const s of [source,fs.readFileSync(path.join(root,'steel-beam-column-core.js
 assert.match(fs.readFileSync(path.join(root,'developing.html'),'utf8'),/href="steel-beam-column-demo.html"/);
 assert.match(fs.readFileSync(path.join(root,'index.html'),'utf8'),/2 个 demo/);
 console.log('PASS DOM contracts: 13 section modes and dimensions, pending stability never passes, invalid/stale-result clearing, per-section state, decimal typing, rectangular box, hidden coefficients, reset, print, local links. Browser/layout unverified.');
-
