@@ -1,0 +1,42 @@
+{
+  "method": "Original sinh/cosh Levy basis, Decimal 200-digit evaluation, odd modes 1..79; independent of production exponential basis",
+  "nu": 0.3,
+  "samples": [
+    {
+      "ratio": 0.1,
+      "alpha": 0.0032498936160253043,
+      "x": 0.484375,
+      "y": 0.10000000000000002
+    },
+    {
+      "ratio": 0.3282051282051282,
+      "alpha": 0.03191236650126814,
+      "x": 0.5,
+      "y": 0.3282051282051282
+    },
+    {
+      "ratio": 0.5,
+      "alpha": 0.0601584148331987,
+      "x": 0.5,
+      "y": 0.5
+    },
+    {
+      "ratio": 0.79,
+      "alpha": 0.09631595599438962,
+      "x": 0.5,
+      "y": 0.79
+    },
+    {
+      "ratio": 1.0,
+      "alpha": 0.11170041481393449,
+      "x": 0.5,
+      "y": 1.0
+    },
+    {
+      "ratio": 1.2,
+      "alpha": 0.12051750564365603,
+      "x": 0.5,
+      "y": 1.2
+    }
+  ]
+}
