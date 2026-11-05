@@ -1,0 +1,5 @@
+KaTeX 0.19.1
+https://katex.org/docs/api
+https://registry.npmjs.org/katex/-/katex-0.19.1.tgz
+Archive SHA256: 24da5a599eb2fcede2e270b99a6ff48bca816beecc95feeb84e8cccbd1bb34fd
+CSS font URLs converted to embedded WOFF2 data. Other sources unmodified.
