@@ -34,6 +34,13 @@
       b=h=requireValue(p.B,'方管边长 B（mm）',10,3000);const t=requireValue(p.t,'壁厚 t（mm）',1,100);
       if (2*t >= b) throw new Error('方管壁厚必须小于边长的一半');
       A=b*b-(b-2*t)**2;Ix=Iy=(b**4-(b-2*t)**4)/12;tmax=t;
+    } else if (p.type === 'box') {
+      h=requireValue(p.H,'箱型高度 H（mm）',10,3000);b=requireValue(p.B,'箱型宽度 B（mm）',10,3000);
+      const tf=requireValue(p.tf,'翼缘厚 tf（mm）',1,100),tw=requireValue(p.tw,'腹板厚 tw（mm）',1,100);
+      if(2*tf>=h || 2*tw>=b)throw new Error('箱型要求 2tf < H、2tw < B');
+      A=b*h-(b-2*tw)*(h-2*tf);
+      Ix=(b*h**3-(b-2*tw)*(h-2*tf)**3)/12;
+      Iy=(h*b**3-(h-2*tf)*(b-2*tw)**3)/12;tmax=Math.max(tf,tw);
     } else if (p.type === 'i') {
       h=requireValue(p.H,'截面高度 H（mm）',20,3000);b=requireValue(p.B,'翼缘宽 B（mm）',10,2000);
       const tf=requireValue(p.tf,'翼缘厚 tf（mm）',1,100),tw=requireValue(p.tw,'腹板厚 tw（mm）',1,100);
@@ -41,7 +48,7 @@
       A=2*b*tf+(h-2*tf)*tw;Ix=(b*h**3-(b-tw)*(h-2*tf)**3)/12;
       Iy=(2*tf*b**3+(h-2*tf)*tw**3)/12;tmax=Math.max(tf,tw);
       if (Ix < Iy) throw new Error('请将工字形截面的强轴布置为 x 轴（Ix ≥ Iy）');
-    } else throw new Error('请选择圆管、方管或工字钢');
+    } else throw new Error('此截面的稳定计算待补充');
     return {A,Ix,Iy,Wx:2*Ix/h,Wy:2*Iy/b,ix:Math.sqrt(Ix/A),iy:Math.sqrt(Iy/A),h,b,tmax};
   }
   function material(grade,t,seamless=false) {
@@ -64,6 +71,8 @@
   function curves(p,s,m) {
     if (p.type==='chs') return p.process==='seamless'?['a','a']:['b','b'];
     if (p.type==='shs') return (p.B-2*p.t)/p.t>20?['b','b']:['c','c'];
+    // Table 7.2.1: where plate ratios straddle 20, use the adverse c curve.
+    if (p.type==='box') return Math.min((p.B-2*p.tw)/p.tf,(p.H-2*p.tf)/p.tw)>20?['b','b']:['c','c'];
     if (p.process==='rolled') {
       if(s.tmax>=80)return ['c','d'];
       if(s.tmax>=40)return ['b','c'];
@@ -89,6 +98,10 @@
     } else if (p.type==='shs') {
       // Conservative uniform compression limits on all walls for biaxial loading.
       row('壁板 b₀/t',(p.B-2*p.t)/p.t,(N===0?[25,32,37,42]:[30,35,40,45]).map(x=>x*e));
+    } else if (p.type==='box') {
+      const limits=(N===0?[25,32,37,42]:[30,35,40,45]).map(x=>x*e);
+      row('翼缘 b₀/tf',(p.B-2*p.tw)/p.tf,limits);
+      row('腹板 h₀/tw',(p.H-2*p.tf)/p.tw,limits);
     } else row('圆管 D/t',p.D/p.t,[50,70,90,100].map(x=>x*e*e));
     const level=Math.max(...rows.map(r=>r.level));
     return {rows,alpha,level,label:level===5?'超过 S4':'S'+level,ok:level<=3,utilization:Math.max(...rows.map(r=>r.utilization))};
@@ -123,7 +136,7 @@
     const ltb=lateral(p,s,m,by.lambda);
     const NEx=Math.PI**2*E*s.A/bx.lambda**2,NEy=Math.PI**2*E*s.A/by.lambda**2;
     const Npx=NEx/1.1,Npy=NEy/1.1,dx=1-.8*N/Npx,dy=1-.8*N/Npy;
-    const eta=p.type==='shs'?.7:1;
+    const eta=['shs','box'].includes(p.type)?.7:1;
     const strength=N/s.A+(p.type==='chs'?Math.hypot(Mx,My)/(gx*s.Wx):Mx/(gx*s.Wx)+My/(gy*s.Wy));
     const inRange=dx>0&&dy>0&&N<Math.min(NEx,NEy);
     let sx,sy;

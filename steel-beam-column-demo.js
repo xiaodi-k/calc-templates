@@ -122,66 +122,84 @@ function tex2html(src) {
 (function () {
   'use strict';
   const $=id=>document.getElementById(id),T=String.raw;
-  const defaults={chs:{D:168,t:8},shs:{B:150,t:8},i:{H:100,B:100,tf:8,tw:6}};
-  let type='i',dims=JSON.parse(JSON.stringify(defaults)),processes={i:'rolled',chs:'seamless',shs:'welded'};
+  const sections=MullionSections.sections;
+  const defaults=Object.fromEntries(Object.entries(sections).map(([k,s])=>[k,Object.fromEntries(s.dims.map(d=>[d[0],d[2]]))]));
+  const initialProcesses={ibeam:'rolled',tube:'seamless',box:'welded'};
+  let selected='ibeam',type='i',dims=structuredClone(defaults),raw=structuredClone(defaults),processes={...initialProcesses};
+  const lastValid=structuredClone(defaults);
+  const coreType={tube:'chs',box:'box',ibeam:'i'};
   const fmt=(n,d=3)=>Number.isFinite(n)?n.toLocaleString('en-US',{maximumFractionDigits:d,minimumFractionDigits:d}):'—';
   const f=n=>fmt(n,3),F=s=>'<div class="formula">'+tex2html(s)+'</div>';
   const prop=(name,value,unit='')=>'<div class="prop"><span>'+name+'</span><strong>'+value+'</strong><small>'+unit+'</small></div>';
-  const names={chs:'圆管',shs:'方管',i:'工字钢'};
+  function buildOptions() {
+    $('sec').innerHTML=Object.entries(sections).map(([k,s])=>{
+      const supported=Boolean(coreType[k]);
+      const state=supported?'supported':'pending';
+      const description=supported?'可进行压弯验算':'待开发，仅可查看截面参数，暂不支持压弯验算';
+      return '<label class="section-option '+state+'" title="'+s.name+' · '+description+'">'+
+        '<input type="radio" name="section-type" value="'+k+'" aria-label="'+s.name+'，'+description+'"'+(selected===k?' checked':'')+'>'+
+        '<span class="section-icon">'+MullionSections.icon(k)+'</span>'+
+        '<span class="section-state" aria-hidden="true">'+(supported?'可验算':'待开发')+'</span></label>';
+    }).join('');
+  }
   function dimensionInputs() {
-    const definitions=type==='i'?[['B','B','top'],['H','H','left'],['tw','tw','bottom-left'],['tf','tf','bottom-right']]:type==='chs'?[['D','D','top'],['t','t','bottom']]:[['B','B','top'],['t','t','bottom']];
-    $('dimensionInputs').innerHTML=definitions.map(([key,label,position])=>'<label class="dimension '+position+'">'+label+'<input data-dim="'+key+'" type="number" step="any" min="1" value="'+dims[type][key]+'" aria-label="'+names[type]+' '+label+'（mm）"><small>mm</small></label>').join('');
-    const options=type==='i'?[['rolled','轧制'],['welded-flame','焊接 · 焰切边'],['welded-cut','焊接 · 轧制/剪切边']]:type==='chs'?[['seamless','热轧无缝'],['welded','焊接圆管']]:[['welded','焊接箱形']];
+    type=coreType[selected]||null;
+    $('sectionAvailability').className='section-availability '+(type?'supported':'pending');
+    $('sectionAvailability').textContent=sections[selected].name+(type?' · 支持强度、整体稳定及局部稳定验算':' · 待开发，目前仅支持截面参数计算');
+    $('calculate').textContent=type?'更新计算':'更新截面参数';
+    const options=type==='i'?[['rolled','轧制'],['welded-flame','焊接 · 焰切边'],['welded-cut','焊接 · 轧制/剪切边']]:type==='chs'?[['seamless','热轧无缝'],['welded','焊接圆管']]:type==='box'?[['welded','焊接箱形']]:[['pending','稳定计算待补充']];
     $('process').innerHTML=options.map(([v,t])=>'<option value="'+v+'">'+t+'</option>').join('');
-    $('process').value=processes[type];
-    $('betaInputs').hidden=type==='chs';
-    $('betaNote').textContent=type==='chs'?'圆管按 8.2.4 取同号等端弯矩，βx = βy = 1，β = 1。此工况不使用工字形的四个系数。':'默认均匀弯矩，系数均为 1；其他弯矩分布按 8.2.1 核定。';
+    $('process').value=processes[selected]||'pending';$('process').disabled=!type;
+    $('betaInputs').hidden=type==='chs'||!type;
+    $('betaNote').textContent=!type?'此截面的稳定计算待补充。':type==='chs'?'圆管按 8.2.4 取同号等端弯矩，βx = βy = 1，β = 1。':'默认均匀弯矩，系数均为 1；其他弯矩分布按 8.2.1 核定。';
+    $('secHint').textContent=sections[selected].name+' · 尺寸单位 mm · x 轴水平，y 轴竖直。改完按回车或移开焦点生效。';
     drawSection();
   }
   function drawSection() {
-    const d=dims[type],cx=200,cy=126;
-    let shape='';
-    const line=(x1,y1,x2,y2)=>`<path d="M${x1} ${y1}L${x2} ${y2}"/>`;
-    if(Object.values(d).some(v=>!Number.isFinite(v)||v<=0)) { $('sectionSvg').innerHTML='';return; }
-    if(type==='chs') {
-      const r=66,ri=Math.max(1,r*(1-2*d.t/d.D));
-      shape=`<path d="M${cx+r} ${cy}a${r} ${r} 0 1 0 ${-2*r} 0a${r} ${r} 0 1 0 ${2*r} 0 M${cx+ri} ${cy}a${ri} ${ri} 0 1 0 ${-2*ri} 0a${ri} ${ri} 0 1 0 ${2*ri} 0" fill-rule="evenodd"/>`;
-    } else if(type==='shs') {
-      const b=128,t=Math.min(63,b*d.t/d.B),x=cx-b/2,y=cy-b/2;
-      shape=`<path d="M${x} ${y}h${b}v${b}h${-b}z M${x+t} ${y+t}h${b-2*t}v${b-2*t}h${-b+2*t}z" fill-rule="evenodd"/>`;
-    } else {
-      const scale=Math.min(140/d.H,150/d.B),h=d.H*scale,b=d.B*scale,tf=Math.min(h/2-1,d.tf*scale),tw=Math.min(b-1,d.tw*scale),x=cx-b/2,y=cy-h/2;
-      shape=`<path d="M${x} ${y}h${b}v${tf}h${-(b-tw)/2}v${h-2*tf}h${(b-tw)/2}v${tf}h${-b}v${-tf}h${(b-tw)/2}v${-(h-2*tf)}h${-(b-tw)/2}z"/>`;
-    }
-    $('sectionSvg').innerHTML='<defs><marker id="axisArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#8c9db2"/></marker></defs><g fill="#d4e2f8" stroke="#5279aa" stroke-width="1.5">'+shape+'</g><g fill="none" stroke="#91a4bc" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#axisArrow)">'+line(103,cy,309,cy)+line(cx,204,cx,43)+'</g><g fill="#7187a1" font-size="13" font-family="Georgia,serif"><text x="316" y="131">x</text><text x="208" y="48">y</text></g><circle cx="200" cy="126" r="2.5" fill="#5279aa"/>';
+    try{MullionSections.validate(selected,dims[selected]);lastValid[selected]={...dims[selected]};}catch(e){/* Keep editable fields visible while invalid. */}
+    $('secPrev').innerHTML=MullionSections.draw(selected,lastValid[selected],raw[selected]);
   }
   function read() {
-    const p={type,...dims[type],grade:$('grade').value,process:$('process').value};
+    const p={type,...dims[selected],grade:$('grade').value,process:$('process').value};
     for(const key of ['N','Mx','My','Lx','Ly','bmx','bmy','btx','bty'])p[key]=$(key).value.trim()===''?NaN:Number($(key).value);
-    // Hidden I/box coefficients never affect the circular tube branch.
     if(type==='chs')p.bmx=p.bmy=p.btx=p.bty=1;
     return p;
   }
+  function materialInfo(m) {
+    $('matInfo').innerHTML=prop('f',m?fmt(m.f,0):'—','MPa')+prop('fy',m?fmt(m.fy,0):'—','MPa')+prop('E','206,000','MPa');
+  }
+  function renderPending(s) {
+    $('status').className='';
+    $('status').innerHTML='<div class="statusline pending">截面参数已计算 · 稳定计算待补充</div>';
+    $('checks').innerHTML='';
+    $('warnings').innerHTML='<div class="warning">'+sections[selected].name+'的整体稳定及局部稳定方法尚未接入。本页不输出此截面的承载力利用率或满足结论。</div>';
+    let m=null;
+    try{m=SteelBeamColumn.material($('grade').value,s.tc);}catch(e){/* No extrapolation of strength bands. */}
+    materialInfo(m);
+    $('materialNote').textContent=m?'当前仅显示材料与截面参数；稳定分类和制造工艺待补充。':'控制厚度超出当前强度表范围，仅显示截面参数。';
+    $('report').innerHTML='<section class="card"><h2>截面参数 <span>SECTION</span></h2><div class="body"><p class="report-inputs"><strong>'+sections[selected].name+'</strong> · '+Object.entries(dims[selected]).map(([k,v])=>k+' = '+v+' mm').join('，')+'</p><div class="props">'+prop('A',fmt(s.A,2),'mm²')+prop('Ix',fmt(s.Ix/1e4,2),'cm⁴')+prop('Iy',fmt(s.Iy/1e4,2),'cm⁴')+prop('Wx',fmt(s.Wx/1e3,2),'cm³')+prop('Wy',fmt(s.Wy/1e3,2),'cm³')+prop('ix',f(s.ix),'mm')+prop('iy',f(s.iy),'mm')+'</div><p class="section-note">采用立柱模板相同的截面几何积分；圆形采用解析式。惯性矩绕形心轴计算，截面模量按较远外缘取值。</p></div></section>';
+  }
   function render(r) {
     const {p,s,m,bx,by,local,ltb}=r;
+    materialInfo(m);
     $('materialNote').textContent=`f = ${m.f} MPa · fy = ${m.fy} MPa · E = 206,000 MPa（${m.source}，控制厚度 ${s.tmax} mm）`;
     const status=r.passing?(r.needsReview?'承载力验算满足 · 长细比待复核':'本 Demo 范围内满足'):'本工况不满足';
     $('status').innerHTML='<div class="statusline '+(r.passing&&!r.needsReview?'ok':'ng')+'">'+status+'<small>利用率限值 1.00</small></div>';
     $('checks').innerHTML=r.checks.map(c=>'<div class="check '+(c.value>1?'failed':'')+'"><div class="check-head"><span>'+c.name+'</span><strong>'+(Number.isFinite(c.value)?fmt(c.value,3):'超出范围')+'</strong></div><div class="track"><div class="fill" style="width:'+Math.min(100,c.value*100)+'%"></div></div><small>'+(c.id==='local'?local.label+' · 按 S3 限值':Number.isFinite(c.stress)?fmt(c.stress,2)+' / '+m.f+' MPa':'二阶放大失效')+'</small></div>').join('');
     $('warnings').innerHTML=r.warnings.map(w=>'<div class="warning">'+w+'</div>').join('');
-    const dimsLabel=Object.entries(dims[type]).map(([k,v])=>k+' = '+v+' mm').join('，');
-    let html='<section class="card"><h2>截面与工况 <span>SECTION</span></h2><div class="body"><div class="report-inputs"><strong>'+names[type]+' · '+m.grade+'</strong> · '+$('process').selectedOptions[0].textContent+'<br>'+dimsLabel+'<br>N = '+p.N+' kN，Mx = '+p.Mx+' kN·m，My = '+p.My+' kN·m；Lx = '+p.Lx+' m，Ly = '+p.Ly+' m</div><div class="props" style="margin-top:17px">'+prop('A',fmt(s.A,2),'mm²')+prop('Ix',fmt(s.Ix/1e4,2),'cm⁴')+prop('Iy',fmt(s.Iy/1e4,2),'cm⁴')+prop('f',fmt(m.f,0),'MPa')+prop('Wx',fmt(s.Wx/1e3,2),'cm³')+prop('Wy',fmt(s.Wy/1e3,2),'cm³')+prop('ix',f(s.ix),'mm')+prop('iy',f(s.iy),'mm')+'</div><p class="section-note">几何净截面 = 毛截面；工字形、方管不计圆角，截面性能不等同于含圆角的厂家型材表。</p></div></section>';
+    const dimsLabel=Object.entries(dims[selected]).map(([k,v])=>k+' = '+v+' mm').join('，');
+    let html='<section class="card"><h2>截面与工况 <span>SECTION</span></h2><div class="body"><div class="report-inputs"><strong>'+sections[selected].name+' · '+m.grade+'</strong> · '+$('process').selectedOptions[0].textContent+'<br>'+dimsLabel+'<br>N = '+p.N+' kN，Mx = '+p.Mx+' kN·m，My = '+p.My+' kN·m；Lx = '+p.Lx+' m，Ly = '+p.Ly+' m</div><div class="props" style="margin-top:17px">'+prop('A',fmt(s.A,2),'mm²')+prop('Ix',fmt(s.Ix/1e4,2),'cm⁴')+prop('Iy',fmt(s.Iy/1e4,2),'cm⁴')+prop('f',fmt(m.f,0),'MPa')+prop('Wx',fmt(s.Wx/1e3,2),'cm³')+prop('Wy',fmt(s.Wy/1e3,2),'cm³')+prop('ix',f(s.ix),'mm')+prop('iy',f(s.iy),'mm')+'</div><p class="section-note">几何净截面 = 毛截面；工字形、箱型不计圆角，截面性能不等同于含圆角的厂家型材表。</p></div></section>';
     const step=(n,title,ref,content)=>'<section class="step"><h3>'+n+' · '+title+'<span class="ref">'+ref+'</span></h3>'+content+'</section>';
     html+='<section class="card report-card"><h2>计算过程 <span>CALCULATION</span></h2><div class="body">';
     html+=step('01','截面参数与材料','GB 50017-2017 '+m.source,
-      F(type==='chs'?T`A=\frac{\pi}{4}[D^2-(D-2t)^2]`:type==='shs'?T`A=B^2-(B-2t)^2`:T`A=2Bt_f+(H-2t_f)t_w`)+
+      F(type==='chs'?T`A=\frac{\pi}{4}[D^2-(D-2t)^2]`:type==='box'?T`A=BH-(B-2t_w)(H-2t_f)`:T`A=2Bt_f+(H-2t_f)t_w`)+
       F(T`i_x=\sqrt{\frac{I_x}{A}}=${f(s.ix)}\ \mathrm{mm},\quad i_y=${f(s.iy)}\ \mathrm{mm}`)+
       F(T`f=${m.f}\ \mathrm{MPa},\quad f_y=${m.fy}\ \mathrm{MPa},\quad \varepsilon_k=\sqrt{\frac{235}{${m.nominal}}}=${f(m.epsilon)}`));
     const table='<div class="table-wrap"><table><thead><tr><th>板件</th><th>宽厚比</th><th>S3 限值</th><th>等级</th></tr></thead><tbody>'+local.rows.map(q=>'<tr><td>'+q.name+'</td><td>'+f(q.ratio)+'</td><td>'+f(q.limit)+'</td><td class="'+(q.level<=3?'oktext':'ngtext')+'">'+(q.level<5?'S'+q.level:'超过 S4')+'</td></tr>').join('')+'</tbody></table></div>';
     html+=step('02','板件等级与塑性发展系数','表 3.5.1、8.1.1、表 8.1.1',table+
       (type==='i'?F(T`\alpha_0=\frac{\sigma_{max}-\sigma_{min}}{\sigma_{max}}=${f(local.alpha)}`):'')+
       F(T`\gamma_x=${f(r.gx)},\quad\gamma_y=${f(r.gy)}`)+
-      '<p>'+(!local.ok?'超过 S3，塑性发展系数取 1.0；承载力数值仅作诊断，局部稳定未通过。':type==='shs'?'方管各壁板采用均匀受压限值，未利用弯曲应力梯度放宽。':'截面满足 S3，采用相应截面塑性发展系数。')+'</p>');
+      '<p>'+(!local.ok?'超过 S3，塑性发展系数取 1.0；承载力数值仅作诊断，局部稳定未通过。':type==='box'?'箱型各壁板采用均匀受压限值，未利用弯曲应力梯度放宽。':'截面满足 S3，采用相应截面塑性发展系数。')+'</p>');
     const bucklingRow=(axis,v)=>F(T`\lambda_${axis}=\frac{L_${axis}}{i_${axis}}=${f(v.lambda)},\quad \lambda_{n${axis}}=\frac{\lambda_${axis}}{\pi}\sqrt{\frac{f_y}{E}}=${f(v.ln)},\quad\varphi_${axis}=${f(v.phi)}`)+
       '<p>绕 '+axis+' 轴：'+v.curve+' 类；α₁ = '+v.coefficients[0]+'，α₂ = '+v.coefficients[1]+'，α₃ = '+v.coefficients[2]+'。</p>';
     html+=step('03','双向受压稳定系数','7.2.1、7.2.2、表 7.2.1-1 / -2、附录 D.0.5',
@@ -193,7 +211,7 @@ function tex2html(src) {
         F(T`\varphi_{b0}=\frac{4320}{\lambda_y^2}\frac{AH}{W_x}\sqrt{1+(\frac{\lambda_y t_f}{4.4H})^2}\varepsilon_k^2=${f(ltb.raw)}`)+
         F(T`\varphi_{bx}=${f(ltb.phi)}`))+
         F(T`\varphi_{by}=1.0,\quad\eta=1.0`)+ '<p>'+ltb.method+'。Ly 同时作为侧向支承间距；βb = 1、ηb = 0。</p>':
-        F(T`\varphi_{bx}=\varphi_{by}=1.0`)+(type==='shs'?F(T`\eta=0.7`):'<p>圆管的整体稳定采用 8.2.4，不套用工字形的双向线性叠加式。</p>'));
+        F(T`\varphi_{bx}=\varphi_{by}=1.0`)+(type==='box'?F(T`\eta=0.7`):'<p>圆管的整体稳定采用 8.2.4，不套用工字形的双向线性叠加式。</p>'));
     html+=step('05','欧拉力与二阶放大参数','8.2.1-2、8.2.5-3；圆管另见 8.2.4-6',
       F(T`N_{Ex}=\frac{\pi^2EA}{\lambda_x^2}=${f(r.NEx/1000)}\ \mathrm{kN},\quad N'_{Ex}=\frac{N_{Ex}}{1.1}=${f(r.Npx/1000)}\ \mathrm{kN}`)+
       F(T`N_{Ey}=${f(r.NEy/1000)}\ \mathrm{kN},\quad N'_{Ey}=${f(r.Npy/1000)}\ \mathrm{kN}`)+
@@ -216,29 +234,41 @@ function tex2html(src) {
     html+='</div></section>';
     $('report').innerHTML=html;
   }
-  function update() {
-    drawSection();
-    try {render(SteelBeamColumn.calculate(read()));}
-    catch(e) {
+  function update(redraw=false) {
+    if(redraw)drawSection();
+    try {
+      const geometry=MullionSections.properties(selected,dims[selected]);
+      if(type)render(SteelBeamColumn.calculate(read()));else renderPending(geometry);
+    } catch(e) {
       $('status').textContent=e.message;$('status').className='error';
-      $('checks').innerHTML='';$('warnings').innerHTML='';$('report').innerHTML='';$('materialNote').textContent='请先补全有效输入。';return;
+      $('checks').innerHTML='';$('warnings').innerHTML='';$('report').innerHTML='';
+      materialInfo(null);$('materialNote').textContent='请先补全有效输入。';return;
     }
     $('status').className='';
   }
-  $('inputs').addEventListener('submit',e=>{e.preventDefault();update();});
+  function acceptDimension(target) {
+    const key=target.dataset.dim;
+    raw[selected][key]=target.value;
+    dims[selected][key]=target.value.trim()===''?NaN:Number(target.value);
+  }
+  $('inputs').addEventListener('submit',e=>{e.preventDefault();update(true);});
   $('inputs').addEventListener('input',e=>{
-    if(e.target.matches('[data-dim]'))dims[type][e.target.dataset.dim]=e.target.value.trim()===''?NaN:Number(e.target.value);
+    if(e.target.matches('[data-dim]'))acceptDimension(e.target);
     if(e.target.type!=='radio')update();
   });
   $('inputs').addEventListener('change',e=>{
-    if(e.target.name==='section') {processes[type]=$('process').value;type=e.target.value;dimensionInputs();}
-    if(e.target.id==='process')processes[type]=e.target.value;
-    update();
+    if(e.target.name==='section-type') {processes[selected]=$('process').value;selected=e.target.value;dimensionInputs();}
+    if(e.target.id==='process')processes[selected]=$('process').value;
+    if(e.target.matches('[data-dim]')){acceptDimension(e.target);update(true);}else update();
+  });
+  $('inputs').addEventListener('keydown',e=>{
+    if(e.key==='Enter'&&e.target.matches('[data-dim]')){e.preventDefault();acceptDimension(e.target);update(true);}
   });
   $('reset').addEventListener('click',()=>{
-    $('inputs').reset();type='i';dims=JSON.parse(JSON.stringify(defaults));processes={i:'rolled',chs:'seamless',shs:'welded'};dimensionInputs();update();
+    $('inputs').reset();selected='ibeam';type='i';dims=structuredClone(defaults);raw=structuredClone(defaults);processes={...initialProcesses};
+    buildOptions();dimensionInputs();update();
   });
   $('print').addEventListener('click',()=>window.print());
-  dimensionInputs();update();
+  buildOptions();dimensionInputs();update();
 })();
 
