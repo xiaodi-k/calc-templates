@@ -3,15 +3,17 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>压弯构件计算 · Demo</title>
-<link rel="stylesheet" href="steel-beam-column-demo.css?v=1.1.1">
+<link rel="stylesheet" href="steel-beam-column-demo.css?v=1.2.0">
 <script src="mullion-sections.js?v=1.1.1" defer></script>
-<script src="steel-beam-column-core.js?v=1.1.1" defer></script>
-<script src="steel-beam-column-demo.js?v=1.1.1" defer></script>
+<script src="steel-beam-column-core.js?v=1.2.0" defer></script>
+<script src="beam-column-materials.js?v=1.2.0" defer></script>
+<script src="beam-column-material-report.js?v=1.2.0" defer></script>
+<script src="steel-beam-column-demo.js?v=1.2.0" defer></script>
 </head>
 <body>
 <div class="page">
   <header class="topbar"><a href="developing.html">← developing</a><h1>压弯构件计算</h1><span class="badge">DEMO 02</span><span class="spacer"></span><button id="print" class="quiet" type="button">打印计算书</button></header>
-  <p class="intro">钢构件在轴压力与双向弯矩共同作用下的截面强度和稳定验算。<span>GB 50017-2017 · v1.1.1 · 2026-11-05</span></p>
+  <p class="intro">碳钢、不锈钢与铝合金构件在轴压力与双向弯矩共同作用下的强度和稳定验算。<span>GB 50017-2017 · CECS 410:2015 · GB 50429-2007 · v1.2.0</span></p>
   <main>
     <aside class="inputs" aria-label="计算输入">
       <div class="colcap in">输入 INPUT</div>
@@ -24,8 +26,12 @@
           <p class="hint" id="secHint"></p>
         </div></section>
         <section class="card"><h2>材料</h2><div class="body">
+          <div class="row"><label for="family">材料类别</label><select id="family"><option value="steel">碳钢 / 低合金钢</option><option value="stainless">不锈钢</option><option value="aluminium">铝合金</option></select></div>
           <div class="row"><label for="grade">牌号</label><select id="grade"><option>Q235</option><option>Q345</option><option>Q390</option><option>Q420</option><option>Q460</option></select></div>
+          <div class="row" id="alProductRow" hidden><label for="product">铝材产品</label><select id="product"><option value="profile">挤压型材（含空心型材）</option><option value="tube">挤压管材</option><option value="verified">产品标准 / 材质证明</option></select></div>
+          <label class="field" id="proofRow" hidden>规定非比例延伸强度标准值 f0.2<div class="input-unit"><input id="f02" type="number" min="30" max="600" step="any" placeholder="按产品标准或材质证明填写"><span>MPa</span></div></label>
           <div class="row"><label for="process">制造工艺</label><select id="process"></select></div>
+          <p id="materialScope" class="hint"></p>
           <div class="matgrid" id="matInfo"></div>
           <p id="materialNote" class="hint"></p>
         </div></section>
@@ -36,14 +42,14 @@
           <p class="hint">轴压取正；弯矩输入设计值，按绝对值包络验算，不再乘荷载分项系数。Lx、Ly 已包含计算长度系数。</p>
           <details id="advanced"><summary>高级选项 · 等效弯矩系数</summary><div id="betaInputs" class="grid2">
             <label class="field">绕 x 轴 · 平面内 βmx<input id="bmx" type="number" value="1" min="0.1" max="2" step="0.05"></label>
-            <label class="field">绕 x 轴 · 平面外 βtx<input id="btx" type="number" value="1" min="0.1" max="2" step="0.05"></label>
+            <label class="field" id="btxField">绕 x 轴 · 平面外 βtx<input id="btx" type="number" value="1" min="0.1" max="2" step="0.05"></label>
             <label class="field">绕 y 轴 · 平面内 βmy<input id="bmy" type="number" value="1" min="0.1" max="2" step="0.05"></label>
-            <label class="field">绕 y 轴 · 平面外 βty<input id="bty" type="number" value="1" min="0.1" max="2" step="0.05"></label>
+            <label class="field" id="btyField">绕 y 轴 · 平面外 βty<input id="bty" type="number" value="1" min="0.1" max="2" step="0.05"></label>
           </div><p id="betaNote" class="hint">默认均匀弯矩，系数均为 1；其他弯矩分布按 8.2.1 核定。</p></details>
           <button id="calculate" class="primary" type="submit">更新计算</button><button id="reset" class="quiet" type="button">恢复初始值</button>
         </div></section>
       </form>
-      <section class="scope"><h2>本 Demo 的计算范围</h2><p>等截面、双轴对称、非悬臂钢构件，静力设计。工字形的 Ly 同时作为受压翼缘侧向支承间距，端部抗扭约束、翘曲自由。</p><p>圆管采用同号等端弯矩（β = 1），适用于杆段内无很大横向力或集中弯矩的情况。箱型按焊接箱形；不覆盖冷弯薄壁型钢、斜翼缘普通工字钢、孔洞、疲劳、扭矩和连接。</p><p>13 种截面均可编辑并计算截面参数；圆管、箱型和对称工字形提供稳定验算，其余截面稳定计算待补充。演示结果用于核对方法。</p></section>
+      <section class="scope"><h2>本 Demo 的计算范围</h2><p>等截面、双轴对称、非悬臂构件，静力设计。工字形按端部抗扭约束、自由翘曲、均匀弯矩及荷载过弯心计算。Lx、Ly 已含计算长度系数，新材料工字形也将其用于对应侧向约束间距。</p><p>不锈钢与铝合金仅在全截面有效条件下输出承载力；平板采用均匀受压限值。铝合金焊接热影响区尚未接入。碳钢仍按原 S3 范围及圆管同号等端弯矩方法。</p><p>13 种截面可计算几何参数；圆管、箱型、对称工字形提供稳定验算，其余待开发。未包含孔洞、剪力、扭矩、疲劳及连接。<a href="BEAM_COLUMN_MATERIALS.md">新材料的公式和适用范围</a>。</p></section>
     </aside>
     <div class="outputs" aria-label="计算输出">
       <div class="colcap out">输出 OUTPUT</div>
@@ -51,6 +57,6 @@
       <div id="report"></div>
     </div>
   </main>
-  <footer>压弯构件计算 · Demo v1.1.1 · <a href="developing.html">返回演示目录</a><span>2026-11-05</span></footer>
+  <footer>压弯构件计算 · Demo v1.2.0 · <a href="developing.html">返回演示目录</a><span>2026-11-06</span></footer>
 </div>
 </body></html>

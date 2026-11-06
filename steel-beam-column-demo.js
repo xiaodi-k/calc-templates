@@ -131,6 +131,30 @@ function tex2html(src) {
   const fmt=(n,d=3)=>Number.isFinite(n)?n.toLocaleString('en-US',{maximumFractionDigits:d,minimumFractionDigits:d}):'—';
   const f=n=>fmt(n,3),F=s=>'<div class="formula">'+tex2html(s)+'</div>';
   const prop=(name,value,unit='')=>'<div class="prop"><span>'+name+'</span><strong>'+value+'</strong><small>'+unit+'</small></div>';
+  const family=()=>$('family').value;
+  function materialOptions() {
+    const previous=$('grade').value,options=BeamColumnMaterials.grades[family()];
+    $('grade').innerHTML=options.map(v=>'<option value="'+v+'">'+(BeamColumnMaterials.names[v]||v)+'</option>').join('');
+    $('grade').value=options.includes(previous)?previous:options[0];
+    productOptions();
+  }
+  function productOptions() {
+    $('alProductRow').hidden=family()!=='aluminium';
+    $('proofRow').hidden=family()!=='aluminium'||$('product').value!=='verified';
+    $('materialScope').textContent=family()==='steel'?'GB 50017-2017 · 按厚度分档取钢材强度。':family()==='stainless'?'CECS 410:2015 · 固溶处理材料；不计冷作强度提高。':'GB 50429-2007 · 按产品类型取 f0.2；本版承载力计算限无焊接热影响区。5083-H112 自动数据仅覆盖管材，其余产品可输入产品标准值。';
+  }
+  function processOptions() {
+    const old=$('process').value,key=family()+':'+selected;
+    const options=!type?[['pending','稳定计算待补充']]:family()==='stainless'?(type==='i'?[['ss-welded','焊接工字形']]:type==='chs'?[['ss-cold','冷成型圆管（成型后未退火）'],['ss-other','其他圆管 / 成型后退火']]:[['ss-welded','焊接箱形'],['ss-cold','冷成型方矩管（成型后未退火）']]):family()==='aluminium'?[['al-unwelded','无焊接热影响区'],['al-welded','有焊接 · 需另算热影响区']]:type==='i'?[['rolled','轧制'],['welded-flame','焊接 · 焰切边'],['welded-cut','焊接 · 轧制/剪切边']]:type==='chs'?[['seamless','热轧无缝'],['welded','焊接圆管']]:[['welded','焊接箱形']];
+    $('process').innerHTML=options.map(([v,t])=>'<option value="'+v+'">'+t+'</option>').join('');
+    const value=processes[key]||processes[selected]||old;
+    $('process').value=options.some(v=>v[0]===value)?value:options[0][0];$('process').disabled=!type;
+    const carbon=family()==='steel';
+    $('betaInputs').hidden=!type||(carbon&&type==='chs');
+    $('btxField').hidden=$('btyField').hidden=!carbon;
+    ['bmx','bmy'].forEach(k=>{$(k).min=carbon?'0.1':family()==='stainless'?'0.2':'0.3';$(k).max=carbon?'2':'1';});
+    $('betaNote').textContent=!type?'此截面的稳定计算待补充。':!carbon?'βmx、βmy 默认 1；按'+(family()==='stainless'?'5.5.3（端弯矩：0.6 + 0.4M2/M1）':'8.2.1（端弯矩：0.65 + 0.35M2/M1）')+'核定。受弯整体稳定按均匀弯矩计算。':type==='chs'?'圆管按 8.2.4 取同号等端弯矩，βx = βy = 1，β = 1。':'默认均匀弯矩，系数均为 1；其他弯矩分布按 8.2.1 核定。';
+  }
   function buildOptions() {
     $('sec').innerHTML=Object.entries(sections).map(([k,s])=>{
       const supported=Boolean(coreType[k]);
@@ -147,11 +171,7 @@ function tex2html(src) {
     $('sectionAvailability').className='section-availability '+(type?'supported':'pending');
     $('sectionAvailability').textContent=sections[selected].name+(type?' · 支持强度、整体稳定及局部稳定验算':' · 待开发，目前仅支持截面参数计算');
     $('calculate').textContent=type?'更新计算':'更新截面参数';
-    const options=type==='i'?[['rolled','轧制'],['welded-flame','焊接 · 焰切边'],['welded-cut','焊接 · 轧制/剪切边']]:type==='chs'?[['seamless','热轧无缝'],['welded','焊接圆管']]:type==='box'?[['welded','焊接箱形']]:[['pending','稳定计算待补充']];
-    $('process').innerHTML=options.map(([v,t])=>'<option value="'+v+'">'+t+'</option>').join('');
-    $('process').value=processes[selected]||'pending';$('process').disabled=!type;
-    $('betaInputs').hidden=type==='chs'||!type;
-    $('betaNote').textContent=!type?'此截面的稳定计算待补充。':type==='chs'?'圆管按 8.2.4 取同号等端弯矩，βx = βy = 1，β = 1。':'默认均匀弯矩，系数均为 1；其他弯矩分布按 8.2.1 核定。';
+    processOptions();
     $('secHint').textContent=sections[selected].name+' · 尺寸单位 mm · x 轴水平，y 轴竖直。改完按回车或移开焦点生效。';
     drawSection();
   }
@@ -160,13 +180,13 @@ function tex2html(src) {
     $('secPrev').innerHTML=MullionSections.draw(selected,lastValid[selected],raw[selected]);
   }
   function read() {
-    const p={type,...dims[selected],grade:$('grade').value,process:$('process').value};
+    const p={type,...dims[selected],family:family(),grade:$('grade').value,process:$('process').value,product:$('product').value,f02:$('f02').value.trim()===''?NaN:Number($('f02').value)};
     for(const key of ['N','Mx','My','Lx','Ly','bmx','bmy','btx','bty'])p[key]=$(key).value.trim()===''?NaN:Number($(key).value);
-    if(type==='chs')p.bmx=p.bmy=p.btx=p.bty=1;
+    if(type==='chs'&&family()==='steel')p.bmx=p.bmy=p.btx=p.bty=1;
     return p;
   }
   function materialInfo(m) {
-    $('matInfo').innerHTML=prop('f',m?fmt(m.f,0):'—','MPa')+prop('fy',m?fmt(m.fy,0):'—','MPa')+prop('E','206,000','MPa');
+    $('matInfo').innerHTML=prop('f',m?fmt(m.f,2):'—','MPa')+prop(family()==='steel'?'fy':'f0.2',m?fmt(m.fy,0):'—','MPa')+prop('E',m?fmt(m.E,0):'—','MPa');
   }
   function renderPending(s) {
     $('status').className='';
@@ -174,13 +194,14 @@ function tex2html(src) {
     $('checks').innerHTML='';
     $('warnings').innerHTML='<div class="warning">'+sections[selected].name+'的整体稳定及局部稳定方法尚未接入。本页不输出此截面的承载力利用率或满足结论。</div>';
     let m=null;
-    try{m=SteelBeamColumn.material($('grade').value,s.tc);}catch(e){/* No extrapolation of strength bands. */}
+    try{m=BeamColumnMaterials.material(read(),{tmax:s.tc});}catch(e){/* No extrapolation of strength bands. */}
     materialInfo(m);
     $('materialNote').textContent=m?'当前仅显示材料与截面参数；稳定分类和制造工艺待补充。':'控制厚度超出当前强度表范围，仅显示截面参数。';
     $('report').innerHTML='<section class="card"><h2>截面参数 <span>SECTION</span></h2><div class="body"><p class="report-inputs"><strong>'+sections[selected].name+'</strong> · '+Object.entries(dims[selected]).map(([k,v])=>k+' = '+v+' mm').join('，')+'</p><div class="props">'+prop('A',fmt(s.A,2),'mm²')+prop('Ix',fmt(s.Ix/1e4,2),'cm⁴')+prop('Iy',fmt(s.Iy/1e4,2),'cm⁴')+prop('Wx',fmt(s.Wx/1e3,2),'cm³')+prop('Wy',fmt(s.Wy/1e3,2),'cm³')+prop('ix',f(s.ix),'mm')+prop('iy',f(s.iy),'mm')+'</div><p class="section-note">采用立柱模板相同的截面几何积分；圆形采用解析式。惯性矩绕形心轴计算，截面模量按较远外缘取值。</p></div></section>';
   }
   function render(r) {
     const {p,s,m,bx,by,local,ltb}=r;
+    if(p.family&&p.family!=='steel'){renderMaterial(r);return;}
     materialInfo(m);
     $('materialNote').textContent=`f = ${m.f} MPa · fy = ${m.fy} MPa · E = 206,000 MPa（${m.source}，控制厚度 ${s.tmax} mm）`;
     const status=r.passing?(r.needsReview?'承载力验算满足 · 长细比待复核':'本 Demo 范围内满足'):'本工况不满足';
@@ -234,11 +255,21 @@ function tex2html(src) {
     html+='</div></section>';
     $('report').innerHTML=html;
   }
+  function renderMaterial(r) {
+    const {m,local}=r;
+    materialInfo(m);
+    $('materialNote').textContent=m.code+' · '+m.source+' · '+m.product;
+    const status=!r.available?'超出本版计算范围 · 需进一步计算':r.passing?(r.needsReview?'承载力数值满足 · 适用条件待复核':'本 Demo 范围内满足'):'本工况不满足';
+    $('status').innerHTML='<div class="statusline '+(r.passing&&!r.needsReview?'ok':'ng')+'">'+status+'<small>利用率限值 1.00</small></div>';
+    $('checks').innerHTML=r.checks.map(c=>'<div class="check '+(c.value>1?'failed':'')+'"><div class="check-head"><span>'+c.name+'</span><strong>'+(Number.isFinite(c.value)?fmt(c.value,3):'超出范围')+'</strong></div><div class="track"><div class="fill" style="width:'+Math.min(100,c.value*100)+'%"></div></div><small>'+(c.id==='local'?local.label:Number.isFinite(c.stress)?fmt(c.stress,2)+' / '+fmt(m.f,2)+' MPa':'二阶放大失效')+'</small></div>').join('');
+    $('warnings').innerHTML=r.warnings.map(w=>'<div class="warning">'+w+'</div>').join('');
+    $('report').innerHTML=beamColumnMaterialReport(r,sections[selected].name,Object.entries(dims[selected]).map(([k,v])=>k+' = '+v+' mm').join('，'),$('process').selectedOptions[0].textContent);
+  }
   function update(redraw=false) {
     if(redraw)drawSection();
     try {
       const geometry=MullionSections.properties(selected,dims[selected]);
-      if(type)render(SteelBeamColumn.calculate(read()));else renderPending(geometry);
+      if(type)render(BeamColumnMaterials.calculate(read()));else renderPending(geometry);
     } catch(e) {
       $('status').textContent=e.message;$('status').className='error';
       $('checks').innerHTML='';$('warnings').innerHTML='';$('report').innerHTML='';
@@ -254,21 +285,25 @@ function tex2html(src) {
   $('inputs').addEventListener('submit',e=>{e.preventDefault();update(true);});
   $('inputs').addEventListener('input',e=>{
     if(e.target.matches('[data-dim]'))acceptDimension(e.target);
+    if(['family','grade','product','process'].includes(e.target.id))return;
     if(e.target.type!=='radio')update();
   });
   $('inputs').addEventListener('change',e=>{
-    if(e.target.name==='section-type') {processes[selected]=$('process').value;selected=e.target.value;dimensionInputs();}
-    if(e.target.id==='process')processes[selected]=$('process').value;
+    if(e.target.name==='section-type') {processes[family()+':'+selected]=$('process').value;selected=e.target.value;dimensionInputs();}
+    if(e.target.id==='family'){materialOptions();processOptions();}
+    if(e.target.id==='grade'||e.target.id==='product')productOptions();
+    if(e.target.id==='process')processes[family()+':'+selected]=$('process').value;
     if(e.target.matches('[data-dim]')){acceptDimension(e.target);update(true);}else update();
   });
   $('inputs').addEventListener('keydown',e=>{
     if(e.key==='Enter'&&e.target.matches('[data-dim]')){e.preventDefault();acceptDimension(e.target);update(true);}
   });
   $('reset').addEventListener('click',()=>{
-    $('inputs').reset();selected='ibeam';type='i';dims=structuredClone(defaults);raw=structuredClone(defaults);processes={...initialProcesses};
-    buildOptions();dimensionInputs();update();
+    // The button id="reset" masks form.reset in a real browser.
+    HTMLFormElement.prototype.reset.call($('inputs'));selected='ibeam';type='i';dims=structuredClone(defaults);raw=structuredClone(defaults);processes={...initialProcesses};
+    $('family').value='steel';$('product').value='profile';materialOptions();buildOptions();dimensionInputs();update();
   });
   $('print').addEventListener('click',()=>window.print());
-  buildOptions();dimensionInputs();update();
+  materialOptions();buildOptions();dimensionInputs();update();
 })();
 

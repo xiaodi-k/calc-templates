@@ -1,5 +1,7 @@
 # 压弯构件 Demo v1.1.1
 
+v1.2.0 新增的不锈钢与铝合金方法、牌号及适用条件见 [BEAM_COLUMN_MATERIALS.md](BEAM_COLUMN_MATERIALS.md)。本文件以下保留碳钢计算依据。
+
 日期：2026-11-05。入口：`developing.html` → `steel-beam-column-demo.html`。
 
 根据用户提供的 MSteel 压弯构件计算书，增加截面 → 材料 → 板件等级和塑性发展系数 → 轴压稳定 → 受弯整体稳定 → 欧拉力 → 强度 → 整体及局部稳定的计算流程。原始计算书及本地规范文件不上传到仓库。
