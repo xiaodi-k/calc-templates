@@ -1,0 +1,9 @@
+# 谁会被自动拉来 review
+# 每一行是一条规则：路径 → 负责人。最后匹配的那条生效，所以宽口径放最前面。
+# 加人就把 @换成同事的 GitHub 用户名。
+
+*               @xiaodi-k
+
+# 计算模板本身的改动，建议让管结构的人一起看一眼
+/glass-panel.html   @xiaodi-k
+/mullion.html       @xiaodi-k
