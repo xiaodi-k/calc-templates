@@ -28,7 +28,7 @@
     if (p.type === 'chs') {
       const D=requireValue(p.D,'外径 D（mm）',10,3000),t=requireValue(p.t,'壁厚 t（mm）',1,100);
       if (2*t >= D) throw new Error('圆管壁厚必须小于外径的一半');
-      if (t >= 40) throw new Error('圆管壁厚须小于 40 mm；更厚圆管的稳定截面分类需另行确认');
+      if ((!p.family || p.family==='steel') && t >= 40) throw new Error('圆管壁厚须小于 40 mm；更厚圆管的稳定截面分类需另行确认');
       h=b=D; A=Math.PI/4*(D*D-(D-2*t)**2); Ix=Iy=Math.PI/64*(D**4-(D-2*t)**4);tmax=t;
     } else if (p.type === 'shs') {
       b=h=requireValue(p.B,'方管边长 B（mm）',10,3000);const t=requireValue(p.t,'壁厚 t（mm）',1,100);

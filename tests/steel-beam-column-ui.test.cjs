@@ -22,9 +22,9 @@ class Element {
 for(const m of html.matchAll(/<([a-z]+)\b([^>]*\bid="([^"]+)"[^>]*)>/g)){assert(!nodes[m[3]],'duplicate id');const n=new Element(m[1],m[2]);n.id=m[3];nodes[n.id]=n;}
 for(const m of html.matchAll(/<select id="([^"]+)">([\s\S]*?)<\/select>/g))nodes[m[1]].innerHTML=m[2];
 const doc={getElementById:id=>{assert(nodes[id],`missing ${id}`);return nodes[id];}};
-const context={document:doc,window:{print(){printed++;}},console,structuredClone};
+const context={document:doc,window:{print(){printed++;}},HTMLFormElement:{prototype:{reset:Element.prototype.reset}},console,structuredClone};
 vm.createContext(context);
-for(const file of ['mullion-sections.js','steel-beam-column-core.js'])vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),context);
+for(const file of ['mullion-sections.js','steel-beam-column-core.js','beam-column-materials.js','beam-column-material-report.js'])vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),context);
 vm.runInContext(source,context);
 function fire(id,event,target=nodes[id]){for(const fn of events[id+':'+event]||[])fn({target,preventDefault(){}});}
 function change(id,value){nodes[id].value=value;fire('inputs','input',nodes[id]);fire('inputs','change',nodes[id]);}
@@ -91,5 +91,5 @@ fire('print','click');assert.equal(printed,1);
 for(const m of html.matchAll(/(?:src|href)="(steel-beam-column-[^"]+)"/g))assert.ok(fs.existsSync(path.join(root,m[1].split('?')[0])));
 for(const s of [source,fs.readFileSync(path.join(root,'steel-beam-column-core.js'),'utf8')])assert(!/\bfetch\(|localStorage|XMLHttpRequest/.test(s),'no network or persistent data');
 assert.match(fs.readFileSync(path.join(root,'developing.html'),'utf8'),/href="steel-beam-column-demo.html"/);
-assert.match(fs.readFileSync(path.join(root,'index.html'),'utf8'),/2 个 demo/);
+assert.match(fs.readFileSync(path.join(root,'index.html'),'utf8'),/3 个 demo/);
 console.log('PASS DOM contracts: 13 section modes and dimensions, pending stability never passes, invalid/stale-result clearing, per-section state, decimal typing, rectangular box, hidden coefficients, reset, print, local links. Browser/layout unverified.');
