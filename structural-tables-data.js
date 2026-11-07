@@ -14,7 +14,42 @@
     scope:'高强度非合金钢丝，Zn95Al5 镀层，内部无填充。E = 160 ± 10 kN/mm²。公称直径公差 0% / +3%。不适用于不锈钢 OSS 或 FLC。',
     rows:diameters.map((d,i)=>({diameter:d,fuk:characteristic[i],design:characteristic[i]/2,area:areas[i],equivalentDiameter:Math.sqrt(4*areas[i]/Math.PI),ea:stiffness[i],weight:weights[i],socket:d<=36?'压接':'树脂或金属浇注'}))
   };
-  const catalog=[table];
+  table.forceLabel='特征破断拉力 / 标准值';
+  table.forceSymbol='Fuk';
+  table.designLabel='设计张拉力';
+  table.columns=[['diameter','公称索径 d [mm]'],['fuk','特征破断拉力 Fuk [kN]'],['design','设计张拉力 Fd [kN]'],['area','公称金属面积 A [mm²]'],['equivalentDiameter','面积等效圆直径 [mm]'],['ea','刚度 EA [MN]'],['weight','单重 G [kg/m]'],['socket','索头条件']];
+  const kinlongValues=[
+    [30,'1×91',2.73,531.60,693.74],
+    [32,'1×91',2.91,604.85,789.33],
+    [34,'1×91',3.09,682.82,891.07],
+    [36,'1×91',3.27,765.51,998.99],
+    [38,'1×91',3.45,852.93,1113.07],
+    [40,'1×91',3.64,945.07,1233.32],
+    [42,'1×91',3.82,1041.94,1359.74],
+    [45,'1×91',4.09,1196.11,1508.89],
+    [48,'1×91',4.36,1360.91,1716.78],
+    [52,'1×127',4.00,1595.93,2013.26],
+    [56,'1×127',4.31,1850.90,2334.91],
+    [60,'1×169',4.00,2123.72,2648.27],
+    [65,'1×169',4.33,2492.42,3108.04],
+    [70,'1×217',4.12,2889.67,3603.42],
+    [75,'1×271',3.95,3316.46,4135.62],
+    [80,'1×271',4.21,3773.39,4705.42],
+    [85,'1×331',4.05,4259.09,5311.09],
+    [90,'1×331',4.29,4774.90,5954.30],
+    [95,'1×331',4.52,5320.18,6634.27],
+    [100,'1×331',4.76,5894.94,7350.99]
+  ];
+  const kinlong={
+    id:'kinlong-stainless-2021-p97',title:'坚朗 热铸型不锈钢拉索 · 普通索',category:'索结构',version:'1.0.0',updated:'2026-11-07',
+    source:{publisher:'广东坚朗五金制品股份有限公司',file:'点支承玻璃幕墙配件典型产品目录（用户提供封面及参数页截图）',edition:'2021年1月印刷',printedPage:'96–97',pdfPage:null,url:'https://www.kinlong.com',evidence:'用户上传的封面、封底与 96/97 跨页截图；未提供原 PDF，PDF 页序及整本文件哈希未核验。'},
+    standard:table.standard,productStandards:[],forceLabel:'钢索最小破断拉力',forceSymbol:'Fmin',designLabel:'破断力 / 2（参考）',
+    assumptions:'原表给出钢索最小破断拉力，未标注为特征值。延续本 Demo 的除以 2 口径提供参考换算，不自动认定其等同规范极限抗拉力标准值；正式设计值需确认厂家标准值及连接适用条件。',
+    scope:'热铸型不锈钢拉索（“易张拉”系列），普通索参数；型号 G02、H02、K02。钢绞线 316/2205；紧固件 316（A4-70）；螺杆、销轴 2205；索头、锚杯 CD3MN；生产范围 Φ30–Φ100。E = (1.30 ± 0.10) × 10⁵ N/mm²。截图同时展示密封索示意，但本参数表仅适用于普通索。厂家注：可生产更高强度拉索，需另行询价。',
+    columns:[['diameter','钢索直径 [mm]'],['structure','参考结构'],['wireDiameter','钢丝直径 [mm]'],['area','金属断面积 [mm²]'],['fuk','钢索最小破断拉力 [kN]'],['design','破断力 / 2（参考）[kN]'],['equivalentDiameter','面积等效圆直径 [mm]'],['modulus','弹性模量 [10⁵ N/mm²]']],
+    rows:kinlongValues.map(([diameter,structure,wireDiameter,area,force])=>({diameter,structure,wireDiameter,area,fuk:force,design:force/2,equivalentDiameter:Math.sqrt(4*area/Math.PI),modulus:'1.30 ± 0.10'}))
+  };
+  const catalog=[table,kinlong];
   function selectRows(t,diameter,minDesign){
     const min=minDesign===''?0:Number(minDesign);
     if(!Number.isFinite(min)||min<0)throw new Error('设计张拉力下限请输入不小于 0 的数值。');
