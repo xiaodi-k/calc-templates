@@ -13,3 +13,8 @@
 #inspector-scroll{scroll-behavior:auto}.results-rail .status-counts{display:flex;justify-content:space-between;gap:4px}.results-rail .status-counts span{font-size:9px;white-space:nowrap}.results-rail .status-counts strong{display:block}.inspector .field label{font-size:11px}.inspector .info{font-size:10px}
 .inspector-head,.inspector nav,.preset-bar{flex-shrink:0}
 #model-view{position:relative}.solid-canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none}.model-overlay{position:absolute;inset:0;width:100%;height:100%}
+
+
+/* A pending plate design must not read as a green completed check. */
+.status-title.pending{color:#a56b24}
+.model-legend [hidden]{display:none}
