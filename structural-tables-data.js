@@ -49,7 +49,45 @@
     columns:[['diameter','钢索直径 [mm]'],['structure','参考结构'],['wireDiameter','钢丝直径 [mm]'],['area','金属断面积 [mm²]'],['fuk','钢索最小破断拉力 [kN]'],['design','破断力 / 2（参考）[kN]'],['equivalentDiameter','面积等效圆直径 [mm]'],['modulus','弹性模量 [10⁵ N/mm²]']],
     rows:kinlongValues.map(([diameter,structure,wireDiameter,area,force])=>({diameter,structure,wireDiameter,area,fuk:force,design:force/2,equivalentDiameter:Math.sqrt(4*area/Math.PI),modulus:'1.30 ± 0.10'}))
   };
-  const catalog=[table,kinlong];
+  // FATZER 06-2017, printed p.25 / PDF p.26. Keep tabulated EA: do not regenerate it from nominal E and A.
+  // Columns: nominal diameter [mm], Fmin = Fuk [kN], metallic area [mm²], EA [MN], weight incl. filler [kg/m].
+  const flcValues=[
+    [25,596,440,70.1,3.8],
+    [30,858,648,101,5.6],
+    [35,1170,842,137,7.3],
+    [40,1580,1125,177,9.7],
+    [45,2000,1382,226,12],
+    [50,2470,1731,278,15],
+    [55,3020,2106,347,18],
+    [60,3590,2424,414,21],
+    [65,4220,2929,477,25],
+    [70,4890,3444,547,30],
+    [75,5620,3791,626,33],
+    [80,6390,4379,707,38],
+    [85,7210,4952,799,42],
+    [90,8090,5568,890,48],
+    [95,9110,6095,984,52],
+    [100,10100,6804,1082,58],
+    [105,11100,7567,1224,65],
+    [110,12200,8341,1354,71],
+    [115,13400,9149,1458,78],
+    [120,14500,9729,1586,83],
+    [125,15800,10636,1712,91],
+    [130,16200,11385,1835,97],
+    [135,17400,12368,1979,106]
+  ];
+  const flc={
+    id:'fatzer-flc-2017-p25',title:'FATZER FLC 全封闭索 · 镀层非合金钢',category:'索结构',version:'1.0.0',updated:'2026-11-17',
+    source:{...table.source,printedPage:25,pdfPage:26},
+    standard:{...table.standard},
+    productStandards:['DIN EN 12385-10','DIN EN 10264-2（圆钢丝）','DIN EN 10264-3（Z 型钢丝）','DIN EN 13411-4（浇注索头）'],
+    forceLabel:table.forceLabel,forceSymbol:'Fuk',designLabel:table.designLabel,
+    assumptions:table.assumptions+' 原表按 EN 1993-1-11 取浇注索头 ke = 1.0，因此 Fmin = Fuk；不采用厂家 FRd = Fuk / 1.5。产品及欧标代号按 2017 手册记录，原页未注明这些标准的年版。',
+    scope:'全封闭索（原手册名称：密封钢丝绳），高强度非合金钢丝；内层圆钢丝、外层 Z 型钢丝。内层热浸锌并填充富锌材料 TruLub A11，外两层 Zn95Al5 镀层、无填充。E = 160 ± 10 kN/mm²，公称直径公差 0% / +3%。全部规格采用树脂或金属浇注索头，单重包含内部填充物。EA 按原表独立录入，不用公称 E × A 重算。仅收录 25～135 mm 表列规格，不插值；不适用于不锈钢 FLC 或 OSS。',
+    columns:[table.columns[0],['fmin','最小破断拉力 Fmin [kN]'],...table.columns.slice(1,6),['weight','单重 G（含填充物）[kg/m]'],table.columns[7]],
+    rows:flcValues.map(([diameter,force,area,ea,weight])=>({diameter,fmin:force,fuk:force,design:force/2,area,equivalentDiameter:Math.sqrt(4*area/Math.PI),ea,weight,socket:'树脂或金属浇注'}))
+  };
+  const catalog=[table,flc,kinlong];
   function selectRows(t,diameter,minDesign){
     const min=minDesign===''?0:Number(minDesign);
     if(!Number.isFinite(min)||min<0)throw new Error('设计张拉力下限请输入不小于 0 的数值。');
