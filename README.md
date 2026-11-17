@@ -201,4 +201,4 @@ Pk=1.0 kN、γ=1.5、κ=1.0、直径 100 mm 圆形接触区、作用点在完成
 
 本页 E=160±10 kN/mm²，直径公差 0%/+3%；DIN EN 12385-10 钢丝绳、DIN EN 10264-2 圆钢丝、DIN EN 10264-3 Z 型钢丝，DIN EN 13411-4 树脂或金属浇注索头。欧标代号照录厂家 2017 手册，原页未注明其年版，不声称使用现行最新版本。EA 是厂家独立表列值，不强制改为公称 E×A。CSV 同步附适用条件、产品依据及数据版本；原 PDF 不随仓库分发。
 
-直接入口：`structural-tables.html?table=fatzer-flc-2017-p25`。原 OSS 与坚朗表继续保留。完整原始表值核对及换算回归见 `tests/structural-tables.test.cjs`，浏览器切换、查询、CSV 与布局检查见 `tests/structural-tables-browser.test.cjs`。
+直接入口：`structural-tables.html?table=fatzer-flc-2017-p25`。原 OSS 与坚朗表继续保留。代表规格、换算及来源回归见 `tests/structural-tables.test.cjs`，浏览器切换、查询、CSV 与布局检查见 `tests/structural-tables-browser.test.cjs`。
