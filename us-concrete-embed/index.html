@@ -5,18 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#17465b">
   <title>美标混凝土埋件计算 · 计算模板</title>
-  <meta name="description" content="按 ACI 318-19 验算现浇矩形锚群，比较锚板位置、混凝土边距与荷载组合。">
+  <meta name="description" content="按 ACI CODE-318-25 验算现浇矩形锚群，比较锚板位置、混凝土边距与荷载组合。">
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="viewer.css">
   <link rel="stylesheet" href="report.css">
   <link rel="stylesheet" href="supplement.css">
+  <link rel="stylesheet" href="../column-base/vendor/katex/katex-inline.css">
 </head>
 <body>
   <header class="app-header">
     <div class="brand"><span class="brand-mark" aria-hidden="true">⌑</span><div><h1>美标混凝土埋件计算</h1><small>CONCRETE EMBED LAB</small></div></div>
-    <div class="project-heading"><small>ACI 318-19 · SI</small><strong id="project-title">矩形锚群</strong></div>
+    <div class="project-heading"><small>ACI CODE-318-25 · SI 输入</small><strong id="project-title">矩形锚群</strong></div>
     <div class="header-actions">
-      <a class="button" href="../developing.html">← demo</a>
       <span id="save-state" class="save-state"></span>
       <button id="import-btn" type="button">导入</button>
       <input id="import-file" type="file" accept=".json,application/json" hidden>
@@ -34,6 +34,8 @@
           <option value="standard">L 形锚栓 · 常规边距</option>
           <option value="edge">L 形锚栓 · 靠近下边</option>
           <option value="headed">有头栓钉 · 内区锚板</option>
+          <option value="bolt">端部螺母锚栓 · 内区锚板</option>
+          <option value="welded">端部附焊短筋 · 构造核对</option>
           <option value="custom" disabled>自定义节点</option>
         </select>
       </div>
@@ -49,7 +51,7 @@
         <div class="load-head"><div><small class="eyebrow">LOAD CASES</small><h2>荷载组合</h2></div><button id="add-case" type="button" class="small">＋ 添加组合</button></div>
         <div class="table-scroll"><table><thead><tr><th>工况</th><th>N<sub>u</sub> <small>kN</small></th><th>M<sub>x</sub> <small>kN·m</small></th><th>V<sub>y</sub> <small>kN</small></th><th>利用率</th><th><span class="sr-only">工况操作</span></th></tr></thead><tbody id="load-cases"></tbody></table></div>
       </div>
-      <p class="workspace-note">拉力为正，+M<sub>x</sub> 使 +Y 排受拉。图中锚板厚度仅作示意，锚板抗弯及焊缝需另算。</p>
+      <p class="workspace-note">拉力为正，+M<sub>x</sub> 使 +Y 排受拉。模型按输入的锚板厚度绘制；锚板抗弯、转接件焊缝及局部承压见右侧单独验算。</p>
     </section>
     <aside class="results" aria-label="实时验算">
       <div class="section-head"><div><small class="eyebrow">LIVE CHECKS</small><h2>实时验算</h2></div><span class="status-indicator">实时</span></div>
@@ -60,6 +62,8 @@
   <noscript>请启用 JavaScript 以编辑节点、查看模型并进行计算。</noscript>
   <script src="engine.js"></script>
   <script src="viewer.js"></script>
+  <script src="../column-base/vendor/katex/katex.min.js"></script>
+  <script src="report-math.js"></script>
   <script src="report.js"></script>
   <script src="supplement.js"></script>
   <script src="app.js"></script>

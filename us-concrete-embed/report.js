@@ -1,7 +1,7 @@
 /* Printable calculation record and the two published comparison cases. */
 (function () {
   'use strict';
-  const codeUrl = 'https://www.concrete.org/store/productdetail.aspx?ItemID=318U19';
+  const codeUrl = 'https://www.concrete.org/store/productdetail.aspx?ItemID=318U25';
   const paperUrl = 'https://www.doc88.com/p-69037866447199.html';
   const number = (value, digits = 2) => Number.isFinite(value) ? value.toLocaleString('zh-CN', {maximumFractionDigits: digits}) : '—';
   function el(doc, tag, text, className) {
@@ -86,33 +86,50 @@
   function report(doc, params, current, context = {}) {
     const cases = context.cases?.length ? context.cases : [params];
     const active = context.activeIndex ?? 0;
-    const content = show(doc, '美标混凝土埋件计算书', (context.name || '预埋件节点') + ' · ACI 318-19（SI）');
+    const content = show(doc, '美标混凝土埋件计算书', (context.name || '预埋件节点') + ' · ACI CODE-318-25');
     const model = section(doc, '节点与荷载约定');
-    model.append(el(doc, 'p', '普通重、开裂混凝土，矩形规则锚群焊于同一刚性锚板。N 向外为正，正 Mx 使 +Y 排受拉；Vy 沿 Y 轴、通过锚群形心。输入值为锚板传力面处的同一强度组合设计内力。'));
-    const anchor = params.anchorType === 'headed' ? '有头栓钉' : params.anchorType === 'hooked' ? 'L 形锚栓' : '待核锚型';
+    model.append(el(doc, 'p', '开裂普通重混凝土，非冗余连接，无补充配筋。矩形规则锚群焊于同一刚性锚板。N 向外为正，正 Mx 使 +Y 排受拉。Vy 沿 Y 轴、通过锚群形心，按有效传力焊缝将全剪力分配至背排。输入值为锚板传力面处的同一强度组合设计内力。'));
+    const anchors = {headed:'焊接有头栓钉',hooked:'L 形锚栓',headedBolt:'端部螺母锚栓',weldedRebar:'端部纵向附焊短筋',rebar:'带肋弯钩钢筋'};
+    const anchor = anchors[params.anchorType] || '待核锚型';
+    const ends = {
+      hooked:['弯钩有效伸出',number(params.eh)+' mm'],
+      headed:['钉头直径',number(params.dh)+' mm'],
+      headedBolt:['螺母对边 / 净承压面积',number(params.dh)+' mm / '+number(params.bearingArea)+' mm²'],
+      weldedRebar:['附焊短筋',number(params.endBarCount)+' 根 × φ'+number(params.endBarDiameter)+' × '+number(params.endBarLength)+' mm'],
+      rebar:['端部形式','带肋钢筋标准弯钩']
+    };
     model.append(table(doc, ['参数','项目输入'], [
       ['锚型与布置', anchor+' · X 向 '+number(params.nx)+' 列 × Y 向 '+number(params.ny)+' 排'],
-      ['锚板 / 混凝土厚度',number(params.plateX)+' × '+number(params.plateY)+' mm / '+number(params.h)+' mm'],
+      ['锚板宽 × 长 × 实厚 / 混凝土厚度',[params.plateX,params.plateY,params.plateThickness].map(v=>number(v)).join(' × ')+' mm / '+number(params.h)+' mm'],
       ['杆径 / 有效埋深',number(params.d)+' / '+number(params.hef)+' mm'],
       ['锚距 sx / sy', number(params.sx)+' / '+number(params.sy)+' mm'],
       ['混凝土边距（左、右、下、上）',[params.left,params.right,params.bottom,params.top].map(v=>number(v)).join(' / ')+' mm'],
-      [params.anchorType==='headed'?'钉头直径 dh':'弯钩伸出 eh',number(params.anchorType==='headed'?params.dh:params.eh)+' mm'],
+      ends[params.anchorType] || ['端部尺寸','待确认'],
       ['混凝土 f′c / 锚材 fy / fu',[params.fc,params.fy,params.fu].map(v=>number(v)).join(' / ')+' MPa']
     ]));
+    model.append(el(doc,'p','主表采用 ACI CODE-318-25（美国惯用单位版）。输入以 mm、MPa、kN 表示；含经验系数的基本强度公式按 in、psi、lbf 代入，再换算为 kN。各式显示值经舍入，判定使用未舍入值。'));
+    if(['hooked','headed','headedBolt'].includes(params.anchorType)) window.EmbedReportMath.plateDetail(doc,model,params);
     content.append(model);
-    const results = cases.map((c, j) => j===active ? current : window.EmbedEngine.calculate({...params,...c}));
+    const results = context.results || cases.map((c, j) => j===active ? current : window.EmbedEngine.calculate({...params,...c}));
     const summary = section(doc,'各荷载组合');
     summary.append(table(doc,['工况','Nu (kN)','Mx (kN·m)','Vy (kN)','控制利用率','锚固结论'],
       cases.map((c,j)=>[c.name||'工况 '+(j+1),number(c.nu),number(c.mx),number(c.vy),number(results[j]?.utilization,3),
-        results[j]?.ok ? (results[j].status==='pass'?'满足':'超限') : '待核对'])));
+        results[j]?.ok ? (results[j].status==='pass'?'满足':'超限') : results[j]?.status==='special'?'仅构造核对':'待核对'])));
     content.append(summary);
     cases.forEach((c, j) => {
       const result = results[j];
       const group = section(doc, (c.name||'工况 '+(j+1))+' · 分项验算');
       if (!result?.ok) {
+        if(result?.specialChecks?.length) {
+          const states={pass:'构造满足',fail:'构造不满足',review:'须专项核定'};
+          group.append(table(doc,['构造项目','实设','要求','结果','依据'],result.specialChecks.map(k=>[
+            k.label,k.actual,k.required,states[k.status]||k.status,k.clause
+          ])));
+        }
         group.append(el(doc,'p',(result?.errors||['请核对输入']).join('；'),'er-warning'));
+        if (params.anchorType==='weldedRebar') window.EmbedReportMath.welded(doc,group,params);
       } else {
-        group.append(el(doc,'p','受拉控制比 '+number(result.etaN,3)+'，受剪控制比 '+number(result.etaV,3)+'。单项比值限值为 1.00；两者均大于 0.20 时，还须满足两者之和 ≤ 1.20。'));
+        group.append(el(doc,'p','受拉控制比 '+number(result.etaN,3)+'，受剪控制比 '+number(result.etaV,3)+'。混凝土锚群和最不利单根锚杆分别按式 (17.8.3) 和 (17.8.4) 校核。'));
         group.append(table(doc,['验算项目','设计需求','设计承载力 / 限值','利用率','依据'],
           result.checks.map(k=>[k.label,k.applicable===false?'—':number(k.demand,3)+(k.unit==='kN'?' kN':''),
             k.applicable===false?'—':number(k.capacity,3)+(k.unit==='kN'?' kN':''),k.applicable===false?'未触发':number(k.ratio,3),k.clause])));
@@ -122,17 +139,15 @@
             result.distribution.rows.map(r=>[number(r.y),number(r.tension,3),number(r.perAnchor,3)])));
           group.append(rows);
         }
+        window.EmbedReportMath.anchor(doc,group,{...params,...c},result);
         const explain = el(doc,'details');
-        explain.append(el(doc,'summary','公式与条款'));
-        for (const check of result.checks) {
-          if (check.applicable === false) continue;
-          explain.append(el(doc,'p',check.label+' · '+check.clause+'　'+check.formula));
-        }
+        explain.append(el(doc,'summary','投影面积与各自由边参数'));
         const trace = result.trace;
         const groupN = trace.tensionGroups[result.distribution.activeGroup];
         explain.append(table(doc,['受拉参数','代入值'],[
-          ['有效截面 Ase / 限制后的 f*',number(trace.As)+' mm² / '+number(trace.fut)+' MPa'],
-          ['φ 钢拉 / 钢剪 / 混凝土',[trace.phiN,trace.phiV,trace.phiConcrete].map(v=>number(v)).join(' / ')],
+          ['受拉 / 受剪有效面积 Ase',number(trace.AseN)+' / '+number(trace.AseV)+' mm²'],
+          ['钢材设计采用的抗拉强度',number(trace.fut)+' MPa'],
+          ['φ 混凝土拉 / 剪，ψa',[trace.phiConcreteN,trace.phiConcreteV,trace.psiA].map(v=>number(v)).join(' / ')],
           ['受拉锚群投影 ANc / ANco',number(groupN.ANc)+' / '+number(groupN.ANco)+' mm²'],
           ['受拉基本强度 Nb / 计算埋深',number(groupN.Nb)+' kN / '+number(groupN.he)+' mm'],
           ['偏心 e′N / ψec,N / ψed,N',number(result.distribution.eccN)+' mm / '+number(trace.psiEc,3)+' / '+number(groupN.psiEd,3)],
@@ -150,8 +165,9 @@
       window.EmbedSupplement.appendRecord(doc,content,window.EmbedSupplement.snapshot(doc));
     }
     const limits = section(doc, '使用范围');
-    limits.append(el(doc,'p','以上结论涵盖本页计算的锚固破坏模式。锚板弯曲、转接件、焊缝、钢筋可焊性、主体传力和地震专项应结合实际节点另核。采用带肋弯钩钢筋时，须按第 25 章核对钢筋发展及弯折构造。项目采用的规范版本及地方修订由设计人确认。'),
-      link(doc,'ACI 318-19 官方出版信息',codeUrl));
+    limits.append(el(doc,'p','锚板实厚须根据节点传力和板弯曲确定。采用 §17.7.2.2.2 连续焊接锚件的剪切增强式时，连接钢板厚度条件为 t ≥ max(0.5dₐ, 3/8 in)，还须同时满足锚距、角部钢筋和受剪排条件。本工具采用一般剪切公式，锚板另按输入的板带弯矩检算。'),
+      el(doc,'p','钢筋锚固参见 §17.1.7、§17.1.8 和第 25 章。附焊短筋构造依据 GB/T 50010-2010（2024 年版）表 8.3.3、图 8.3.3(c)、(d) 和 §8.3.4。项目所在地、当地采纳的版本、焊缝、主体传力和地震条件须由项目设计人核定。'),
+      link(doc,'ACI CODE-318-25 · 官方出版信息',codeUrl));
     content.append(limits);
   }
   function paper(doc) {
@@ -171,8 +187,8 @@
     explanation.append(el(doc,'p','M-1 的受拉锥破设计承载力 118.1 kN 小于设计拉力 124.8 kN。工程中若采用专门锚固钢筋传力，须核算受力钢筋、潜在破坏面两侧的锚固及荷载传至主体的路径。'));
     content.append(explanation);
     const edition=section(doc,'把论文用于当前设计时');
-    edition.append(el(doc,'p','论文对比 GB 50010-2010 §9.7.2 与 ACI 318-14 第 17 章。工作台按 ACI 318-19 公制计算，默认保留混凝土崩裂。论文使用 ASTM A615 带肋钢筋，应用时应先判定锚固依靠弯部承压还是钢筋黏结、发展；锚栓与普通弯钩钢筋各有适用构造。论文算例的 1.6 荷载系数只用于复算这两组数据。'),
-      link(doc,'原文第 49–50 页 · 图 6、表 1',paperUrl),doc.createTextNode('　'),link(doc,'ACI 318-19',codeUrl));
+    edition.append(el(doc,'p','论文对比 GB 50010-2010 §9.7.2 与 ACI 318-14 第 17 章。上表按原文刊载值复算 2014 版算例。工作台采用 ACI CODE-318-25，§17.8 将混凝土和钢材分开验算。论文使用 ASTM A615 带肋钢筋，需核查发展长度、群筋崩裂及后续传力。论文的 1.6 荷载系数仅用于此处复算。'),
+      link(doc,'原文第 49–50 页 · 图 6、表 1',paperUrl),doc.createTextNode('　'),link(doc,'ACI CODE-318-25',codeUrl));
     content.append(edition);
   }
   window.EmbedReport=Object.freeze({open:report,paper});
