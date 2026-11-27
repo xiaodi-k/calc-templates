@@ -1,0 +1,44 @@
+.er-dialog {
+  box-sizing: border-box; width: min(940px, 95vw); max-height: 88dvh;
+  border: 1px solid #cddce3; border-radius: 12px; padding: 0;
+  background: white; color: #163849; box-shadow: 0 25px 85px #102e4340;
+  font: 14px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+}
+.er-dialog::backdrop { background: #102e4366; }
+.er-head { position: sticky; top: 0; z-index: 1; background: white; border-bottom: 1px solid #d9e3e8;
+  padding: 1rem 1.6rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+.er-head h2, .er-body h3 { margin: 0; color: #153c50; }
+.er-head h2 { font-size: 1.3rem; }
+.er-head p { color: #526b79; margin: .2rem 0 0; }
+.er-actions { display: flex; gap: .45rem; flex-wrap: wrap; }
+.er-actions button { cursor: pointer; font: inherit; padding: .35rem .8rem; border-radius: .35rem; border: 1px solid #c8d8df; color: #17455a; background: #fff; }
+.er-actions button:first-child { background: #17495d; color: white; }
+.er-body { padding: .25rem 1.6rem 1.5rem; }
+.er-body section { margin: 1.2rem 0; }
+.er-body p { margin: .5rem 0 .8rem; }
+.er-body table { width: 100%; border-collapse: collapse; margin: .65rem 0; font-variant-numeric: tabular-nums; }
+.er-scroll { overflow-x: auto; }
+.er-body :is(th, td) { text-align: left; padding: .45rem .65rem; border-bottom: 1px solid #e0e9ed; }
+.er-body th { background: #edf4f6; color: #275569; }
+.er-body details { border: 1px solid #dce7ec; border-radius: .4rem; padding: .55rem .85rem; margin: .55rem 0; }
+.er-body summary { cursor: pointer; font-weight: 600; }
+.er-body a { color: #146078; }
+.er-warning { color: #904117; }
+@media (max-width: 600px) {
+  .er-dialog { width: 97vw; }
+  .er-head { align-items: flex-start; padding: .8rem; gap: .5rem; flex-wrap: wrap; }
+  .er-body { padding: .3rem .8rem 1rem; }
+  .er-body td, .er-body th { min-width: 70px; }
+}
+@media print {
+  html:has(.has-embed-record), body.has-embed-record { height: auto !important; display: block !important; overflow: visible !important; margin: 0; background: white; }
+  body.has-embed-record > :not(#embed-record) { display: none !important; }
+  #embed-record { position: static; inset: auto; margin: 0; width: 100%; height: auto; max-width: none; max-height: none; overflow: visible;
+    border: 0; border-radius: 0; box-shadow: none; color: black; font-size: 10pt; }
+  #embed-record::backdrop, .er-actions { display: none; }
+  .er-head { position: static; padding: 0 0 8pt; }
+  .er-body { padding: 0; }
+  .er-scroll { overflow: visible; }
+  .er-dialog tr { break-inside: avoid; }
+  .er-dialog :is(h2,h3,summary) { break-after: avoid; }
+}

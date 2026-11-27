@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#17465b">
+  <title>美标混凝土埋件计算 · 计算模板</title>
+  <meta name="description" content="按 ACI 318-19 验算现浇矩形锚群，比较锚板位置、混凝土边距与荷载组合。">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="viewer.css">
+  <link rel="stylesheet" href="report.css">
+  <link rel="stylesheet" href="supplement.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand"><span class="brand-mark" aria-hidden="true">⌑</span><div><h1>美标混凝土埋件计算</h1><small>CONCRETE EMBED LAB</small></div></div>
+    <div class="project-heading"><small>ACI 318-19 · SI</small><strong id="project-title">矩形锚群</strong></div>
+    <div class="header-actions">
+      <a class="button" href="../developing.html">← demo</a>
+      <span id="save-state" class="save-state"></span>
+      <button id="import-btn" type="button">导入</button>
+      <input id="import-file" type="file" accept=".json,application/json" hidden>
+      <button id="export-btn" type="button">保存参数</button>
+      <button id="report-btn" class="primary" type="button">计算书 ↗</button>
+    </div>
+  </header>
+  <main class="workbench">
+    <aside class="inspector" aria-label="节点参数">
+      <div class="section-head"><div><small class="eyebrow">DESIGN INPUTS</small><h2>节点参数</h2></div><button class="small" type="button" id="recalc-btn">重算 ↻</button></div>
+      <nav id="tabs" class="tabs" aria-label="参数分组"></nav>
+      <div class="preset-row">
+        <label for="preset">参考算例</label>
+        <select id="preset">
+          <option value="standard">L 形锚栓 · 常规边距</option>
+          <option value="edge">L 形锚栓 · 靠近下边</option>
+          <option value="headed">有头栓钉 · 内区锚板</option>
+          <option value="custom" disabled>自定义节点</option>
+        </select>
+      </div>
+      <div id="param-panels" class="param-panels"></div>
+      <button id="paper-btn" class="paper-link" type="button">论文算例及规范依据 <span>↗</span></button>
+    </aside>
+    <section class="workspace" aria-label="模型及荷载组合">
+      <div class="model-wrap">
+        <div id="model-view" aria-label="交互式锚固节点模型"></div>
+        <p id="model-message" class="model-message" hidden></p>
+      </div>
+      <div class="load-deck">
+        <div class="load-head"><div><small class="eyebrow">LOAD CASES</small><h2>荷载组合</h2></div><button id="add-case" type="button" class="small">＋ 添加组合</button></div>
+        <div class="table-scroll"><table><thead><tr><th>工况</th><th>N<sub>u</sub> <small>kN</small></th><th>M<sub>x</sub> <small>kN·m</small></th><th>V<sub>y</sub> <small>kN</small></th><th>利用率</th><th><span class="sr-only">工况操作</span></th></tr></thead><tbody id="load-cases"></tbody></table></div>
+      </div>
+      <p class="workspace-note">拉力为正，+M<sub>x</sub> 使 +Y 排受拉。图中锚板厚度仅作示意，锚板抗弯及焊缝需另算。</p>
+    </section>
+    <aside class="results" aria-label="实时验算">
+      <div class="section-head"><div><small class="eyebrow">LIVE CHECKS</small><h2>实时验算</h2></div><span class="status-indicator">实时</span></div>
+      <div id="results-content" aria-live="polite"></div>
+    </aside>
+  </main>
+  <div id="notice" role="status" hidden></div>
+  <noscript>请启用 JavaScript 以编辑节点、查看模型并进行计算。</noscript>
+  <script src="engine.js"></script>
+  <script src="viewer.js"></script>
+  <script src="report.js"></script>
+  <script src="supplement.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
