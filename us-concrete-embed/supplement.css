@@ -1,0 +1,61 @@
+.esup-dialog {
+  color: #233d4b;
+  background: #f6f8f9;
+  width: min(850px, calc(100vw - 30px));
+  max-width: 100%;
+  max-height: min(90dvh, 950px);
+  box-sizing: border-box;
+  padding: 0;
+  border: 1px solid #c6d5da;
+  border-radius: 14px;
+  box-shadow: 0 22px 80px #142b4238;
+  font: 14px/1.55 Inter, "Microsoft YaHei", sans-serif;
+  overflow: hidden;
+}
+.esup-dialog[open] { display: flex; flex-direction: column; }
+.esup-dialog::backdrop { background: #122b3b72; }
+.esup-dialog * { box-sizing: border-box; }
+.esup-dialog button, .esup-dialog select, .esup-dialog input { font: inherit; }
+.esup-header, .esup-nav, .esup-toolbar { display: flex; align-items: center; gap: 10px; }
+.esup-header { padding: 15px 23px 10px; justify-content: space-between; background: white; border: 0; }
+.esup-header h2 { margin: 0; color: #183d4d; font-size: 21px; font-weight: 650; }
+.esup-dialog button { cursor: pointer; line-height: 1.35; }
+.esup-close, .esup-action { color: #294957; background: white; border: 1px solid #c3d2d7; border-radius: 5px; padding: 6px 11px; }
+.esup-dialog button:focus-visible, .esup-dialog input:focus-visible, .esup-dialog select:focus-visible { outline: 2px solid #147569; outline-offset: 2px; }
+.esup-nav { background: white; padding: 0 23px; border-bottom: 1px solid #d7e2e5; }
+.esup-nav button { margin: 0; padding: 12px 3px 10px; color: #54717f; background: transparent; border: 0; border-radius: 0; border-bottom: 3px solid transparent; }
+.esup-nav button[aria-pressed=true] { color: #12695e; border-bottom-color: #147569; font-weight: 650; }
+.esup-body { padding: 15px 23px 18px; overflow-y: auto; overscroll-behavior: contain; }
+.esup-toolbar { flex-wrap: wrap; }
+.esup-origin { margin-right: auto; color: #315e6c; font-size: 12px; font-weight: 650; }
+.esup-action { font-size: 12px !important; }
+.esup-hint, .esup-note, .esup-eq, .esup-foot p, .esup-trace { font-size: 12px; color: #4d6671; line-height: 1.65; }
+.esup-hint { margin: 9px 0 13px; }
+.esup-group { margin: 0 0 13px; padding: 16px; border: 1px solid #d7e2e5; border-radius: 8px; background: white; }
+.esup-group h3 { margin: 0; font-size: 16px; font-weight: 650; color: #173f50; }
+.esup-ref { margin: 2px 0 6px; font: 11px/1.5 ui-monospace, monospace; color: #526f7b; }
+.esup-note { margin: 0 0 11px; }
+.esup-grid { display: grid; gap: 10px 13px; grid-template-columns: repeat(4,minmax(0,1fr)); }
+.esup-field { display: flex; flex-direction: column; justify-content: flex-end; gap: 4px; min-width: 0; font-size: 12px; color: #375665; }
+.esup-field input, .esup-field select { width: 100%; min-width: 0; padding: 5px 7px; height: 32px; border: 1px solid #bacdd3; border-radius: 4px; background: white; color: #163847; font-variant-numeric: tabular-nums; }
+.esup-result { margin: 14px 0 7px; border-left: 3px solid #b4c6cc; padding: 9px 11px; background: #f1f5f6; font-size: 12px; }
+.esup-result.esup-pass { background: #f0f7f4; border-color: #328272; }
+.esup-result.esup-fail { background: #fdf1ee; border-color: #b25546; }
+.esup-result ul { display: flex; flex-wrap: wrap; gap: 3px 14px; list-style: none; padding: 0; margin: 7px 0 0; }
+.esup-verdict { margin: 0 0 7px; font-weight: 650; }
+.esup-table { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+.esup-table th, .esup-table td { padding: 4px 5px 4px 0; text-align: right; border: 0; border-bottom: 1px solid #d6e0df; }
+.esup-table th:first-child, .esup-table td:first-child { text-align: left; }
+.esup-table th { color: #526871; font-weight: 550; }
+.esup-trace, .esup-eq { margin: 7px 0 0; }
+.esup-foot { display: block; padding: 0; background: transparent; }
+.esup-foot p { margin: 0 0 4px; }
+.esup-foot a { margin-right: 14px; font-size: 12px; color: #186b63; text-decoration: underline; }
+@media (max-width: 680px) {
+  .esup-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .esup-body { padding: 12px; }
+  .esup-header { padding: 12px 14px 5px; }
+  .esup-nav { padding: 0 14px; }
+  .esup-group { padding: 12px; }
+  .esup-dialog { width: calc(100vw - 14px); max-height: 94dvh; }
+}
