@@ -1,11 +1,11 @@
 .embed-viewer {
   --ev-ink: #203e4f; --ev-muted: #566f7c;
-  min-width: 0; width: 100%; display: flex; flex-direction: column;
+  min-width: 0; min-height: 0; width: 100%; height: 100%; display: flex; flex-direction: column;
   color: var(--ev-ink); background: #f8faf9;
   overflow: hidden; font: 13px/1.45 "Microsoft YaHei",system-ui,sans-serif;
 }
 .embed-viewer * { box-sizing: border-box }
-.ev-toolbar, .ev-caption { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; padding: 10px 13px }
+.ev-toolbar, .ev-caption { display: flex; flex: none; align-items: center; flex-wrap: wrap; gap: 6px 12px; padding: 10px 13px }
 .ev-toolbar { justify-content: space-between; border-bottom: 1px solid #dbe4e7; background: #fafcfb }
 .ev-modes, .ev-controls { display: flex; align-items: center; gap: 3px; flex-wrap: wrap }
 .embed-viewer .ev-button {
@@ -19,14 +19,14 @@
 .embed-viewer .ev-button:focus-visible, .ev-stage:focus-visible { outline: 2px solid #007c90; outline-offset: -2px }
 .ev-zoom-readout { text-align: center; font: 11px/1 system-ui,sans-serif; font-variant-numeric: tabular-nums; min-width: 34px }
 .ev-stage {
-  position: relative; width: 100%; height: clamp(315px, 43vw, 486px); overflow: hidden;
+  position: relative; width: 100%; flex: 1 1 auto; min-height: 180px; overflow: hidden;
   touch-action: none; user-select: none; cursor: grab; outline: 0;
   background-color: #f8faf9;
   background-image: radial-gradient(circle at 1px 1px,#bdcbcf75 .75px,transparent .9px);
   background-size: 16px 16px;
 }
 .ev-stage:active { cursor: grabbing }
-.ev-stage svg { display: block; width: 100%; height: 100%; overflow: hidden; font-family: inherit }
+.ev-stage svg { position: absolute; inset: 0; display: block; width: 100%; height: 100%; overflow: hidden; font-family: inherit }
 .ev-stage [data-field] { cursor: pointer; outline: none }
 .ev-stage .ev-dimt { font: 600 11.5px/1 system-ui,"Microsoft YaHei",sans-serif; fill: #365662 }
 .ev-stage .ev-dim:hover .ev-dimt, .ev-stage .ev-dim:focus .ev-dimt, .ev-stage .ev-dim.is-focused .ev-dimt { fill: #00738a }
@@ -41,7 +41,6 @@
 .ev-key-anchor::before { background: #bb8a45 }
 .ev-status { font-size: 11px; color: #526c77; margin-left: auto }
 @media(max-width: 560px) {
-  .ev-stage { height: 345px }
   .ev-toolbar,.ev-caption { padding: 7px 8px; gap: 4px 8px }
   .embed-viewer .ev-button { min-width: 27px; padding: 5px 6px; min-height:32px }
   .ev-status { margin-left:0 }

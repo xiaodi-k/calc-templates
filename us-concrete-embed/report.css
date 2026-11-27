@@ -24,6 +24,11 @@
 .er-body summary { cursor: pointer; font-weight: 600; }
 .er-body a { color: #146078; }
 .er-warning { color: #904117; }
+.er-calculation { padding: .45rem 0 .45rem 1rem; border-left: 2px solid #d7e7ed; margin: .7rem 0; }
+.er-calculation h4 { margin: .1rem 0 .45rem; color: #214d62; font-size: .98em; }
+.er-equation { overflow-x: auto; padding: .08rem 0; }
+.er-equation .katex-display { margin: .2em 0; }
+.er-equation .katex-display > .katex { text-align: left; }
 @media (max-width: 600px) {
   .er-dialog { width: 97vw; }
   .er-head { align-items: flex-start; padding: .8rem; gap: .5rem; flex-wrap: wrap; }
@@ -31,6 +36,7 @@
   .er-body td, .er-body th { min-width: 70px; }
 }
 @media print {
+  @page { size: A4; margin: 13mm 13mm 15mm; }
   html:has(.has-embed-record), body.has-embed-record { height: auto !important; display: block !important; overflow: visible !important; margin: 0; background: white; }
   body.has-embed-record > :not(#embed-record) { display: none !important; }
   #embed-record { position: static; inset: auto; margin: 0; width: 100%; height: auto; max-width: none; max-height: none; overflow: visible;
@@ -40,5 +46,8 @@
   .er-body { padding: 0; }
   .er-scroll { overflow: visible; }
   .er-dialog tr { break-inside: avoid; }
-  .er-dialog :is(h2,h3,summary) { break-after: avoid; }
+  .er-dialog :is(h2,h3,h4,summary) { break-after: avoid; }
+  .er-calculation { break-inside: avoid; margin: 4pt 0; padding: 1pt 0 2pt 6pt; }
+  .er-calculation h4 { break-after: avoid; }
+  .er-equation { overflow: visible; font-size: 8.7pt; }
 }
